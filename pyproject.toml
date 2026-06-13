@@ -1,0 +1,70 @@
+[project]
+name = "llm-job-support"
+version = "0.1.0"
+description = "지엔소프트 멀티모달 AI 프로젝트 (8주 일경험) — VLM/SAM/RAG/Agent 프로토타입 워크스페이스"
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Proprietary" }
+authors = [{ name = "llm-job-support team" }]
+
+# 공용 의존성은 가볍게. 무거운 모델 라이브러리는 프로토타입 폴더별로 둔다.
+dependencies = [
+    "anthropic>=0.40.0",
+    "python-dotenv>=1.0.0",
+    "requests>=2.32.0",
+    "pillow>=10.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.6.0",
+    "pytest>=8.0.0",
+    "ipython>=8.0.0",
+]
+demo = [
+    "gradio>=5.0.0",
+    "streamlit>=1.40.0",
+]
+rag = [
+    "chromadb>=0.5.0",
+    "rank-bm25>=0.2.2",
+    "sentence-transformers>=3.0.0",
+]
+vision = [
+    # 무거우므로 필요할 때만 설치.
+    # "torch>=2.4.0",
+    # "transformers>=4.45.0",
+    # "ultralytics>=8.3.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["notebooks", "data", "weights", "prototypes/*/sample"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "UP",  # pyupgrade
+    "SIM", # flake8-simplify
+    "RUF", # ruff-specific
+]
+ignore = [
+    "E501",  # 줄 길이는 formatter가 처리
+    "B008",  # FastAPI Depends() 패턴 허용
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-q"

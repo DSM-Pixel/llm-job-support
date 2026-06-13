@@ -1,0 +1,78 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+*.egg
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Virtual envs
+.venv/
+venv/
+env/
+.python-version
+
+# uv
+uv.lock.bak
+
+# --- Secrets ---
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+credentials.json
+service-account*.json
+
+# --- Notebooks ---
+.ipynb_checkpoints/
+
+# --- Data / Models (대용량) ---
+data/raw/
+data/interim/
+data/processed/
+data/external/
+*.csv.gz
+*.parquet
+*.arrow
+weights/
+checkpoints/
+*.pt
+*.pth
+*.safetensors
+*.onnx
+*.gguf
+*.bin
+
+# --- ML / Vision artifacts ---
+runs/
+wandb/
+mlruns/
+lightning_logs/
+outputs/
+tmp/
+
+# --- Gradio / Streamlit cache ---
+gradio_cached_examples/
+flagged/
+.streamlit/secrets.toml
+
+# --- Editor / OS ---
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Claude Code (project-local) ---
+.claude/settings.local.json
+.claude/.cache/
+.claude/logs/
