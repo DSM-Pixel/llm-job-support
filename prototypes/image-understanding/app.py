@@ -27,12 +27,15 @@ from google import genai
 from google.genai import types
 from PIL import Image, ImageDraw, ImageFont
 
+from gradio_image_annotation import image_annotator
+
 import backend_client
 import dataset
 import segmenter
 import stats
 from labeling import (
     LabelRecord,
+    from_annotator,
     from_coco,
     from_record_dict,
     from_yolo,
@@ -43,6 +46,9 @@ from labeling import (
     to_yolo_seg,
     yolo_classes_txt,
 )
+
+# 마우스 라벨링에서 고를 수 있는 기본 클래스(필요시 자유롭게 늘리세요).
+DRAW_LABELS = ["포트홀", "균열", "맨홀", "차량", "사람", "표지판"]
 
 DEFAULT_MODEL = "gemini-2.5-flash"
 
@@ -553,7 +559,7 @@ def save_to_backend(record: LabelRecord | None, annotated, original=None):
 
 def batch_process(
     files, target: str, save_backend: bool, use_mask: bool = False,
-    delay: float = 4.0, min_conf: int = 0,
+    delay: float = 4.0, min_conf: int = 0, progress=gr.Progress(),
 ):
     """[모드3] 여러 이미지를 한 번에 자동 라벨링한다.
 
@@ -583,6 +589,10 @@ def batch_process(
         # gr.File(multiple)은 임시 경로(str) 또는 .name 객체로 올 수 있다.
         path = fpath if isinstance(fpath, str) else getattr(fpath, "name", str(fpath))
         name = os.path.basename(path)
+        try:
+            progress((idx, n), desc=f"{idx + 1}/{n} 처리 중: {name}")
+        except Exception:  # noqa: BLE001 - 진행률은 UI 전용, 실패해도 무시(테스트 등).
+            pass
         try:
             image = Image.open(path)
             image.filename = name
@@ -652,6 +662,28 @@ def batch_process(
         "\n\n(" + " · ".join(extra) + ")" if extra else ""
     )
     return rows, zip_path, summary
+
+
+def save_drawn(annotation, save_backend: bool):
+    """[마우스 라벨링] image_annotator로 그린 박스를 라벨로 변환해 미리보기/저장."""
+    if not annotation or annotation.get("image") is None:
+        raise gr.Error("이미지를 올리고 박스를 그려주세요.")
+    from PIL import Image as _Image
+
+    img = _Image.fromarray(annotation["image"]).convert("RGB")
+    w, h = img.size
+    labels = from_annotator(annotation.get("boxes"), w, h)
+    if not labels:
+        raise gr.Error("그린 박스가 없습니다. 이미지 위에서 드래그해 박스를 그려주세요.")
+
+    annotated, draw_summary = _draw_boxes(img, labels)
+    record = LabelRecord("drawn.png", w, h, labels)
+
+    status = draw_summary
+    if save_backend:
+        resp = backend_client.save_labeling(record, annotated, img)
+        status += f"\n\n💾 {resp['message']} (`{resp['record_id']}`)"
+    return annotated, status
 
 
 def export_dataset(val_ratio: float):
@@ -824,6 +856,24 @@ with gr.Blocks(title="이미지 이해·라벨링 데모") as demo:
                 inputs=[det_state, det_image_out, det_image_in],
                 outputs=save_status,
             )
+
+        with gr.Tab("🖱️ 마우스 라벨링"):
+            gr.Markdown(
+                "이미지를 올리고 **마우스로 드래그**해 박스를 직접 그립니다. "
+                "박스를 클릭하면 클래스를 고르거나 지울 수 있어요. AI 탐지 없이 순수 수동 라벨링용입니다."
+            )
+            annot = image_annotator(
+                label_list=DRAW_LABELS,
+                label_colors=[_hex_to_rgb(c) for c in _COLORS[: len(DRAW_LABELS)]],
+                height=500,
+            )
+            with gr.Row():
+                draw_save = gr.Checkbox(label="mock 백엔드에 저장", value=True)
+                draw_btn = gr.Button("라벨 확정 / 저장", variant="primary")
+            with gr.Row():
+                draw_out = gr.Image(type="pil", label="결과 (박스 표시)")
+                draw_status = gr.Markdown()
+            draw_btn.click(save_drawn, inputs=[annot, draw_save], outputs=[draw_out, draw_status])
 
         with gr.Tab("📁 배치 처리"):
             gr.Markdown(
