@@ -28,6 +28,7 @@ from google.genai import types
 from PIL import Image, ImageDraw, ImageFont
 
 import backend_client
+import dataset
 import segmenter
 import stats
 from labeling import (
@@ -537,9 +538,9 @@ def export_labels(record: LabelRecord | None, fmt: str):
     return [path]
 
 
-def save_to_backend(record: LabelRecord | None, annotated):
+def save_to_backend(record: LabelRecord | None, annotated, original=None):
     """라벨링 결과를 백엔드(현재 MOCK)에 저장하고 상태 메시지를 돌려준다."""
-    resp = backend_client.save_labeling(record, annotated)
+    resp = backend_client.save_labeling(record, annotated, original)
     if resp["status"] != "ok":
         return f"❌ {resp['message']}"
     return (
@@ -613,7 +614,7 @@ def batch_process(
                 annotated = (
                     _draw_boxes(image, labels)[0] if labels else image.convert("RGB").copy()
                 )
-                resp = backend_client.save_labeling(record, annotated)
+                resp = backend_client.save_labeling(record, annotated, image)
                 status = "저장됨" + (f"(마스크 {masks_here})" if use_mask else "")
                 if resp["status"] != "ok":
                     status = "저장실패"
@@ -651,6 +652,21 @@ def batch_process(
         "\n\n(" + " · ".join(extra) + ")" if extra else ""
     )
     return rows, zip_path, summary
+
+
+def export_dataset(val_ratio: float):
+    """저장된 라벨(_saved/)을 train/val 로 나눈 YOLO 데이터셋 zip 으로 만든다."""
+    zip_path, st = dataset.build_yolo_dataset(backend_client._SAVE_ROOT, val_ratio)
+    if zip_path is None:
+        return None, "저장된 라벨이 없습니다. 먼저 '백엔드에 저장' 또는 배치로 저장하세요."
+    md = (
+        f"**데이터셋 생성 완료 · 총 {st['n_total']}장**\n\n"
+        f"- train: **{st['n_train']}장** / val: **{st['n_val']}장**\n"
+        f"- 클래스 {len(st['classes'])}종: {', '.join(st['classes'])}\n"
+        f"- 이미지 없어 제외: {st['n_skipped']}장\n\n"
+        f"zip 안에 `images/`, `labels/`, `data.yaml`(YOLO 표준)이 들어 있습니다."
+    )
+    return zip_path, md
 
 
 def build_dashboard():
@@ -805,7 +821,7 @@ with gr.Blocks(title="이미지 이해·라벨링 데모") as demo:
             )
             save_btn.click(
                 save_to_backend,
-                inputs=[det_state, det_image_out],
+                inputs=[det_state, det_image_out, det_image_in],
                 outputs=save_status,
             )
 
@@ -879,6 +895,20 @@ with gr.Blocks(title="이미지 이해·라벨링 데모") as demo:
                 build_dashboard,
                 outputs=[dash_summary, dash_class, dash_conf, dash_table],
             )
+
+        with gr.Tab("📦 데이터셋 내보내기"):
+            gr.Markdown(
+                "저장(`_saved/`)된 라벨을 **YOLO 학습용 데이터셋**(train/val 분할)으로 묶어줍니다. "
+                "원본 이미지(image.png)가 있으면 그걸, 없으면 박스 그려진 이미지를 사용합니다."
+            )
+            ds_ratio = gr.Slider(
+                minimum=0.1, maximum=0.5, value=0.2, step=0.05,
+                label="검증셋(val) 비율",
+            )
+            ds_btn = gr.Button("📦 데이터셋 만들기", variant="primary")
+            ds_summary = gr.Markdown()
+            ds_zip = gr.File(label="데이터셋 다운로드 (zip)")
+            ds_btn.click(export_dataset, inputs=[ds_ratio], outputs=[ds_zip, ds_summary])
 
 if __name__ == "__main__":
     demo.launch()

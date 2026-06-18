@@ -42,12 +42,17 @@ def _slugify(name: str) -> str:
     return base or "image"
 
 
-def save_labeling(record: LabelRecord, annotated_image: Image.Image | None = None) -> dict:
+def save_labeling(
+    record: LabelRecord,
+    annotated_image: Image.Image | None = None,
+    original_image: Image.Image | None = None,
+) -> dict:
     """라벨링 결과를 백엔드에 저장한다. (현재 MOCK: 로컬 디스크에 기록)
 
     Args:
         record: 라벨 레코드(단일 원천).
-        annotated_image: 박스가 그려진 결과 이미지(선택).
+        annotated_image: 박스가 그려진 결과 이미지(선택, 미리보기용).
+        original_image: 박스 없는 원본 이미지(선택, 데이터셋 학습용).
 
     Returns:
         응답 계약 dict (위 모듈 docstring 참고).
@@ -81,9 +86,11 @@ def save_labeling(record: LabelRecord, annotated_image: Image.Image | None = Non
     with open(os.path.join(out_dir, "labels.coco.json"), "w", encoding="utf-8") as f:
         json.dump(to_coco(record), f, ensure_ascii=False, indent=2)
 
-    # 4) 결과 이미지(있으면)
+    # 4) 결과 이미지(미리보기) + 원본 이미지(학습용 데이터셋)
     if annotated_image is not None:
         annotated_image.convert("RGB").save(os.path.join(out_dir, "annotated.png"))
+    if original_image is not None:
+        original_image.convert("RGB").save(os.path.join(out_dir, "image.png"))
 
     # 실제 백엔드라면 여기서 요청 바이트를 만들어 보낼 것이다(예시는 미사용).
     _ = io.BytesIO()
