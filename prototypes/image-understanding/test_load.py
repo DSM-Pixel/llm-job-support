@@ -5,9 +5,11 @@
 
 from labeling import (
     LabelRecord,
+    from_annotator,
     from_coco,
     from_record_dict,
     from_yolo,
+    to_annotator,
     to_coco,
     to_yolo,
     to_yolo_seg,
@@ -71,6 +73,28 @@ def test_yolo_seg_roundtrip_polygon():
 def test_yolo_unknown_class_fallback():
     back = from_yolo("3 0.5 0.5 0.2 0.2", [])  # 클래스명 없음 → class_3
     assert back[0]["class_name"] == "class_3"
+
+
+def test_from_annotator_pixels_to_norm():
+    boxes = [{"xmin": 10, "ymin": 20, "xmax": 60, "ymax": 120, "label": "포트홀"}]
+    labels = from_annotator(boxes, 100, 200)  # w=100, h=200
+    assert labels[0]["class_name"] == "포트홀"
+    # x:10/100*1000=100, y:20/200*1000=100, x:60→600, y:120→600
+    assert labels[0]["box_2d"] == [100, 100, 600, 600]
+
+
+def test_from_annotator_skips_invalid():
+    boxes = [
+        {"xmin": 50, "ymin": 50, "xmax": 50, "ymax": 50, "label": "x"},  # 면적 0
+        {"xmin": 0, "ymin": 0, "xmax": 10},  # 키 누락
+    ]
+    assert from_annotator(boxes, 100, 100) == []
+
+
+def test_annotator_roundtrip():
+    labels = [{"class_name": "균열", "box_2d": [100, 100, 600, 600]}]
+    boxes = to_annotator(labels, 100, 200)
+    assert from_annotator(boxes, 100, 200)[0]["box_2d"] == [100, 100, 600, 600]
 
 
 if __name__ == "__main__":

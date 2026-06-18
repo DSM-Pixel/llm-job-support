@@ -214,6 +214,45 @@ def from_coco(coco: dict) -> LabelRecord:
     return LabelRecord(img.get("file_name") or "image.png", w, h, labels)
 
 
+def from_annotator(boxes, img_w: int, img_h: int) -> list[dict]:
+    """image_annotator 박스(픽셀 xmin/ymin/xmax/ymax + label) → labels(0~1000)."""
+    labels = []
+    if not img_w or not img_h:
+        return labels
+    for b in boxes or []:
+        try:
+            xmin = float(b["xmin"]); ymin = float(b["ymin"])
+            xmax = float(b["xmax"]); ymax = float(b["ymax"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if xmax <= xmin or ymax <= ymin:
+            continue
+        name = (b.get("label") or "object").strip() or "object"
+        box = [
+            round(ymin / img_h * NORM), round(xmin / img_w * NORM),
+            round(ymax / img_h * NORM), round(xmax / img_w * NORM),
+        ]
+        box = [max(0, min(int(NORM), v)) for v in box]
+        labels.append({"class_name": name, "box_2d": box})
+    return labels
+
+
+def to_annotator(labels, img_w: int, img_h: int) -> list[dict]:
+    """labels(0~1000) → image_annotator 박스(픽셀). 기존 라벨을 그리기 화면에 표시."""
+    out = []
+    for lb in labels or []:
+        box = lb.get("box_2d")
+        if not box or len(box) != 4:
+            continue
+        ymin, xmin, ymax, xmax = box
+        out.append({
+            "xmin": round(xmin / NORM * img_w), "ymin": round(ymin / NORM * img_h),
+            "xmax": round(xmax / NORM * img_w), "ymax": round(ymax / NORM * img_h),
+            "label": lb.get("class_name", "object"),
+        })
+    return out
+
+
 def from_yolo(text: str, class_names: list[str] | None = None) -> list[dict]:
     """YOLO txt(박스 또는 세그) → labels. 좌표 0~1 정규화이므로 크기 정보 불필요."""
     names = class_names or []
