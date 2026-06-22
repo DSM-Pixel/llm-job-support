@@ -10,12 +10,15 @@ Gradio 백엔드 프로토타입(`api-test`, `image-understanding`, `rag-search`
 
 | 파일 | 화면 | 대응 백엔드 프로토타입 |
 |------|------|------------------------|
-| `HTML/1. Main Dashboard.html` | 메인 대시보드 | `image-understanding/stats.py` |
-| `HTML/2. Natural Language Query.html` | 자연어 질의 | `rag-search` |
-| `HTML/3. RAG System.html` | RAG 공공데이터 검색 | `rag-search` |
-| `HTML/4. Image Labeling.html` | 이미지 분석·라벨링 | `image-understanding` |
-| `HTML/5. Report.html` | 요약·보고서 생성 | (보고서 자동화 과제) |
-| `HTML/6. Data Management.html` | 데이터 관리 | `image-understanding/dataset.py` |
+| `HTML/dashboard.html` | 메인 대시보드 | `image-understanding/stats.py` |
+| `HTML/query.html` | 자연어 질의 | `rag-search` |
+| `HTML/rag.html` | RAG 공공데이터 검색 | `rag-search` |
+| `HTML/labeling.html` | 이미지 분석·라벨링 | `image-understanding` |
+| `HTML/report.html` | 요약·보고서 생성 | (보고서 자동화 과제) |
+| `HTML/data.html` | 데이터 관리 | `image-understanding/dataset.py` |
+
+> 각 HTML은 동일 베이스명의 `CSS/<name>.css`, `JS/<name>.js`를 사용합니다
+> (예: `dashboard.html` → `CSS/dashboard.css`, `JS/dashboard.js`). 공통은 `common.*`.
 
 - `CSS/` — 화면별 스타일 + `common.css`(공통)
 - `JS/` — 화면별 스크립트 + `common.js`(공통)
