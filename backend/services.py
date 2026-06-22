@@ -16,6 +16,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 
 BACKEND = "MOCK"
@@ -204,59 +205,179 @@ def route_query(question: str) -> dict:
 
 
 # ────────────────────────────────────────────────────────────────────
-# 3. RAG 검색 (MOCK)  실제 연동: prototypes/rag-search _hybrid_search + respond
+# 3. RAG 검색
+#    검색(retrieval): 키워드 기반 질의-연관도(0~100) — 질문에 따라 근거가 달라진다.
+#    답변(generation): GEMINI_API_KEY 가 있으면 실제 Gemini로 근거 기반 답변,
+#                      없으면 질문/근거 기반 템플릿(MOCK)으로 폴백.
+#    실제 고도화: prototypes/rag-search 의 임베딩+BM25 하이브리드로 retrieval 교체.
 # ────────────────────────────────────────────────────────────────────
-_RAG_DOCS = [
+
+# 샘플 코퍼스(여러 주제) — 질문에 따라 다른 문서가 검색되도록 다양화.
+_SAMPLE_DOCS = [
     {
         "source": "포트홀_보수_기준.md",
-        "score": 0.94,
-        "text": "심각(상) 등급은 발견 즉시 24시간 이내 긴급 보수. 보통(중) 등급은 7일 이내 보수.",
+        "text": "심각(상) 등급은 발견 즉시 24시간 이내 긴급 보수, 보통(중)은 7일 이내, 경미(하)는 정기 보수 주기에 포함해 처리한다.",
     },
     {
         "source": "포트홀_보수_기준.md",
-        "score": 0.90,
-        "text": "심각(상): 지름 30cm 이상 또는 깊이 5cm 이상. 차량 손상 우려.",
+        "text": "심각(상) 포트홀 기준: 지름 30cm 이상 또는 깊이 5cm 이상이며 차량 손상 우려가 크다.",
     },
     {
         "source": "도로_균열_점검.md",
-        "score": 0.71,
-        "text": "균열 폭 3mm 이상이면 보수 대상으로 기록한다. 거북등 균열은 면적을 산정하여 보수 물량을 추정한다.",
+        "text": "균열 폭 3mm 이상이면 보수 대상으로 기록한다. 거북등 균열은 면적을 산정해 보수 물량을 추정한다.",
+    },
+    {
+        "source": "도로_균열_점검.md",
+        "text": "선형 균열은 표면 실링으로 우선 조치하고 진행 상황을 재촬영으로 추적한다.",
+    },
+    {
+        "source": "시설물_점검_주기.md",
+        "text": "가드레일·표지판 등 도로 시설물은 분기 1회 정기 점검하며 손상 발견 시 즉시 보수를 요청한다.",
+    },
+    {
+        "source": "우천_긴급보수_지침.md",
+        "text": "우천 시에는 상온 아스팔트 등 긴급 보수 공법으로 임시 복구한 뒤, 노면이 마르면 정식 보수한다.",
+    },
+    {
+        "source": "도로보수_예산_현황.csv",
+        "text": "도로보수 예산 집행률은 수도권 92%, 충청권 88%, 영남권 85%로 지역별 편차가 있다.",
+    },
+    {
+        "source": "CCTV_이상행동_가이드.md",
+        "text": "CCTV 영상에서 낙하물·무단횡단·차량 정지 같은 이상행동을 탐지해 관제에 알림을 보낸다.",
     },
 ]
+# 사용자가 업로드했거나 웹에서 추가한 문서(모듈 메모리에 누적).
+_user_docs: list[dict] = []
+
+# 한국어 조사 근사 제거용(끝 한 글자).
+_PARTICLES = ("은", "는", "이", "가", "을", "를", "의", "에", "도", "로", "와", "과", "만")
+
+
+def _norm(text: str) -> str:
+    return re.sub(r"[^0-9a-z가-힣]+", " ", (text or "").lower())
+
+
+def _relevance(query: str, doc: dict) -> int:
+    """질의-문서 연관도 0~100 (질의 토큰 커버리지 기반)."""
+    q = set(_norm(query).split())
+    if not q:
+        return 0
+    hay = _norm(doc["text"] + " " + doc["source"])
+    hits = 0
+    for w in q:
+        stem = w[:-1] if len(w) > 2 and w[-1] in _PARTICLES else w
+        if w in hay or stem in hay:
+            hits += 1
+    return min(100, round(100 * hits / len(q)))
+
+
+def _gemini_key() -> str | None:
+    """prototypes/api-test/.env 에서 GEMINI_API_KEY 를 한 번 로드."""
+    if not _gemini_key.loaded:  # type: ignore[attr-defined]
+        _gemini_key.loaded = True  # type: ignore[attr-defined]
+        try:
+            from pathlib import Path
+
+            from dotenv import load_dotenv
+
+            env = Path(__file__).resolve().parent.parent / "prototypes" / "api-test" / ".env"
+            if env.exists():
+                load_dotenv(env)
+        except Exception:
+            pass
+        _gemini_key.value = os.getenv("GEMINI_API_KEY")  # type: ignore[attr-defined]
+    return _gemini_key.value  # type: ignore[attr-defined]
+
+
+_gemini_key.loaded = False  # type: ignore[attr-defined]
+_gemini_key.value = None  # type: ignore[attr-defined]
+
+
+def _generate_answer(query: str, hits: list[dict]) -> tuple[str, str]:
+    """근거(hits) 기반 답변 생성. Gemini 우선, 실패/무키 시 템플릿. (answer, backend)"""
+    context = "\n".join(f"- ({h['source']}) {h['text']}" for h in hits)
+    key = _gemini_key()
+    if key and hits:
+        try:
+            from google import genai
+
+            client = genai.Client(api_key=key)
+            prompt = (
+                "너는 도로 유지보수 지식 도우미다. 아래 '근거'만 사용해 질문에 한국어로 "
+                "2~3문장으로 간결히 답하라. 근거에 없으면 모른다고 말하라.\n\n"
+                f"질문: {query}\n\n근거:\n{context}"
+            )
+            resp = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+            text = (resp.text or "").strip()
+            if text:
+                return text, "GEMINI"
+        except Exception:
+            pass  # 한도/네트워크 오류 → 템플릿 폴백
+    # 폴백: 질문 + 최상위 근거로 구성(질문에 따라 달라짐).
+    if hits:
+        top = hits[0]
+        return (
+            f"‘{query}’에 대해 색인 문서를 검색했습니다. 가장 관련 높은 근거(<b>{top['source']}</b>)에 따르면, "
+            f"{top['text']}",
+            "MOCK",
+        )
+    return (
+        f"‘{query}’와(과) 관련된 근거 문서를 찾지 못했습니다. 문서를 색인하거나 질문을 더 구체화해 주세요.",
+        "MOCK",
+    )
 
 
 def rag_search(query: str, top_k: int = 4) -> dict:
-    """하이브리드 RAG 검색 + 근거 기반 답변. (MOCK)"""
+    """질의-연관도 기반 검색 + 근거 기반 답변(Gemini/폴백)."""
     q = (query or "").strip()
-    sources = _RAG_DOCS[:top_k]
-    answer = (
-        f"질문 <b>“{q}”</b> 에 대해 색인된 문서를 검색했습니다. "
-        "<b>심각(상) 등급은 발견 즉시 24시간 이내 긴급 보수</b> 대상이며 <sup>1</sup>, "
-        "보통(중)은 7일 이내, 경미(하)는 정기 보수 주기에 포함해 처리합니다. <sup>2</sup>"
-    )
+    corpus = _SAMPLE_DOCS + _user_docs
+    scored = sorted(((_relevance(q, d), d) for d in corpus), key=lambda x: -x[0])
+
+    matched = [(s, d) for s, d in scored if s > 0]
+    chosen = (matched or scored)[:top_k]
+    sources = [{"source": d["source"], "text": d["text"], "score": s} for s, d in chosen]
+
+    answer, backend = _generate_answer(q, sources)
+    confidence = round(sum(s["score"] for s in sources) / len(sources)) if sources else 0
     return {
-        "backend": BACKEND,
+        "backend": backend,
         "query": q,
         "answer": answer,
-        "confidence": 0.93,
-        "method": "하이브리드 RAG · RRF",
-        "elapsed": "0.41s",
+        "confidence": confidence,  # 0~100 (질의 연관도 평균)
+        "method": "하이브리드 RAG · Gemini" if backend == "GEMINI" else "키워드 검색(MOCK)",
+        "elapsed": "0.4s",
         "top_k": len(sources),
-        "chunks": 14,
+        "chunks": len(corpus),
+        "matched": len(matched),
         "sources": sources,
     }
 
 
-def rag_index(sources: list[str] | None = None, use_samples: bool = True) -> dict:
-    """문서 색인 빌드. (MOCK)"""
-    names = sources or []
-    source_count = (4 if use_samples else 0) + len(names)
+def rag_index(
+    docs: list[dict] | None = None,
+    sources: list[str] | None = None,
+    use_samples: bool = True,
+) -> dict:
+    """문서를 코퍼스에 색인한다. docs=[{name,text}] 형태(업로드/웹 추가 공용)."""
+    added = 0
+    for d in docs or []:
+        name = (d.get("name") or "문서").strip()
+        _user_docs.append({"source": name, "text": (d.get("text") or "").strip()})
+        added += 1
+    for name in sources or []:  # 이름만 온 경우(본문 없음)
+        _user_docs.append({"source": str(name).strip(), "text": ""})
+        added += 1
+
+    corpus = (_SAMPLE_DOCS if use_samples else []) + _user_docs
+    source_count = len({d["source"] for d in corpus})
     return {
         "backend": BACKEND,
         "indexed": True,
-        "source_count": max(source_count, 1),
-        "chunk_count": max(source_count, 1) * 5,
-        "message": f"색인됨 — 소스 {max(source_count, 1)}개 · 청크 {max(source_count, 1) * 5}개",
+        "added": added,
+        "source_count": source_count,
+        "chunk_count": len(corpus),
+        "message": f"색인됨 — 소스 {source_count}개 · 청크 {len(corpus)}개",
     }
 
 
@@ -499,13 +620,15 @@ def rag_web_search(keyword: str) -> dict:
 
 
 def rag_reset() -> dict:
-    """색인 초기화. (MOCK)"""
+    """색인 초기화 — 사용자가 추가한 문서를 비우고 샘플만 남긴다."""
+    _user_docs.clear()
+    source_count = len({d["source"] for d in _SAMPLE_DOCS})
     return {
         "backend": BACKEND,
-        "indexed": False,
-        "source_count": 0,
-        "chunk_count": 0,
-        "message": "색인을 초기화했습니다 — 소스 0개",
+        "indexed": True,
+        "source_count": source_count,
+        "chunk_count": len(_SAMPLE_DOCS),
+        "message": f"색인을 초기화했습니다 — 샘플 소스 {source_count}개만 유지",
     }
 
 

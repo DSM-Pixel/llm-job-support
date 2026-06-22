@@ -346,6 +346,54 @@
   font-weight: 900;
 }
 
+/* 웹에서 찾아 넣기 — 선택형 결과 */
+.web-results {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.web-results:empty {
+  display: none;
+}
+
+.web-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.web-item input {
+  margin-top: 3px;
+}
+
+.web-item b {
+  font-size: 13px;
+}
+
+.web-item small {
+  display: block;
+  color: var(--blue);
+  font-size: 11px;
+}
+
+.web-item p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.web-results .add-web {
+  width: 100%;
+  margin-top: 2px;
+}
+
 @media (max-width: 1200px) {
   .rag-layout {
     grid-template-columns: 1fr;

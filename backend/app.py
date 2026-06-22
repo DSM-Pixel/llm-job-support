@@ -36,6 +36,7 @@ class RagSearchIn(BaseModel):
 
 
 class RagIndexIn(BaseModel):
+    docs: list[dict] = []
     sources: list[str] = []
     use_samples: bool = True
 
@@ -89,7 +90,7 @@ def rag_search(body: RagSearchIn) -> dict:
 
 @app.post("/api/rag/index")
 def rag_index(body: RagIndexIn) -> dict:
-    return services.rag_index(body.sources, body.use_samples)
+    return services.rag_index(body.docs, body.sources, body.use_samples)
 
 
 @app.post("/api/rag/web-search")

@@ -57,37 +57,70 @@ with sync_playwright() as p:
     href = page.get_attribute(".message.assistant:last-child .message-actions a", "href")
     check("query: 답변 렌더 + 라벨링 링크", href == "labeling.html", f"href={href}")
 
-    # 3) RAG ─ 검색 결과 갱신
+    # 3) RAG ─ 질의 연관도 검색 + 질문별 답변 + 업로드/웹 문서
     page.goto(f"{BASE}/pages/rag.html")
-    before = page.inner_text(".answer p")
-    page.fill(".ask-line input", "거북등 균열은 어떻게 보수해?")
-    page.click(".ask-line .primary")
-    page.wait_for_function(
-        "(t) => document.querySelector('.answer p') && document.querySelector('.answer p').innerText !== t",
-        arg=before,
-    )
-    srcs = page.query_selector_all(".source-list .source")
-    conf = page.inner_text(".answer-head > .status")
-    check("rag: 근거 3건 렌더", len(srcs) == 3, f"{len(srcs)}건")
-    check("rag: 신뢰도 갱신", "신뢰도" in conf, conf)
 
-    files_before = len(page.query_selector_all(".file-list li"))
-    page.fill(".search-line input", "포트홀 보수 기준")
+    def rag_query(q):
+        prev = page.inner_text(".answer p")
+        page.fill(".ask-line input", q)
+        page.click(".ask-line .primary")
+        page.wait_for_function(
+            "(t) => document.querySelector('.answer p').innerText !== t", arg=prev
+        )
+
+    # 질문 A
+    rag_query("포트홀 긴급 보수 기한은?")
+    srcs = page.query_selector_all(".source-list .source")
+    top_a = page.inner_text(".source-list .source:first-child b")
+    score_text = page.inner_text(".source-list .source:first-child em").strip()
+    conf = page.inner_text(".answer-head > .status")
+    check("rag: 근거 렌더", len(srcs) >= 1, f"{len(srcs)}건")
+    check(
+        "rag: 연관도 0~100 표기", score_text.endswith("%") and score_text[:-1].isdigit(), score_text
+    )
+    check("rag: 연관도 헤더(% 기준)", "%" in conf, conf)
+
+    # 질문 B (다른 주제) → 근거 문서가 달라져야 함(질문별 검색)
+    rag_query("가드레일 점검 주기는?")
+    top_b = page.inner_text(".source-list .source:first-child b")
+    check("rag: 질문별 근거 변화", top_b != top_a, f"A={top_a} / B={top_b}")
+
+    # 웹에서 찾아 넣기 → 결과 선택 → 색인 추가
+    page.fill(".search-line input", "포트홀 보수 공법")
     page.click(".search-line button")
+    page.wait_for_selector(".web-results .web-item")
+    web_items = len(page.query_selector_all(".web-results .web-item"))
+    files_before = len(page.query_selector_all(".file-list li"))
+    page.click(".web-results .add-web")
     page.wait_for_function(
         "(n) => document.querySelectorAll('.file-list li').length > n", arg=files_before
     )
-    files_after = len(page.query_selector_all(".file-list li"))
+    check("rag: 웹 결과 선택 추가", web_items == 3, f"{web_items}건 표시")
+
+    # 업로드 문서가 검색 근거에 포함되는지
+    page.set_input_files(
+        ".upload-input",
+        files=[
+            {
+                "name": "myrule.txt",
+                "mimeType": "text/plain",
+                "buffer": "특이키워드 자이로 보수 지침".encode(),
+            }
+        ],
+    )
+    page.wait_for_function("() => document.querySelector('.indexed').innerText.includes('색인')")
+    rag_query("특이키워드 자이로 지침")
     check(
-        "rag: 웹 검색 결과 추가", files_after == files_before + 3, f"{files_before}→{files_after}"
+        "rag: 업로드 문서가 근거에 표시",
+        "myrule.txt" in page.inner_text(".source-list"),
+        page.inner_text(".source-list .source:first-child b"),
     )
 
+    # 답변 복사 + 색인 초기화
+    page.click(".answer-actions button:has-text('복사')")
     page.click(".index-actions .flat")
     page.wait_for_function("() => document.querySelector('.indexed').innerText.includes('초기화')")
     check("rag: 색인 초기화", "초기화" in page.inner_text(".indexed"), page.inner_text(".indexed"))
-
-    page.click(".answer-actions button:has-text('복사')")
-    check("rag: 답변 복사 동작", True)  # 예외 없이 핸들러 실행
 
     # 4) Labeling ─ 분석 + 이미지 교체
     page.goto(f"{BASE}/pages/labeling.html")
