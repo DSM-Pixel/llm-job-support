@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>자연어 질의</title>
+    <link rel="stylesheet" href="../assets/css/common.css" />
+    <link rel="stylesheet" href="../assets/css/query.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <a class="logo" href="dashboard.html">GNSoft</a>
+        <nav class="nav-group">
+          <p class="nav-label">AI 서비스</p>
+          <a class="nav-item" data-icon="▦" href="dashboard.html"
+            >메인 대시보드</a
+          >
+          <a
+            class="nav-item active"
+            data-icon="▤"
+            href="query.html"
+            >자연어 질의 <span class="nav-chevron">›</span></a
+          >
+          <a class="nav-item" data-icon="⌕" href="rag.html"
+            >RAG 공공데이터 검색</a
+          >
+          <a class="nav-item" data-icon="⌗" href="labeling.html"
+            >이미지 분석·라벨링</a
+          >
+          <a class="nav-item" data-icon="⇱" href="report.html"
+            >요약·보고서 생성</a
+          >
+          <a class="nav-item" data-icon="▱" href="data.html"
+            >데이터 관리</a
+          >
+        </nav>
+        <div class="user-box">
+          <span class="avatar">김연</span>
+          <div>
+            <div class="user-name">김연우</div>
+            <div class="user-team">R&D · 청년 1팀</div>
+          </div>
+          <span class="gear">⚙</span>
+        </div>
+      </aside>
+      <main class="main query-main">
+        <header class="topbar">
+          <h1>자연어 질의</h1>
+          <span class="live">LIVE</span>
+          <div class="top-actions"><span>?</span><span>♧</span></div>
+        </header>
+        <section class="query-stage">
+          <div class="empty-state">
+            <div class="spark">✣</div>
+            <h2>무엇이든 자연어로 물어보세요</h2>
+            <p>
+              질문을 이해해 이미지 분석·공공데이터 검색·보고서 생성·업무<br />자동화로
+              자동 연결합니다.
+            </p>
+            <div class="prompt-grid">
+              <button class="card"><span>⌗</span>포트홀 영역을 찾아줘</button>
+              <button class="card">
+                <span><i class="search-line-icon" aria-hidden="true"></i></span
+                >공공데이터포털 기반으로 도로 파손 통계를 보여줘
+              </button>
+              <button class="card">
+                <span><i class="search-line-icon" aria-hidden="true"></i></span
+                >검색 결과를 요약해서 보고서로 만들어줘
+              </button>
+              <button class="card">
+                <span>⌗</span>심각한 포트홀 대응 절차를 자동으로 추천해줘
+              </button>
+            </div>
+          </div>
+        </section>
+        <section class="chat-dock">
+          <div class="input-wrap">
+            <input
+              type="text"
+              placeholder="자연어로 질문하세요 — 예: 포트홀 영역을 찾아줘"
+            />
+          <button class="btn primary">→</button>
+          </div>
+          <div class="suggestions">
+            <span class="pill">포트홀 영역을 찾아줘</span>
+            <span class="pill"
+              >공공데이터포털 기반으로 도로 파손 통계를 보여줘</span
+            >
+            <span class="pill">검색 결과를 요약해서 보고서로 만들어줘</span>
+            <span class="pill"
+              >심각한 포트홀 대응 절차를 자동으로 추천해줘</span
+            >
+          </div>
+        </section>
+      </main>
+    </div>
+    <script src="../assets/js/common.js"></script>
+    <script src="../assets/js/query.js"></script>
+  </body>
+</html>
