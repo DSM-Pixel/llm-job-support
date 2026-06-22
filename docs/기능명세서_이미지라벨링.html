@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>기능 명세서 — AI 이미지 라벨링 도구</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Malgun Gothic", "맑은 고딕", sans-serif;
+    color: #1c2530; font-size: 10.5pt; line-height: 1.65; margin: 0;
+  }
+  h1 { font-size: 22pt; margin: 0 0 4px; color: #0b3d91; letter-spacing: -0.5px; }
+  h2 {
+    font-size: 14pt; margin: 26px 0 10px; color: #0b3d91;
+    border-bottom: 2.5px solid #0b3d91; padding-bottom: 5px;
+  }
+  h3 {
+    font-size: 11.5pt; margin: 18px 0 6px; color: #11243a;
+    background: #eef3fb; padding: 6px 10px; border-left: 4px solid #2f6fd6; border-radius: 3px;
+  }
+  p { margin: 6px 0; }
+  .sub { color: #5a6b7b; font-size: 10pt; margin-top: 2px; }
+  .meta-box {
+    background: #f6f8fb; border: 1px solid #d9e2ee; border-radius: 6px;
+    padding: 12px 16px; margin: 14px 0 4px; font-size: 9.8pt;
+  }
+  .meta-box span { display: inline-block; min-width: 78px; color: #5a6b7b; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 9.6pt; }
+  th, td { border: 1px solid #d4dde8; padding: 6px 9px; text-align: left; vertical-align: top; }
+  th { background: #e8eef7; color: #11243a; font-weight: 600; }
+  td.k { background: #f7f9fc; font-weight: 600; width: 110px; color: #2a3b4d; }
+  ul { margin: 5px 0 5px 0; padding-left: 20px; }
+  li { margin: 3px 0; }
+  .tag {
+    display: inline-block; font-size: 8.3pt; padding: 1px 8px; border-radius: 10px;
+    background: #2f6fd6; color: #fff; vertical-align: middle; margin-left: 6px;
+  }
+  .tag.opt { background: #7a8aa0; }
+  .tag.mock { background: #c77f0a; }
+  .note {
+    background: #fff8e6; border: 1px solid #f0d99a; border-radius: 6px;
+    padding: 10px 14px; margin: 10px 0; font-size: 9.6pt;
+  }
+  .wire {
+    border: 1.5px dashed #9fb3cc; border-radius: 8px; background: #fbfdff;
+    padding: 12px 14px; margin: 10px 0; font-family: Consolas, monospace;
+    font-size: 9pt; line-height: 1.5; color: #2a3b4d; white-space: pre;
+  }
+  .flow { font-size: 9.8pt; color: #11243a; margin: 6px 0; }
+  .flow b { color: #0b3d91; }
+  .page-break { page-break-before: always; }
+  .footer { margin-top: 30px; padding-top: 10px; border-top: 1px solid #d4dde8;
+            color: #8593a3; font-size: 8.6pt; }
+  .legend span { margin-right: 16px; font-size: 9pt; }
+  .dot { display:inline-block; width:9px; height:9px; border-radius:2px; margin-right:4px; vertical-align: middle;}
+</style>
+</head>
+<body>
+
+<h1>기능 명세서</h1>
+<p class="sub">AI 이미지 라벨링 도구 — 디자인 핸드오프용</p>
+
+<div class="meta-box">
+  <div><span>제품명</span> 자연어 기반 이미지 이해 · 자동 라벨링 도구</div>
+  <div><span>대상 과제</span> 도로 파손(포트홀/균열) 라벨링 자동화 등 Vision AI 데이터 구축</div>
+  <div><span>사용자</span> 라벨링 작업자 · 데이터 검수자 (비개발 직군 포함)</div>
+  <div><span>플랫폼</span> 웹 (Gradio 기반, 단일 화면 + 탭 구조)</div>
+  <div><span>버전</span> v0.4 프로토타입 / 작성일 2026-06-19</div>
+  <div><span>문서 목적</span> 현재 동작 중인 프로토타입의 기능·화면·상태를 디자이너에게 전달하여 UI/UX 리디자인 기준선 제공</div>
+</div>
+
+<h2>1. 제품 한 줄 정의</h2>
+<p>
+사용자가 이미지를 올리고 <b>"포트홀을 찾아줘"</b>처럼 찾을 대상을 한국어로 입력하면,
+AI가 해당 객체의 <b>바운딩 박스를 자동으로 그려주고</b>, 사용자가 이를 <b>검수·수정</b>한 뒤
+학습용 데이터셋(YOLO/COCO) 형식으로 <b>내보내기/저장</b>하는 도구.
+</p>
+<div class="note">
+<b>핵심 가치:</b> "사람이 박스를 일일이 그리던 작업"을 AI가 1차 초안으로 만들고,
+사람은 <b>확인·보정만</b> 하도록 바꿔 라벨링 속도를 끌어올린다. → 디자인은 <b>AI 결과 검수 흐름</b>이 가장 중요.
+</div>
+
+<h2>2. 전체 화면 구조 (정보 구조)</h2>
+<p>상단 단일 페이지 + 작업 단계별 탭으로 구성. 모든 탭은 공통적으로 <b>좌측 이미지 캔버스 / 우측 컨트롤</b> 패턴을 따른다.</p>
+<table>
+  <tr><th style="width:34px">#</th><th>탭(기능)</th><th>한 줄 역할</th><th>핵심 산출</th></tr>
+  <tr><td>1</td><td>📝 설명 분석</td><td>이미지를 글로 이해 (설명/목록/이상탐지)</td><td>텍스트 리포트</td></tr>
+  <tr><td>2</td><td>🔲 박스로 찾기 <span class="tag">핵심</span></td><td>대상을 자동 탐지해 박스 그림</td><td>라벨(박스) 세트</td></tr>
+  <tr><td>3</td><td>✏️ 수동 보정</td><td>AI 박스를 표/마우스로 수정</td><td>수정된 라벨</td></tr>
+  <tr><td>4</td><td>🖱️ 마우스 라벨링</td><td>AI 없이 직접 드래그로 박스 작성</td><td>수기 라벨</td></tr>
+  <tr><td>5</td><td>📁 배치 처리</td><td>여러 장 한 번에 자동 라벨링</td><td>일괄 라벨 + 진행률</td></tr>
+  <tr><td>6</td><td>💾 내보내기 / 저장</td><td>YOLO·COCO 변환, 백엔드 저장</td><td>다운로드 파일</td></tr>
+  <tr><td>7</td><td>📊 통계 대시보드</td><td>저장된 라벨 집계 시각화</td><td>차트/표</td></tr>
+</table>
+
+<div class="page-break"></div>
+<h2>3. 화면별 상세 명세</h2>
+
+<h3>화면 ① 설명 분석</h3>
+<div class="flow"><b>흐름:</b> 이미지 업로드 → 시나리오 프리셋 선택(또는 직접 질문) → [분석 실행] → 결과 텍스트가 <b>실시간(스트리밍)</b>으로 흘러나옴</div>
+<table>
+  <tr><td class="k">입력</td><td>이미지 1장, 프리셋 드롭다운(4종) 또는 자유 입력 텍스트박스</td></tr>
+  <tr><td class="k">프리셋</td><td>도로 파손/포트홀 찾기 · 이미지 전체 설명 · 객체 목록 뽑기 · 이상 상황 탐지</td></tr>
+  <tr><td class="k">출력</td><td>한국어 분석 결과(마크다운 텍스트). 글자가 타이핑되듯 채워짐</td></tr>
+  <tr><td class="k">디자인 포인트</td><td>스트리밍 중 "생각하는 중" 로딩 표현 필요. 직접 입력 시 프리셋은 무시됨을 시각적으로 안내</td></tr>
+</table>
+
+<h3>화면 ② 박스로 찾기 <span class="tag">가장 중요</span></h3>
+<div class="flow"><b>흐름:</b> 이미지 업로드 → 찾을 대상 입력(쉼표로 여러 개) → 엔진 선택 → 신뢰도 임계값 설정 → [찾기] → 캔버스에 <b>박스 + 라벨 오버레이</b> 표시</div>
+<table>
+  <tr><td class="k">대상 입력</td><td>예: <code>포트홀</code> 또는 <code>포트홀, 균열, 맨홀</code> (다중 클래스)</td></tr>
+  <tr><td class="k">엔진 선택</td><td>① <b>Gemini</b>(자연어 이해, 유연) / ② <b>YOLO-World</b>(박스 위치 정확) — 라디오/토글</td></tr>
+  <tr><td class="k">신뢰도 필터</td><td>0~100% 슬라이더. 임계값 미만 박스는 자동 숨김</td></tr>
+  <tr><td class="k">결과 표시</td><td>이미지 위 컬러 박스 + 클래스명 + 신뢰도(%). 클래스별 색상 자동 배정(10색 팔레트)</td></tr>
+  <tr><td class="k">결과 요약</td><td>"N개 탐지 / M개 필터로 숨김" 형태 상태 메시지</td></tr>
+</table>
+<div class="wire">┌─────────────────────────────┐   ┌───── 컨트롤 ──────┐
+│                             │   │ 찾을 대상         │
+│     [이미지 + 박스 오버레이] │   │ [포트홀, 균열   ] │
+│   ┌──────┐                  │   │ 엔진 ◉Gemini ○YOLO│
+│   │포트홀 │92%               │   │ 신뢰도 ──●──── 40%│
+│   └──────┘     ┌────┐       │   │   [  찾  기  ]    │
+│                │균열│78%     │   │ ▸ 3개 탐지, 1개 숨김│
+└─────────────────────────────┘   └───────────────────┘</div>
+<div class="note"><b>주의:</b> AI 박스는 <b>초안</b>이다. 사용자가 "이거 틀렸네" 하고 바로 고칠 수 있어야 하므로,
+②번 결과에서 ③ 수동 보정으로 자연스럽게 이어지는 동선이 핵심. (현재는 같은 탭 하단에 보정 영역이 붙어 있음)</div>
+
+<h3>화면 ③ 수동 보정</h3>
+<div class="flow"><b>흐름:</b> ②의 탐지 결과를 <b>표(스프레드시트)</b>로 표시 → 좌표·클래스명 직접 수정 / 행 추가·삭제 → [반영] → 캔버스 다시 그림</div>
+<table>
+  <tr><td class="k">편집 방식</td><td>표 형태(클래스명, 좌표 4값, 신뢰도). 셀 직접 편집 + 행 추가/삭제</td></tr>
+  <tr><td class="k">정밀 마스크</td><td>[정밀화] 버튼 — 박스를 픽셀 단위 외곽선(폴리곤)으로 변환 <span class="tag opt">선택</span></td></tr>
+  <tr><td class="k">디자인 포인트</td><td>표 편집은 비개발자에게 어려움 → <b>마우스로 박스를 끌어 수정</b>하는 직접조작 UI가 이상적(개선 여지). 좌표는 0~1000 정규화 정수</td></tr>
+</table>
+
+<h3>화면 ④ 마우스 라벨링</h3>
+<div class="flow"><b>흐름:</b> 이미지 업로드 → 마우스로 영역 드래그 → 클래스 선택 → [저장]</div>
+<table>
+  <tr><td class="k">기본 클래스</td><td>포트홀 · 균열 · 맨홀 · 차량 · 사람 · 표지판 (확장 가능)</td></tr>
+  <tr><td class="k">용도</td><td>AI가 못 찾는 객체를 사람이 직접. 순수 수동 라벨링 지원</td></tr>
+</table>
+
+<div class="page-break"></div>
+<h3>화면 ⑤ 배치 처리</h3>
+<div class="flow"><b>흐름:</b> 여러 이미지 업로드 → 찾을 대상 입력 → [일괄 실행] → <b>진행률 바</b> + 장별 결과 누적</div>
+<table>
+  <tr><td class="k">진행 표시</td><td>"3 / 12 장 처리 중…" 진행률. 한 장 실패해도 멈추지 않고 계속</td></tr>
+  <tr><td class="k">옵션</td><td>SAM 정밀 마스크 적용 여부, 호출 간 딜레이(초) 조절(한도 완화)</td></tr>
+  <tr><td class="k">디자인 포인트</td><td>장시간 작업 → <b>진행률·예상시간·실패 장 표시</b>가 중요. 결과 썸네일 그리드 권장</td></tr>
+</table>
+
+<h3>화면 ⑥ 내보내기 / 저장</h3>
+<table>
+  <tr><td class="k">포맷</td><td>YOLO(.txt) · YOLO-seg(폴리곤 포함) · COCO(.json)</td></tr>
+  <tr><td class="k">다운로드</td><td>포맷별 zip 또는 개별 파일</td></tr>
+  <tr><td class="k">백엔드 저장</td><td>[서버에 저장] 버튼 <span class="tag mock">현재 MOCK</span> — 추후 실제 저장소 연동 예정</td></tr>
+  <tr><td class="k">데이터셋</td><td>저장 라벨을 학습용 train/val로 분할 내보내기(검증 비율 슬라이더)</td></tr>
+</table>
+
+<h3>화면 ⑦ 통계 대시보드</h3>
+<table>
+  <tr><td class="k">집계</td><td>클래스별 라벨 수(막대), 신뢰도 분포, 이미지별 박스 수(표)</td></tr>
+  <tr><td class="k">용도</td><td>데이터셋 균형·품질 점검. 어떤 클래스가 부족한지 한눈에</td></tr>
+</table>
+
+<h2>4. 공통 컴포넌트 / 상태 정의</h2>
+<table>
+  <tr><th>상태</th><th>표현 요구</th></tr>
+  <tr><td>빈 상태(이미지 없음)</td><td>"이미지를 먼저 업로드해주세요" 안내. 실행 버튼 비활성</td></tr>
+  <tr><td>로딩/처리 중</td><td>스트리밍 텍스트 또는 진행률. 버튼 중복 클릭 방지</td></tr>
+  <tr><td>탐지 결과 없음</td><td>"해당 대상을 찾지 못했습니다" — 오류 아님, 정상 안내</td></tr>
+  <tr><td>API 한도 초과(429)</td><td>"무료 사용 한도 초과 — 약 10~30초 뒤 다시 시도하세요" (무료티어 특성, 자주 발생)</td></tr>
+  <tr><td>키 미설정</td><td>탐지 기능 사용 시 키 필요 안내. <b>상단 전역 배너 권장(개선)</b></td></tr>
+  <tr><td>박스 오버레이</td><td>클래스별 10색 팔레트, 라벨 칩(클래스명+신뢰도%), 마스크는 반투명 채움</td></tr>
+</table>
+
+<div class="legend" style="margin:8px 0 0;">
+  <span><span class="dot" style="background:#FF3B30"></span>색1</span>
+  <span><span class="dot" style="background:#34C759"></span>색2</span>
+  <span><span class="dot" style="background:#007AFF"></span>색3</span>
+  <span><span class="dot" style="background:#FF9500"></span>색4</span>
+  <span><span class="dot" style="background:#AF52DE"></span>색5</span>
+  <span class="sub">… 클래스별로 순환 배정(총 10색)</span>
+</div>
+
+<h2>5. 참고 — 데이터 규약 (디자인엔 영향 적음)</h2>
+<ul>
+  <li>좌표: <code>[ymin, xmin, ymax, xmax]</code>, 0~1000 정규화 정수 (모든 화면 공통)</li>
+  <li>신뢰도(confidence): 0~100 정수</li>
+  <li>라벨 1건 = { 클래스명, 박스좌표, (선택)신뢰도, (선택)폴리곤 }</li>
+</ul>
+
+<h2>6. 디자인 우선순위 제안</h2>
+<ol>
+  <li><b>②→③ 검수 동선</b> — AI 박스 확인·수정이 가장 잦은 작업. 직접조작(드래그 수정) UX 최우선.</li>
+  <li><b>상태 피드백</b> — 한도초과/로딩/빈결과 메시지를 명확하고 비위협적으로.</li>
+  <li><b>배치 진행률</b> — 장시간 작업의 신뢰감.</li>
+  <li><b>비개발자 친화</b> — 표 편집 의존을 줄이고 시각적 조작 위주로.</li>
+</ol>
+
+<div class="footer">
+지엔소프트(주) × 유클리드소프트 「프로젝트형 청년 일경험」 · llm-job-support / image-understanding 프로토타입 기준 ·
+본 문서는 현재 동작 코드(v0.4)를 근거로 작성된 디자인 핸드오프 기준선이며, 실제 모델 정확도·성능은 별도 검증 대상임.
+</div>
+
+</body>
+</html>
