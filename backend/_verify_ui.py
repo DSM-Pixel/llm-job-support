@@ -191,26 +191,51 @@ with sync_playwright() as p:
         di.value.suggested_filename,
     )
 
-    # 저장 → 미리보기 유지
     saved_count = len(page.query_selector_all(".box-list li"))
-    page.click(".modal-save")
-    page.wait_for_selector(".toast.show")
-    check("labeling: 라벨 저장", "저장" in page.inner_text(".toast"), page.inner_text(".toast"))
-    page.click(".label-modal .modal-close")
-    page.wait_for_selector(".preview-boxes .pbox")
-    pbox = len(page.query_selector_all(".preview-boxes .pbox"))
-    check("labeling: 저장 후 미리보기에 박스 유지", pbox == saved_count, f"{pbox}/{saved_count}")
 
-    # 재열기 → 저장된 박스 복원
+    # 저장 안 한 채 닫기 → 확인 다이얼로그(자동 저장 안 함)
+    page.click(".label-modal .modal-close")
+    page.wait_for_selector(".confirm-save:not([hidden])")
+    check(
+        "labeling: 미저장 닫기 시 확인창",
+        page.is_visible(".confirm-save") and page.is_visible(".label-modal"),
+    )
+    page.click(".confirm-cancel")
+    page.wait_for_selector(".confirm-save", state="hidden")
+    check("labeling: 확인창 취소 시 모달 유지", page.is_visible(".label-modal"))
+
+    # 저장 → 모달 닫힘 + 미리보기 반영
+    page.click(".modal-save")
+    page.wait_for_selector("#label-modal", state="hidden")
+    pbox = len(page.query_selector_all(".preview-boxes .pbox"))
+    check("labeling: 저장 시 모달 닫힘+미리보기 반영", pbox == saved_count, f"{pbox}/{saved_count}")
+
+    # 재열기 → 복원
     page.click(".open-label-modal")
     page.wait_for_selector("#label-modal:not([hidden])")
     page.wait_for_function(
         "(n) => document.querySelectorAll('.box-list li').length === n", arg=saved_count
     )
-    check(
-        "labeling: 재열기 시 박스 복원", len(page.query_selector_all(".box-list li")) == saved_count
+    check("labeling: 재열기 시 복원", len(page.query_selector_all(".box-list li")) == saved_count)
+
+    # 새 박스 그린 뒤 '저장 안 함'으로 닫기 → 미반영(저장 안 눌렀으니)
+    page.wait_for_function(
+        "() => { const b=document.querySelector('.canvas-boxes'); return b && b.getBoundingClientRect().width > 50; }"
+    )
+    lay2 = page.locator(".canvas-boxes").bounding_box()
+    page.mouse.move(lay2["x"] + 200, lay2["y"] + 30)
+    page.mouse.down()
+    page.mouse.move(lay2["x"] + 260, lay2["y"] + 80, steps=4)
+    page.mouse.up()
+    page.wait_for_function(
+        "(n) => document.querySelectorAll('.box-list li').length === n + 1", arg=saved_count
     )
     page.click(".label-modal .modal-close")
+    page.wait_for_selector(".confirm-save:not([hidden])")
+    page.click(".confirm-discard")
+    page.wait_for_selector("#label-modal", state="hidden")
+    pbox2 = len(page.query_selector_all(".preview-boxes .pbox"))
+    check("labeling: 저장 안 함 선택 시 미반영", pbox2 == saved_count, f"{pbox2}/{saved_count}")
 
     # 이미지 교체(인라인)
     page.set_input_files(

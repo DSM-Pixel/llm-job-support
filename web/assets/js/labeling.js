@@ -102,6 +102,12 @@ document.addEventListener("DOMContentLoaded", () => {
   let start = null;
   let temp = null;
 
+  // 임시(드로잉 중) 박스를 항상 깔끔히 제거 — 누적/잔상 방지.
+  const clearTemp = () => {
+    boxesEl.querySelectorAll(".temp-box").forEach((el) => el.remove());
+    temp = null;
+  };
+
   stage.addEventListener("pointerdown", (event) => {
     const hit = event.target.closest(".draw-box");
     if (hit) {
@@ -109,10 +115,11 @@ document.addEventListener("DOMContentLoaded", () => {
       render();
       return;
     }
+    clearTemp(); // 이전 잔상 제거
     start = pct(event);
     stage.setPointerCapture(event.pointerId);
     temp = document.createElement("div");
-    temp.className = "draw-box";
+    temp.className = "draw-box temp-box";
     boxesEl.appendChild(temp);
   });
 
@@ -125,22 +132,28 @@ document.addEventListener("DOMContentLoaded", () => {
     temp.style.height = `${Math.abs(p.y - start.y)}%`;
   });
 
-  stage.addEventListener("pointerup", (event) => {
-    if (!start || !temp) return;
+  const finishDraw = (event) => {
+    if (!start) return;
     const p = pct(event);
     const x = Math.min(start.x, p.x);
     const y = Math.min(start.y, p.y);
     const w = Math.abs(p.x - start.x);
     const h = Math.abs(p.y - start.y);
-    temp.remove();
-    temp = null;
     start = null;
-    if (w < 1.2 || h < 1.2) return; // 오클릭 무시
-    const label = (classInput.value || "object").trim() || "object";
-    boxes.push({ x: +x.toFixed(2), y: +y.toFixed(2), w: +w.toFixed(2), h: +h.toFixed(2), label, confidence: null });
-    selected = boxes.length - 1;
+    clearTemp();
+    if (w >= 1.2 && h >= 1.2) {
+      const label = (classInput.value || "object").trim() || "object";
+      boxes.push({ x: +x.toFixed(2), y: +y.toFixed(2), w: +w.toFixed(2), h: +h.toFixed(2), label, confidence: null });
+      selected = boxes.length - 1;
+    }
+    render(); // boxes 기준으로 재구성 → 임시 박스/잔상 없음
+  };
+
+  stage.addEventListener("pointerup", finishDraw);
+  stage.addEventListener("pointercancel", () => {
+    start = null;
+    clearTemp();
     render();
-    ABC.toast(`‘${label}’ 박스 추가`);
   });
 
   listEl.addEventListener("input", (event) => {
@@ -293,7 +306,31 @@ document.addEventListener("DOMContentLoaded", () => {
       done();
     }
   };
-  modal.querySelector(".modal-save").addEventListener("click", (e) => saveLabels(e.currentTarget));
+  // 저장 안 한 변경이 있는지(저장본과 다름).
+  const isDirty = () => JSON.stringify(boxes) !== JSON.stringify(savedBoxes);
+
+  // "라벨 데이터셋에 저장" → 저장 후 모달 닫기.
+  modal.querySelector(".modal-save").addEventListener("click", async (e) => {
+    await saveLabels(e.currentTarget);
+    modal.hidden = true;
+  });
+
+  // ── 저장 확인 다이얼로그 ────────────────────────────────────────
+  const confirmEl = modal.querySelector(".confirm-save");
+  modal.querySelector(".confirm-save-btn").addEventListener("click", async (e) => {
+    confirmEl.hidden = true;
+    await saveLabels(e.currentTarget);
+    modal.hidden = true;
+  });
+  modal.querySelector(".confirm-discard").addEventListener("click", () => {
+    confirmEl.hidden = true;
+    boxes = clone(savedBoxes); // 변경 폐기(저장본으로 되돌림)
+    render();
+    modal.hidden = true;
+  });
+  modal.querySelector(".confirm-cancel").addEventListener("click", () => {
+    confirmEl.hidden = true; // 닫지 않고 모달에 머무름
+  });
 
   // ── 모달 열기/닫기 ──────────────────────────────────────────────
   const openModal = () => {
@@ -301,12 +338,16 @@ document.addEventListener("DOMContentLoaded", () => {
     if (s.defaultClass) classInput.value = s.defaultClass;
     boxes = clone(savedBoxes); // 저장된 박스를 이어서 편집
     selected = -1;
+    confirmEl.hidden = true;
     setImage();
     render();
     modal.hidden = false;
   };
   const closeModal = () => {
-    persist(); // 닫을 때 현재 박스를 유지(미리보기 반영)
+    if (isDirty()) {
+      confirmEl.hidden = false; // 저장할지 물어봄(자동 저장하지 않음)
+      return;
+    }
     modal.hidden = true;
   };
 
