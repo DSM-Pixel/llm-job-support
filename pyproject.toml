@@ -20,6 +20,7 @@ dev = [
     "ruff>=0.6.0",
     "pytest>=8.0.0",
     "ipython>=8.0.0",
+    "playwright>=1.40.0",  # 통합 UI 기능 점검(backend/_verify_ui.py)
 ]
 demo = [
     "gradio>=6.0.0",
@@ -70,6 +71,9 @@ select = [
 ignore = [
     "E501",  # 줄 길이는 formatter가 처리
     "B008",  # FastAPI Depends() 패턴 허용
+    "RUF001", # 한글 문자열의 스마트 따옴표(' ' " ")는 의도된 표기
+    "RUF002", # 〃 (docstring)
+    "RUF003", # 〃 (주석)
 ]
 
 [tool.ruff.format]

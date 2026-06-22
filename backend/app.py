@@ -44,6 +44,7 @@ class DetectIn(BaseModel):
     preset: str = "도로 파손/포트홀 찾기"
     custom_prompt: str = ""
     min_conf: int = 0
+    image_name: str = ""
 
 
 class ReportIn(BaseModel):
@@ -84,7 +85,7 @@ def rag_index(body: RagIndexIn) -> dict:
 
 @app.post("/api/labeling/detect")
 def labeling_detect(body: DetectIn) -> dict:
-    return services.labeling_detect(body.preset, body.custom_prompt, body.min_conf)
+    return services.labeling_detect(body.preset, body.custom_prompt, body.min_conf, body.image_name)
 
 
 @app.post("/api/report")
