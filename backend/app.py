@@ -57,6 +57,15 @@ class UploadIn(BaseModel):
     name: str = ""
 
 
+class WebSearchIn(BaseModel):
+    keyword: str = ""
+
+
+class SaveLabelsIn(BaseModel):
+    image_name: str = ""
+    label_count: int = 0
+
+
 # ── API 라우트 ───────────────────────────────────────────────────────
 @app.get("/api/health")
 def health() -> dict:
@@ -83,9 +92,24 @@ def rag_index(body: RagIndexIn) -> dict:
     return services.rag_index(body.sources, body.use_samples)
 
 
+@app.post("/api/rag/web-search")
+def rag_web_search(body: WebSearchIn) -> dict:
+    return services.rag_web_search(body.keyword)
+
+
+@app.post("/api/rag/reset")
+def rag_reset() -> dict:
+    return services.rag_reset()
+
+
 @app.post("/api/labeling/detect")
 def labeling_detect(body: DetectIn) -> dict:
     return services.labeling_detect(body.preset, body.custom_prompt, body.min_conf, body.image_name)
+
+
+@app.post("/api/labeling/save")
+def labeling_save(body: SaveLabelsIn) -> dict:
+    return services.save_labeling(body.image_name, body.label_count)
 
 
 @app.post("/api/report")

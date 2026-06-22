@@ -36,6 +36,8 @@ document.addEventListener("DOMContentLoaded", () => {
     ABC.toast("이미지를 교체했습니다");
   });
 
+  let labelCount = resultList ? resultList.querySelectorAll("li").length : 0;
+
   analyzeButton?.addEventListener("click", async () => {
     const preset =
       document.querySelector(".radio-list .active")?.textContent.trim() ||
@@ -57,12 +59,42 @@ document.addEventListener("DOMContentLoaded", () => {
           return `<li><span class="badge ${label.tone}">${ABC.escapeHtml(label.grade)}</span>${text}</li>`;
         })
         .join("");
+      labelCount = result.labels.length;
       confidence.textContent = `신뢰도 ${result.confidence.toFixed(2)}`;
       ABC.toast("이미지 분석이 완료되었습니다");
     } catch {
       /* api()가 toast 표시 */
     } finally {
       done();
+    }
+  });
+
+  // 결과 액션: "박스로 찾기" / "라벨로 저장"
+  document.querySelectorAll(".result-card .answer-actions button").forEach((button) => {
+    const label = button.textContent.trim();
+    if (label.includes("박스")) {
+      button.addEventListener("click", () => {
+        const boxTab = [...document.querySelectorAll(".mode-tabs button")].find((b) =>
+          b.textContent.includes("박스"),
+        );
+        if (boxTab) ABC.activateInGroup(boxTab, "button");
+        ABC.toast("박스 그리기 모드로 전환했습니다");
+      });
+    } else if (label.includes("저장")) {
+      button.addEventListener("click", async () => {
+        const done = ABC.setBusy(button, "저장 중");
+        try {
+          const result = await ABC.api("/api/labeling/save", {
+            image_name: imageName,
+            label_count: labelCount,
+          });
+          ABC.toast(result.message);
+        } catch {
+          /* handled */
+        } finally {
+          done();
+        }
+      });
     }
   });
 });

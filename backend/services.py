@@ -432,3 +432,69 @@ def upload_dataset(name: str = "") -> dict:
         "queued": True,
         "message": f"업로드 대기열에 추가되었습니다{f' — {name}' if name else ''}.",
     }
+
+
+# ────────────────────────────────────────────────────────────────────
+# 7. RAG 보조 — 웹 검색 / 색인 초기화 (MOCK)
+#    실제 연동: prototypes/rag-search web_search() / reset_index()
+# ────────────────────────────────────────────────────────────────────
+def rag_web_search(keyword: str) -> dict:
+    """웹에서 후보 문서를 찾아온다. (MOCK)"""
+    kw = (keyword or "").strip() or "도로 보수"
+    results = [
+        {
+            "title": f"{kw} 관련 기술기준",
+            "url": "https://www.law.go.kr",
+            "snippet": "도로 유지·보수 일반 기준 및 등급별 처리 기한.",
+        },
+        {
+            "title": f"{kw} 공공데이터",
+            "url": "https://www.data.go.kr",
+            "snippet": "도로 파손 신고·보수 현황 OpenAPI 데이터셋.",
+        },
+        {
+            "title": f"{kw} 점검 매뉴얼",
+            "url": "https://www.molit.go.kr",
+            "snippet": "시설물 점검 주기 및 보수 공법 안내.",
+        },
+    ]
+    return {
+        "backend": BACKEND,
+        "keyword": kw,
+        "results": results,
+        "message": f"‘{kw}’ 관련 웹 문서 {len(results)}건을 찾았습니다.",
+    }
+
+
+def rag_reset() -> dict:
+    """색인 초기화. (MOCK)"""
+    return {
+        "backend": BACKEND,
+        "indexed": False,
+        "source_count": 0,
+        "chunk_count": 0,
+        "message": "색인을 초기화했습니다 — 소스 0개",
+    }
+
+
+# ────────────────────────────────────────────────────────────────────
+# 8. 라벨 저장 (MOCK)
+#    실제 연동: prototypes/image-understanding backend_client.save_labeling()
+#    (해당 모듈도 이미 동일한 응답 계약을 따른다.)
+# ────────────────────────────────────────────────────────────────────
+def save_labeling(image_name: str = "", label_count: int = 0) -> dict:
+    """라벨링 결과를 백엔드에 저장. (MOCK)"""
+    if label_count <= 0:
+        return {
+            "status": "error",
+            "backend": BACKEND,
+            "record_id": "",
+            "message": "저장할 라벨이 없습니다. 먼저 '분석하기'를 실행하세요.",
+        }
+    slug = re.sub(r"[^0-9A-Za-z가-힣_-]+", "_", image_name or "image").strip("_") or "image"
+    return {
+        "status": "ok",
+        "backend": BACKEND,
+        "record_id": f"20260622_{slug}",
+        "message": f"[MOCK] 라벨 {label_count}건을 저장했습니다.",
+    }

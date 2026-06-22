@@ -56,16 +56,8 @@ const ABC = (() => {
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
 
-  document.addEventListener("click", (event) => {
-    const button = event.target.closest("button");
-    if (!button || button.dataset.noToast === "true") return;
-    if (button.classList.contains("primary")) return;
-    if (button.closest(".quick-grid")) return;
-    if (button.closest(".select-list")) return;
-    if (button.closest(".radio-list")) return;
-    if (button.closest(".mode-tabs")) return;
-    toast(`${button.textContent.trim()} 완료`);
-  });
+  // (이전엔 아무 버튼이나 누르면 "~ 완료" 토스트를 띄웠으나, 실제 동작이 없는
+  //  버튼도 완료된 것처럼 보여 오해를 주므로 제거했다. 각 핸들러가 직접 토스트한다.)
 
   return { toast, setBusy, activateInGroup, api, escapeHtml };
 })();

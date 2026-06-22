@@ -71,6 +71,65 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  // 색인 초기화
+  document.querySelector(".index-actions .flat")?.addEventListener("click", async (event) => {
+    const done = ABC.setBusy(event.currentTarget, "초기화 중");
+    try {
+      const result = await ABC.api("/api/rag/reset", {});
+      document.querySelector(".indexed").textContent = `✓ ${result.message}`;
+      ABC.toast("색인을 초기화했습니다");
+    } catch {
+      /* handled */
+    } finally {
+      done();
+    }
+  });
+
+  // 웹에서 찾아 넣기
+  const webInput = document.querySelector(".search-line input");
+  const webButton = document.querySelector(".search-line button");
+  webButton?.addEventListener("click", async () => {
+    const keyword = webInput?.value.trim();
+    if (!keyword) {
+      ABC.toast("검색어를 입력해주세요");
+      return;
+    }
+    const done = ABC.setBusy(webButton, "검색 중");
+    try {
+      const result = await ABC.api("/api/rag/web-search", { keyword });
+      const list = document.querySelector(".file-list");
+      result.results.forEach((r) => {
+        const item = document.createElement("li");
+        item.innerHTML = `<i>◎</i><b>${ABC.escapeHtml(r.title)}</b><small>${ABC.escapeHtml(r.url)}</small>`;
+        list?.prepend(item);
+      });
+      ABC.toast(result.message);
+    } catch {
+      /* handled */
+    } finally {
+      done();
+    }
+  });
+
+  // 답변 액션: "보고서로 생성" / "복사"
+  document.querySelectorAll(".answer-actions button").forEach((button) => {
+    const label = button.textContent.trim();
+    if (label.includes("보고서")) {
+      button.addEventListener("click", () => {
+        window.location.href = "report.html";
+      });
+    } else if (label.includes("복사")) {
+      button.addEventListener("click", async () => {
+        try {
+          await navigator.clipboard.writeText(answer.textContent.trim());
+          ABC.toast("답변을 복사했습니다");
+        } catch {
+          ABC.toast("복사를 지원하지 않는 브라우저입니다");
+        }
+      });
+    }
+  });
+
   const uploadInput = document.querySelector(".upload-input");
   const uploadBox = document.querySelector(".upload");
   const fileList = document.querySelector(".file-list");

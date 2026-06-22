@@ -71,6 +71,24 @@ with sync_playwright() as p:
     check("rag: 근거 3건 렌더", len(srcs) == 3, f"{len(srcs)}건")
     check("rag: 신뢰도 갱신", "신뢰도" in conf, conf)
 
+    files_before = len(page.query_selector_all(".file-list li"))
+    page.fill(".search-line input", "포트홀 보수 기준")
+    page.click(".search-line button")
+    page.wait_for_function(
+        "(n) => document.querySelectorAll('.file-list li').length > n", arg=files_before
+    )
+    files_after = len(page.query_selector_all(".file-list li"))
+    check(
+        "rag: 웹 검색 결과 추가", files_after == files_before + 3, f"{files_before}→{files_after}"
+    )
+
+    page.click(".index-actions .flat")
+    page.wait_for_function("() => document.querySelector('.indexed').innerText.includes('초기화')")
+    check("rag: 색인 초기화", "초기화" in page.inner_text(".indexed"), page.inner_text(".indexed"))
+
+    page.click(".answer-actions button:has-text('복사')")
+    check("rag: 답변 복사 동작", True)  # 예외 없이 핸들러 실행
+
     # 4) Labeling ─ 분석 + 이미지 교체
     page.goto(f"{BASE}/pages/labeling.html")
     page.click(".label-panel .primary")
@@ -92,6 +110,18 @@ with sync_playwright() as p:
         img_hidden is None and name_shown == "my_road.png",
         f"name={name_shown}",
     )
+
+    page.click(".result-card .answer-actions button:has-text('박스')")
+    box_active = page.eval_on_selector(
+        ".mode-tabs",
+        "el => [...el.querySelectorAll('button')].some(b => b.textContent.includes('박스') && b.classList.contains('active'))",
+    )
+    check("labeling: 박스 모드 전환", box_active)
+
+    page.click(".result-card .answer-actions button:has-text('저장')")
+    page.wait_for_selector(".toast.show")
+    toast_text = page.inner_text(".toast")
+    check("labeling: 라벨 저장 동작", "저장" in toast_text, toast_text)
 
     # 5) Report ─ 보고서 생성
     page.goto(f"{BASE}/pages/report.html")
