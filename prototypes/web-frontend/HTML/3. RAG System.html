@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAG 공공데이터 검색</title>
+  <link rel="stylesheet" href="../CSS/common.css">
+  <link rel="stylesheet" href="../CSS/3. RAG System.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <a class="logo" href="1. Main Dashboard.html">GNSoft</a>
+      <nav class="nav-group">
+        <p class="nav-label">AI 서비스</p>
+        <a class="nav-item" data-icon="▦" href="1. Main Dashboard.html">메인 대시보드</a>
+        <a class="nav-item" data-icon="▤" href="2. Natural Language Query.html">자연어 질의</a>
+        <a class="nav-item active" data-icon="⌕" href="3. RAG System.html">RAG 공공데이터 검색 <span class="nav-chevron">›</span></a>
+        <a class="nav-item" data-icon="⌗" href="4. Image Labeling.html">이미지 분석·라벨링</a>
+        <a class="nav-item" data-icon="⇱" href="5. Report.html">요약·보고서 생성</a>
+        <a class="nav-item" data-icon="▱" href="6. Data Management.html">데이터 관리</a>
+      </nav>
+      <div class="user-box"><span class="avatar">김연</span><div><div class="user-name">김연우</div><div class="user-team">R&D · 청년 1팀</div></div><span class="gear">⚙</span></div>
+    </aside>
+    <main class="main">
+      <header class="topbar"><h1>RAG 공공데이터 검색</h1><span class="live">LIVE</span><div class="top-actions"><span>?</span><span>♧</span></div></header>
+      <section class="rag-layout">
+        <aside class="knowledge">
+          <h2><span class="kb-icon">▥</span>지식베이스</h2>
+
+          <section class="kb-section">
+            <h3><span>1</span>문서 준비</h3>
+            <div class="toggle-row">
+              <div><b>샘플 점검 문서 사용</b><p>도로·포트홀·시설물</p></div>
+              <span class="switch"></span>
+            </div>
+            <label class="upload card">
+              <input type="file" class="upload-input" multiple accept=".txt,.md,.pdf">
+              <span class="upload-icon">⇧</span>
+              <b>내 문서 업로드</b>
+              <small>txt · md · pdf · 여러 개</small>
+            </label>
+            <div class="index-actions">
+              <button class="btn primary">문서 색인</button>
+              <button class="btn flat">↻ 초기화</button>
+            </div>
+            <div class="indexed">✓ 색인됨 — 소스 3개 · 청크 14개</div>
+          </section>
+
+          <section class="kb-section">
+            <h3><span>◎</span>웹에서 찾아 넣기</h3>
+            <div class="search-line"><input value="포트홀 도로 보수 기준"><button>검색</button></div>
+          </section>
+
+          <section class="kb-section">
+            <h3><span>⌘</span>참고중인 파일</h3>
+            <ul class="file-list">
+              <li><i>▤</i><b>포트홀_보수_기준.md</b><small>청크 5개</small></li>
+              <li><i>▤</i><b>도로_균열_점검.md</b><small>청크 4개</small></li>
+              <li><i>▤</i><b>시설물_점검_주기.md</b><small>청크 5개</small></li>
+            </ul>
+          </section>
+        </aside>
+
+        <section class="rag-content">
+          <div class="ask-box">
+            <label><span>2</span>질문하기</label>
+            <div class="ask-line"><input value="심각한 포트홀은 며칠 안에 보수해야 해?"><button class="btn primary">→ 질문하기</button></div>
+            <div class="chips"><span>추천</span><span class="pill active">심각한 포트홀은 며칠 안에 보수해야 해?</span><span class="pill">거북등 균열은 어떻게 보수해?</span><span class="pill">가드레일 점검 주기는 어떻게 돼?</span><span class="pill">우천 시 쓸 수 있는 긴급 보수 공법은?</span></div>
+          </div>
+
+          <article class="card answer">
+            <div class="answer-head"><h3>✣ AI 답변 <span class="status green">하이브리드 RAG</span></h3><span class="status green">신뢰도 0.93</span></div>
+            <p>포트홀은 등급에 따라 보수 기한이 다릅니다. <b>심각(상) 등급은 발견 즉시 24시간 이내 긴급 보수</b> 대상입니다. <sup>1</sup> 보통(중)은 7일 이내, 경미(하)는 정기 보수 주기에 포함해 처리합니다. <sup>2</sup></p>
+            <div class="answer-actions"><button class="btn">보고서로 생성</button><button class="btn">복사</button><small>top-K 4 · 14 chunks · 0.41s</small></div>
+          </article>
+
+          <h2 class="section-title">⌕ 검색된 근거 <small>3 sources · RRF</small></h2>
+          <div class="source-list">
+            <article class="card source"><div><b><span>1</span>포트홀_보수_기준.md</b><p>심각(상) 등급은 발견 즉시 24시간 이내 긴급 보수. 보통(중) 등급은 7일 이내 보수.</p></div><i><span style="width:94%"></span></i><em>0.94</em></article>
+            <article class="card source"><div><b><span>2</span>포트홀_보수_기준.md</b><p>심각(상): 지름 30cm 이상 또는 깊이 5cm 이상. 차량 손상 우려.</p></div><i><span style="width:90%"></span></i><em>0.90</em></article>
+            <article class="card source"><div><b><span>3</span>도로_균열_점검.md</b><p>균열 폭 3mm 이상이면 보수 대상으로 기록한다. 거북등 균열은 면적을 산정하여 보수 물량을 추정한다.</p></div><i><span style="width:71%"></span></i><em>0.71</em></article>
+          </div>
+        </section>
+      </section>
+    </main>
+  </div>
+  <script src="../JS/common.js"></script>
+  <script src="../JS/rag.js"></script>
+</body>
+</html>
