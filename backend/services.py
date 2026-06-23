@@ -123,36 +123,82 @@ def dashboard_stats() -> dict:
 # 2. 자연어 질의 — 의도 라우팅 + 답변 (MOCK)
 #    실제 연동: rag_search + labeling_detect 를 의도에 맞게 호출/오케스트레이션.
 # ────────────────────────────────────────────────────────────────────
-def _query_route(text: str) -> tuple[str, list[dict]]:
-    """질문 의도 → (intent, 후속 작업 버튼)."""
-    if re.search(r"포트홀|이미지|라벨|영역|박스|사진", text):
-        return "image", [
-            {"label": "이미지 분석으로 이동", "href": "labeling.html", "primary": True},
-            {"label": "데이터셋 보기", "href": "data.html", "primary": False},
-        ]
-    if re.search(r"공공|데이터|통계|신고|현황|검색|문서|예산", text):
-        return "rag", [
-            {"label": "RAG 검색으로 이동", "href": "rag.html", "primary": True},
-            {"label": "보고서 생성", "href": "report.html", "primary": False},
-        ]
-    if re.search(r"보고서|요약|리포트", text):
-        return "report", [
-            {"label": "보고서 화면으로 이동", "href": "report.html", "primary": True},
-        ]
-    return "general", []
+# 날짜·시각이 들어간 질문 → 방대한 데이터에서 특정 기록을 찾아야 함(RAG).
+_RE_DATETIME = re.compile(
+    r"\d{4}\s*[.\-/년]\s*\d{1,2}|\d{1,2}\s*시|오전|오후|\bam\b|\bpm\b", re.IGNORECASE
+)
+# 이미지 1장을 직접 분석/라벨해야 하는 작업 → 이미지 분석·라벨링.
+_RE_IMAGE = re.compile(r"영역|박스|바운딩|세그|라벨|이 ?이미지|이 ?사진|사진 ?분석|탐지해|검출해")
+# 데이터셋을 조회해야 답할 수 있는 질문(수량·목록·위치 조회 등) → RAG.
+_RE_DATA = re.compile(
+    r"위치|어디|좌표|구간|지점|몇 ?건|건수|개수|목록|리스트|현황|통계|집계|검색|조회|찾아"
+)
+# 일반 지식·정의·방법 질문 → 그냥 답변.
+_RE_GENERAL = re.compile(
+    r"뭐야|뭐임|무엇|정의|개념|의미|왜|어떻게|방법|차이|종류|원인|날씨|예방|효과"
+)
+
+
+def _classify_query(text: str) -> str:
+    """자연어 질문 분류 → 'general'(바로 답변) / 'rag'(데이터 검색 연계) / 'image'(이미지 작업 연계)."""
+    if _RE_DATETIME.search(text):  # 날짜·시각이 있으면 특정 기록 조회 → 데이터 검색
+        return "rag"
+    if _RE_IMAGE.search(text):  # 이미지 1장 분석/라벨 작업
+        return "image"
+    if _RE_DATA.search(text) and not _RE_GENERAL.search(text):  # 데이터셋 조회성 질문
+        return "rag"
+    return "general"  # 정의·방법·일반 지식 등은 바로 답변
 
 
 def route_query(question: str) -> dict:
-    """질문에 실제로 답한다(웹 검색 그라운딩) + 관련 작업 화면 버튼 제시."""
+    """질문을 판단해 ① 일반 지식이면 바로 답하고, ② 방대한 데이터가 필요하면
+    답하는 대신 적합한 화면(RAG 검색/이미지 분석)으로 연계 안내한다."""
     text = re.sub(r"\s+", " ", (question or "").strip())
-    intent, actions = _query_route(text)
+    intent = _classify_query(text)
+
+    if intent == "rag":
+        from urllib.parse import quote
+
+        return {
+            "backend": "ROUTER",
+            "intent": "rag",
+            "answer": (
+                "이 질문은 색인된 공공데이터에서 특정 기록을 직접 찾아야 정확히 답할 수 있습니다. "
+                "데이터가 방대하므로 제가 바로 답하기보다 ‘RAG 공공데이터 검색’에서 찾는 것이 좋습니다. "
+                "아래 버튼을 누르면 질문이 그대로 전달되어 색인된 데이터 안에서 검색합니다."
+            ),
+            "sources": [],
+            "actions": [
+                {
+                    "label": "RAG 공공데이터 검색으로 이동",
+                    "href": f"rag.html?q={quote(text)}",
+                    "primary": True,
+                },
+            ],
+        }
+
+    if intent == "image":
+        return {
+            "backend": "ROUTER",
+            "intent": "image",
+            "answer": (
+                "이 질문은 도로 이미지를 직접 분석해야 합니다. ‘이미지 분석·라벨링’ 화면에서 "
+                "사진을 올리면 포트홀·균열 영역을 탐지·라벨링할 수 있습니다. 아래 버튼으로 이동하세요."
+            ),
+            "sources": [],
+            "actions": [
+                {"label": "이미지 분석·라벨링으로 이동", "href": "labeling.html", "primary": True},
+            ],
+        }
+
+    # 일반 지식 질문 → 그냥 답변(웹 검색 그라운딩).
     answer, sources, backend = _web_answer(question)
     return {
         "backend": backend,
-        "intent": intent,
+        "intent": "general",
         "answer": answer,
         "sources": sources,
-        "actions": actions,
+        "actions": [],
     }
 
 
@@ -223,6 +269,29 @@ _SAMPLE_DOCS = [
         "text": (
             "CCTV 영상에서 낙하물, 무단횡단, 차량 정지·역주행 같은 이상행동을 탐지해 관제센터에 자동 알림을 보낸다. "
             "야간·악천후에는 오탐이 늘 수 있어 신뢰도 임계값과 사람 확인 절차를 함께 둔다."
+        ),
+    },
+    # 탐지로그 — 날짜·시각·위치가 든 기록. "2026.04.24 8시 포트홀 위치" 같은 질의가
+    # 코퍼스 안에서만 검색되어 보고되도록 하는 샘플 데이터.
+    {
+        "source": "도로파손_탐지로그_2026Q2.csv",
+        "text": (
+            "2026-04-24 08:12 촬영 · 대전 유성구 문지로 272 부근에서 포트홀 1건 탐지(심각도 상, 지름 42cm). "
+            "위치 위도 36.392 경도 127.391. 야간순찰 1조 등록, 24시간 내 긴급 보수 대상."
+        ),
+    },
+    {
+        "source": "도로파손_탐지로그_2026Q2.csv",
+        "text": (
+            "2026-04-24 14:30 촬영 · 대전 서구 둔산대로에서 포트홀 2건 탐지(심각도 중). "
+            "위치 위도 36.351 경도 127.384. 7일 내 보수 예정."
+        ),
+    },
+    {
+        "source": "도로파손_탐지로그_2026Q2.csv",
+        "text": (
+            "2026-04-25 09:05 촬영 · 세종시 한누리대로에서 포트홀 1건 탐지(심각도 하). "
+            "위치 위도 36.480 경도 127.289. 정기 보수 주기 포함."
         ),
     },
 ]
