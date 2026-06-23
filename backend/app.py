@@ -80,6 +80,11 @@ class ReportActivityIn(BaseModel):
     include_chart: bool = True
 
 
+class ReportReviseIn(BaseModel):
+    content: str = ""
+    instruction: str = ""
+
+
 class UploadIn(BaseModel):
     name: str = ""
 
@@ -243,6 +248,12 @@ def report_activity(body: ReportActivityIn) -> dict:
     return services.generate_report_activity(
         body.activities, body.start, body.end, body.report_type, body.include_chart
     )
+
+
+@app.post("/api/report/revise")
+def report_revise(body: ReportReviseIn) -> dict:
+    """AI 대화로 현재 보고서를 수정(예: 서론·본론·결론 분리)하거나 질문에 답한다."""
+    return services.revise_report(body.content, body.instruction)
 
 
 @app.get("/api/datasets")

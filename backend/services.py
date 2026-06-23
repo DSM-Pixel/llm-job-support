@@ -18,8 +18,24 @@ from __future__ import annotations
 
 import os
 import re
+from concurrent.futures import ThreadPoolExecutor
 
 BACKEND = "MOCK"
+
+# Gemini 호출용 스레드풀 — 429 재시도로 길게 행하는 호출을 하드 타임아웃으로 끊는다.
+# (SDK의 http_options timeout/retry_options는 재시도 루프를 막지 못해 직접 끊는다.)
+_GEMINI_POOL = ThreadPoolExecutor(max_workers=8)
+_GEMINI_TIMEOUT_S = 15
+
+
+def _gemini_generate(client, **kwargs):
+    """client.models.generate_content 를 하드 타임아웃으로 감싼다.
+
+    초과 시 TimeoutError 를 던져 호출부 except 가 MOCK 폴백을 타게 한다.
+    (백그라운드 스레드는 SDK 호출이 끝나면 정리된다.)
+    """
+    fut = _GEMINI_POOL.submit(lambda: client.models.generate_content(**kwargs))
+    return fut.result(timeout=_GEMINI_TIMEOUT_S)
 
 
 # ────────────────────────────────────────────────────────────────────
@@ -361,14 +377,14 @@ def _generate_answer(query: str, hits: list[dict]) -> tuple[str, str]:
         try:
             from google import genai
 
-            client = genai.Client(api_key=key)
+            client = genai.Client(api_key=key, http_options={"timeout": 20000})
             prompt = (
                 "너는 도로 유지보수 지식 도우미다. 아래 '근거'에 적힌 내용만으로 한국어로 "
                 "2~3문장으로 간결히 답하라. 근거에 질문의 답이 없으면 추측하지 말고 "
                 "반드시 '참고 문서에 해당 정보가 없습니다.' 라고만 답하라.\n\n"
                 f"질문: {query}\n\n근거:\n{context}"
             )
-            resp = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+            resp = _gemini_generate(client, model="gemini-2.5-flash", contents=prompt)
             text = (resp.text or "").strip()
             if text:
                 return text, "GEMINI"
@@ -617,9 +633,9 @@ def analyze_image_vision(
             from google import genai
             from google.genai import types
 
-            client = genai.Client(api_key=key)
+            client = genai.Client(api_key=key, http_options={"timeout": 20000})
             part = types.Part.from_bytes(data=image_bytes, mime_type=mime or "image/png")
-            resp = client.models.generate_content(model="gemini-2.5-flash", contents=[part, prompt])
+            resp = _gemini_generate(client, model="gemini-2.5-flash", contents=[part, prompt])
             text = (resp.text or "").strip()
             if text:
                 return {"backend": "GEMINI", "preset": preset, "description": text}
@@ -892,6 +908,68 @@ def _parse_md_sections(text: str) -> list[dict]:
     return [x for x in sections if x["heading"] and x["body"]]
 
 
+def revise_report(content: str, instruction: str) -> dict:
+    """현재 보고서 본문을 사용자 지시대로 수정해 새 제목·섹션을 반환한다.
+
+    - 수정 지시(예: '서론·본론·결론으로 나눠줘', '서론에 포트홀 정의 추가')면
+      mode='edit' 로 수정된 전체 보고서(title/sections)를 돌려줘 프런트가 다시 렌더한다.
+    - 단순 질문이면 mode='answer' 로 답변만 돌려준다.
+    - Gemini 사용. 무키/한도/실패 시 안내 메시지(mode='answer').
+    """
+    body = (content or "").strip()
+    instr = (instruction or "").strip()
+    if not instr:
+        return {"backend": "MOCK", "mode": "answer", "answer": "무엇을 도와드릴까요?"}
+
+    key = _gemini_key()
+    if key and body:
+        try:
+            from google import genai
+
+            client = genai.Client(api_key=key, http_options={"timeout": 20000})
+            prompt = (
+                "너는 한국어 보고서 편집 도우미다. 아래 '현재 보고서'를 사용자 '지시'대로 처리하라.\n"
+                "- 보고서를 고치는 지시면: 수정된 전체 보고서를 다음 형식으로만 출력한다.\n"
+                "  · 첫 줄: '# 제목'\n"
+                "  · 이후 각 섹션: '## 소제목' 한 줄 + 다음 줄부터 본문(2~4문장 또는 '- ' 불릿)\n"
+                "  · 머리말/맺음말/코드펜스(```) 없이 본문만.\n"
+                "- 보고서를 고치지 않는 단순 질문이면: 'ANSWER:' 로 시작해 2~4문장으로 답한다.\n\n"
+                f"지시: {instr}\n\n현재 보고서:\n{body[:6000]}"
+            )
+            resp = _gemini_generate(client, model="gemini-2.5-flash", contents=prompt)
+            text = (resp.text or "").strip().strip("`")
+            if text.upper().startswith("ANSWER:"):
+                return {
+                    "backend": "GEMINI",
+                    "mode": "answer",
+                    "answer": text.split(":", 1)[1].strip(),
+                }
+            # 첫 '# 제목' 줄을 분리하고 나머지를 섹션으로 파싱.
+            title = ""
+            lines = text.splitlines()
+            if lines and lines[0].lstrip().startswith("# "):
+                title = lines[0].lstrip().lstrip("#").strip()
+                text = "\n".join(lines[1:])
+            sections = _parse_md_sections(text)
+            if sections:
+                return {"backend": "GEMINI", "mode": "edit", "title": title, "sections": sections}
+            if text.strip():
+                return {"backend": "GEMINI", "mode": "answer", "answer": text.strip()}
+        except Exception:
+            pass
+
+    return {
+        "backend": "MOCK",
+        "mode": "answer",
+        "answer": (
+            "AI 사용량(토큰)이 일시적으로 소진되어 지금은 보고서 수정을 적용하지 못했습니다. "
+            "사용량이 회복되거나 API 키를 교체하면 ‘서론·본론·결론으로 나눠줘’, "
+            "‘서론에 포트홀이 무엇인지 추가해줘’ 같은 지시로 실제 수정됩니다. "
+            "그 사이에도 보고서 본문을 직접 클릭해 수정할 수 있습니다."
+        ),
+    }
+
+
 def _grounding_sources(resp) -> list[dict]:
     """Gemini 응답의 grounding 메타에서 실제 출처(제목+URL)를 추출."""
     out: list[dict] = []
@@ -923,14 +1001,15 @@ def _web_answer(question: str) -> tuple[str, list[dict], str]:
             from google import genai
             from google.genai import types
 
-            client = genai.Client(api_key=key)
+            client = genai.Client(api_key=key, http_options={"timeout": 20000})
             tool = types.Tool(google_search=types.GoogleSearch())
             prompt = (
                 "너는 도로 유지보수·공공데이터 업무 도우미다. 다음 질문에 한국어로 정확하고 친절하게 "
                 "답하라. 필요하면 웹을 검색해 최신 사실·수치에 근거하라. 3~6문장으로 답하고, 핵심은 "
                 f"'- ' 불릿으로 정리해도 좋다.\n\n질문: {q}"
             )
-            resp = client.models.generate_content(
+            resp = _gemini_generate(
+                client,
                 model="gemini-2.5-flash",
                 contents=prompt,
                 config=types.GenerateContentConfig(tools=[tool]),
@@ -965,13 +1044,13 @@ def ask_about_text(context: str, question: str) -> dict:
         try:
             from google import genai
 
-            client = genai.Client(api_key=key)
+            client = genai.Client(api_key=key, http_options={"timeout": 20000})
             prompt = (
                 "아래 '문서'의 내용만 근거로 질문에 한국어로 간결히(2~4문장) 답하라. "
                 "문서에 답이 없으면 '이 문서에는 해당 내용이 없습니다.'라고만 답하라.\n\n"
                 f"문서:\n{ctx[:6000]}\n\n질문: {q}"
             )
-            resp = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+            resp = _gemini_generate(client, model="gemini-2.5-flash", contents=prompt)
             text = (resp.text or "").strip()
             if text:
                 return {"backend": "GEMINI", "answer": text}
@@ -994,10 +1073,10 @@ def ask_about_image(image_bytes: bytes, question: str, mime: str = "image/png") 
             from google import genai
             from google.genai import types
 
-            client = genai.Client(api_key=key)
+            client = genai.Client(api_key=key, http_options={"timeout": 20000})
             part = types.Part.from_bytes(data=image_bytes, mime_type=mime or "image/png")
             prompt = f"이 이미지만 보고 질문에 한국어로 간결히(2~4문장) 답하라.\n질문: {q}"
-            resp = client.models.generate_content(model="gemini-2.5-flash", contents=[part, prompt])
+            resp = _gemini_generate(client, model="gemini-2.5-flash", contents=[part, prompt])
             text = (resp.text or "").strip()
             if text:
                 return {"backend": "GEMINI", "answer": text}
@@ -1031,7 +1110,7 @@ def generate_report_web(
             from google import genai
             from google.genai import types
 
-            client = genai.Client(api_key=key)
+            client = genai.Client(api_key=key, http_options={"timeout": 20000})
             tool = types.Tool(google_search=types.GoogleSearch())
             prompt = (
                 f"'{topic}' 주제로 한국어 {kind} 보고서를 풍부하고 충실하게 작성해라. "
@@ -1043,7 +1122,8 @@ def generate_report_web(
                 "- 가능하면 '핵심 수치', '지역별/연도별 현황', '원인 분석', '대응 방안/권고' 섹션을 포함.\n"
                 "- 머리말/맺음말/코드펜스 없이 섹션만 출력."
             )
-            resp = client.models.generate_content(
+            resp = _gemini_generate(
+                client,
                 model="gemini-2.5-flash",
                 contents=prompt,
                 config=types.GenerateContentConfig(tools=[tool]),
@@ -1107,7 +1187,7 @@ def generate_report_from_rag(
         try:
             from google import genai
 
-            client = genai.Client(api_key=key)
+            client = genai.Client(api_key=key, http_options={"timeout": 20000})
             prompt = (
                 f"아래 'RAG 검색 결과'(질문·AI 답변·근거 문서)를 바탕으로 한국어 {kind} 보고서를 "
                 "충실하게 작성하라. 근거 문서에 있는 내용만 사용하고(추측 금지), 질문과 답변을 보고서 "
@@ -1115,7 +1195,7 @@ def generate_report_from_rag(
                 "출력: 5~6개 섹션. 각 섹션 '## N. 제목' 한 줄, 다음 줄에 본문 2~4문장 또는 '- ' 불릿. "
                 "머리말/맺음말/코드펜스 없이 섹션만.\n\n" + context
             )
-            resp = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+            resp = _gemini_generate(client, model="gemini-2.5-flash", contents=prompt)
             sections = _parse_md_sections(resp.text or "")
             if sections:
                 return {
@@ -1208,14 +1288,14 @@ def generate_report_activity(
         try:
             from google import genai
 
-            client = genai.Client(api_key=key)
+            client = genai.Client(api_key=key, http_options={"timeout": 20000})
             prompt = (
                 "다음은 사용자의 도로 유지보수 AI 플랫폼 사용 활동 로그 요약이다. 이를 분석해 한국어 "
                 "'활동 요약 보고서'를 작성하라. 활동 통계·패턴·주요 작업·인사이트를 포함하고, "
                 "5개 섹션 '## N. 제목' 한 줄 + 본문 2~3문장 또는 '- ' 불릿으로. 머리말/맺음말 없이.\n\n"
                 + context
             )
-            resp = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+            resp = _gemini_generate(client, model="gemini-2.5-flash", contents=prompt)
             parsed = _parse_md_sections(resp.text or "")
             if parsed:
                 sections = parsed
