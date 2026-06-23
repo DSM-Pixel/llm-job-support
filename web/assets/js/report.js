@@ -23,12 +23,39 @@ document.addEventListener("DOMContentLoaded", () => {
       .map((row) => row.querySelector("span, b")?.textContent.trim())
       .filter(Boolean);
 
+  // 본문(여러 문단 + '- ' 불릿)을 문단/목록 HTML로 렌더.
+  const renderBody = (body) => {
+    const lines = String(body || "")
+      .split(/\n+/)
+      .map((l) => l.trim())
+      .filter(Boolean);
+    let html = "";
+    let inList = false;
+    for (const ln of lines) {
+      if (/^[-*•]\s+/.test(ln)) {
+        if (!inList) {
+          html += "<ul>";
+          inList = true;
+        }
+        html += `<li>${esc(ln.replace(/^[-*•]\s+/, ""))}</li>`;
+      } else {
+        if (inList) {
+          html += "</ul>";
+          inList = false;
+        }
+        html += `<p>${esc(ln)}</p>`;
+      }
+    }
+    if (inList) html += "</ul>";
+    return html || "<p></p>";
+  };
+
   // 구조화 응답 → 편집 가능한 제출 보고서 문서로 렌더.
   const renderReport = (r) => {
     const sections = (r.sections || [])
       .map(
         (s) =>
-          `<section><h3 contenteditable="true">${esc(s.heading)}</h3><p contenteditable="true">${esc(s.body)}</p></section>`,
+          `<section><h3 contenteditable="true">${esc(s.heading)}</h3><div class="sec-body" contenteditable="true">${renderBody(s.body)}</div></section>`,
       )
       .join("");
 

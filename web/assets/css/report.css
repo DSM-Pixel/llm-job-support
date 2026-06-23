@@ -4,6 +4,22 @@
   min-height: calc(100vh - 54px);
 }
 
+/* 보고서 본문 — 문단 + 불릿 목록 */
+.report-page .sec-body p {
+  margin: 0 0 8px;
+  line-height: 1.75;
+}
+
+.report-page .sec-body ul {
+  margin: 4px 0 8px;
+  padding-left: 20px;
+}
+
+.report-page .sec-body li {
+  margin: 4px 0;
+  line-height: 1.7;
+}
+
 /* 웹 검색 보고서 — 실제 출처 링크 */
 .report-page .src-link {
   text-decoration: none;

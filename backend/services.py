@@ -663,8 +663,150 @@ def generate_report(
     }
 
 
+def _rich_report_sections(kind: str, period: str, focus: str) -> list[dict]:
+    """웹 검색 불가 시 쓰는 풍부한 예시 섹션(초기 화면보다 상세, 불릿 포함)."""
+    if kind == "정책 브리핑":
+        return [
+            {
+                "heading": "1. 배경 및 목적",
+                "body": (
+                    f"{period} 도로 포트홀·파손 신고가 지속 증가하여 보수 우선순위와 예산 배분에 대한 정책 판단이 필요하다. "
+                    f"본 브리핑은 {focus}을(를) 근거로 현행 대응 체계의 한계를 진단하고 개선 방향을 제시한다."
+                ),
+            },
+            {
+                "heading": "2. 현황 요약",
+                "body": (
+                    "- 전국 포트홀 신고는 연평균 약 14% 증가 추세\n"
+                    "- 수도권 비중이 약 41%로 가장 높음\n"
+                    "- 심각(상) 등급 비율이 전 분기 대비 소폭 상승"
+                ),
+            },
+            {
+                "heading": "3. 핵심 이슈",
+                "body": (
+                    "신고-보수 간 시차 확대, 지역별 예산 집행률 편차, 야간·우천 시 탐지 사각지대가 핵심 이슈로 확인된다. "
+                    "특히 집행률이 낮은 권역에서 반복 신고가 누적되는 경향이 있다."
+                ),
+            },
+            {
+                "heading": "4. 정책 제언",
+                "body": (
+                    "- 심각 등급 24시간 이내 긴급 보수 의무화\n"
+                    "- 집행률 저조 권역 예산 재배분 및 성과 연동\n"
+                    "- Vision AI 자동 검수로 신고-보수 시차 단축"
+                ),
+            },
+            {
+                "heading": "5. 기대 효과",
+                "body": (
+                    "사고 위험 감소, 예산 집행 효율화, 보수 대응 시간 단축이 기대되며, 시민 신고 데이터와 AI 탐지의 연계로 "
+                    "예방적 유지보수 전환이 가능하다."
+                ),
+            },
+            {
+                "heading": "6. 추진 일정(안)",
+                "body": (
+                    "- 1단계(1개월): 기준 정비 및 데이터 연계\n"
+                    "- 2단계(3개월): 자동 검수 시범 적용\n"
+                    "- 3단계(6개월): 전 권역 확대 및 성과 평가"
+                ),
+            },
+        ]
+    if kind == "검수 요약":
+        return [
+            {
+                "heading": "1. 검수 개요",
+                "body": (
+                    f"{period} 수집·라벨링된 데이터셋을 대상으로 품질 검수를 수행하였다. 대상 소스: {focus}."
+                ),
+            },
+            {
+                "heading": "2. 데이터셋 규모",
+                "body": (
+                    "- 총 라벨 12,840건, 검수 완료 100%\n"
+                    "- 클래스 분포: 포트홀 > 균열 > 도로파손\n"
+                    "- 원본 이미지 18,706장, 공공데이터 37종"
+                ),
+            },
+            {
+                "heading": "3. 라벨 정확도",
+                "body": (
+                    "샘플 검증 결과 박스 IoU 0.87, 클래스 정확도 96.2%를 기록했다. 경계가 모호한 손상부에서 "
+                    "오탐·미탐이 일부 확인된다."
+                ),
+            },
+            {
+                "heading": "4. 품질 이슈",
+                "body": (
+                    "- 야간·우천 이미지 표본 부족\n"
+                    "- 소수 클래스(맨홀 등) 데이터 희소\n"
+                    "- 경계 모호 라벨의 검수자 간 편차"
+                ),
+            },
+            {
+                "heading": "5. 보완 권고",
+                "body": (
+                    "야간·우천 이미지 보강, 경계 모호 라벨 재검수, 소수 클래스 추가 수집과 검수 가이드 보강을 권고한다."
+                ),
+            },
+            {
+                "heading": "6. 결론",
+                "body": (
+                    "전반적 품질은 양호하며, 위 보완을 반영하면 파인튜닝 학습 데이터로 활용 가능한 수준이다."
+                ),
+            },
+        ]
+    # 기본: 현황 분석
+    return [
+        {
+            "heading": "1. 개요",
+            "body": (
+                f"{period} 전국 도로 파손(포트홀) 현황을 {focus} 기준으로 분석하였다. 신고·보수·예산·검수 결과를 종합해 "
+                "현행 대응 수준과 개선 여지를 점검한다."
+            ),
+        },
+        {
+            "heading": "2. 핵심 수치",
+            "body": (
+                "- 2025년 누적 신고 38,402건(연평균 약 14% 증가)\n"
+                "- 수도권 비중 41%로 최다\n"
+                "- 평균 예산 집행률 약 87%"
+            ),
+        },
+        {
+            "heading": "3. 지역별 현황",
+            "body": (
+                "수도권은 신고량·집행률 모두 높은 반면, 일부 권역은 집행률이 낮아 보수 적체가 누적된다. "
+                "아래 표의 권역별 수치를 참고한다."
+            ),
+        },
+        {
+            "heading": "4. 원인 분석",
+            "body": (
+                "- 노후 포장과 반복 하중\n"
+                "- 동결-융해 및 우천 등 기상 요인\n"
+                "- 신고-보수 시차로 인한 손상 확대"
+            ),
+        },
+        {
+            "heading": "5. Vision AI 검수 결과",
+            "body": (
+                "탐지 모델(YOLO) 기반 검수에서 심각(상) 등급 비율이 전 분기 대비 소폭 상승했다. 자동 탐지로 "
+                "현장 확인 전 우선순위 분류가 가능하다."
+            ),
+        },
+        {
+            "heading": "6. 권고",
+            "body": (
+                "심각 등급 24시간 이내 긴급 보수, 보통 등급 7일 이내 처리 기준 적용과 집행률 저조 권역 예산 재배분을 권고한다."
+            ),
+        },
+    ]
+
+
 def _parse_md_sections(text: str) -> list[dict]:
-    """'## 제목 / 본문' 마크다운을 섹션 목록으로 파싱."""
+    """'## 제목 / 본문' 마크다운을 섹션 목록으로 파싱. 본문의 줄바꿈·불릿(- )은 보존."""
     sections: list[dict] = []
     cur: dict | None = None
     for line in (text or "").splitlines():
@@ -674,7 +816,7 @@ def _parse_md_sections(text: str) -> list[dict]:
                 sections.append(cur)
             cur = {"heading": s.lstrip("#").strip(), "body": ""}
         elif s and cur is not None:
-            cur["body"] = (cur["body"] + " " + s).strip()
+            cur["body"] = (cur["body"] + "\n" + s) if cur["body"] else s
     if cur:
         sections.append(cur)
     return [x for x in sections if x["heading"] and x["body"]]
@@ -724,11 +866,14 @@ def generate_report_web(
             client = genai.Client(api_key=key)
             tool = types.Tool(google_search=types.GoogleSearch())
             prompt = (
-                f"'{topic}' 주제로 한국어 {kind} 보고서를 작성해라. "
-                "반드시 웹을 검색해 최신 사실·수치에 근거하고, 수치에는 맥락을 붙여라. "
-                f"기간 관점: {period}. "
-                "출력 형식은 정확히 4개 섹션. 각 섹션은 '## 제목' 한 줄 다음 줄에 본문 2~3문장. "
-                "그 외 머리말/맺음말/코드펜스 없이 섹션만 출력."
+                f"'{topic}' 주제로 한국어 {kind} 보고서를 풍부하고 충실하게 작성해라. "
+                "반드시 웹을 검색해 최신 사실·수치에 근거하라. 모든 섹션에 구체적 수치·연도·지역·"
+                f"기관명 등 근거를 포함하라. 기간 관점: {period}.\n"
+                "출력 형식:\n"
+                "- 6~7개 섹션. 각 섹션은 '## N. 제목' 한 줄, 다음 줄부터 본문.\n"
+                "- 본문은 3~5문장으로 충분히 서술하되, 핵심 항목은 '- '로 시작하는 불릿 3개 내외로 정리.\n"
+                "- 가능하면 '핵심 수치', '지역별/연도별 현황', '원인 분석', '대응 방안/권고' 섹션을 포함.\n"
+                "- 머리말/맺음말/코드펜스 없이 섹션만 출력."
             )
             resp = client.models.generate_content(
                 model="gemini-2.5-flash",
@@ -748,16 +893,25 @@ def generate_report_web(
                     "title": f"도로 파손 {kind} 보고서",
                     "subtitle": f"생성일 2026.6.23 · 웹 검색 기반 · {period} · 소스 {len(srcs) or 3}개",
                     "sections": sections,
-                    "table": None,
+                    "table": _report_table(period) if kind == "현황 분석" else None,
                     "sources": sources
                     or [{"title": "Google 검색", "url": "https://www.google.com"}],
                 }
         except Exception:
             pass
-    # 폴백: 기존 MOCK 보고서 + 안내.
-    res = generate_report(report_type, period, None)
-    res["subtitle"] += " · (웹 검색 불가 → 예시)"
-    return res
+    # 폴백: 웹 검색 불가 시에도 초기 화면보다 풍부한 보고서로(내용이 바뀌도록).
+    return {
+        "backend": "MOCK",
+        "report_type": kind,
+        "org": "GNSOFT",
+        "date": "2026.6.23",
+        "period": period,
+        "title": f"도로 파손 {kind} 보고서",
+        "subtitle": f"생성일 2026.6.23 · 예시(웹 검색 불가) · {period} · 소스 {len(srcs) or 3}개",
+        "sections": _rich_report_sections(kind, period, focus),
+        "table": _report_table(period),
+        "sources": srcs or ["도로 파손 신고 현황", "도로보수 예산 현황", "Vision AI 검수 리포트"],
+    }
 
 
 # ────────────────────────────────────────────────────────────────────
