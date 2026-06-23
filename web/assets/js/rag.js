@@ -33,6 +33,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (methodTag) methodTag.textContent = result.method;
       if (meta) meta.textContent = `top-K ${result.top_k} · ${result.chunks} chunks · ${result.elapsed}`;
       renderSources(result.sources);
+      ABC.logActivity("RAG 검색", query);
       ABC.toast(result.found ? "검색 결과가 갱신되었습니다" : "참고 문서에 관련 정보가 없습니다");
     } catch {
       /* api()가 이미 toast 표시 */
@@ -299,6 +300,7 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
     const done = ABC.setBusy(indexBtn, "색인 중");
+    const stagedNames = stagedDocs.map((d) => d.name).join(", ");
     try {
       const useSamples = !document.querySelector(".toggle-row .switch")?.classList.contains("off");
       const res = await ABC.api("/api/rag/index", { docs: stagedDocs, use_samples: useSamples });
@@ -307,6 +309,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (uploadInput) uploadInput.value = "";
       await loadFiles();
       document.querySelector(".indexed").textContent = `✓ ${res.message}`;
+      ABC.logActivity("문서 색인", stagedNames);
       ABC.toast("선택한 문서를 참고중인 파일에 추가했습니다");
     } catch {
       /* handled */

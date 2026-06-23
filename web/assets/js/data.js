@@ -73,6 +73,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const done = ABC.setBusy(uploadBtn, "업로드 중");
     try {
       await ABC.api("/api/datasets/upload", { name: files.map((f) => f.name).join(", ") });
+      ABC.logActivity("데이터 업로드", files.map((f) => f.name).join(", "));
       files.forEach((f) => {
         tbody.insertAdjacentHTML(
           "afterbegin",

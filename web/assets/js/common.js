@@ -56,6 +56,28 @@ const ABC = (() => {
     };
   };
 
+  // ── 활동 로그 (보고서 통계용, localStorage 영속) ────────────────
+  // 사용자가 웹에서 한 행동(질의·검색·이미지 분석·라벨 저장·업로드 등)을
+  // {ts, page, type, label} 형태로 누적. 보고서가 이를 분석·통계 낸다.
+  const ACTIVITY_KEY = "gnsoft.activity";
+  const logActivity = (type, label = "") => {
+    try {
+      const page = (location.pathname.split("/").pop() || "").replace(".html", "");
+      const list = JSON.parse(localStorage.getItem(ACTIVITY_KEY) || "[]");
+      list.push({ ts: Date.now(), page, type, label: String(label).slice(0, 200) });
+      localStorage.setItem(ACTIVITY_KEY, JSON.stringify(list.slice(-300))); // 최근 300개 유지
+    } catch {
+      /* localStorage 불가 시 무시 */
+    }
+  };
+  const getActivity = () => {
+    try {
+      return JSON.parse(localStorage.getItem(ACTIVITY_KEY) || "[]");
+    } catch {
+      return [];
+    }
+  };
+
   const activateInGroup = (target, selector) => {
     const group = target.parentElement;
     if (!group) return;
@@ -474,5 +496,7 @@ const ABC = (() => {
     openHelp,
     registerAskHandler,
     openAi,
+    logActivity,
+    getActivity,
   };
 })();

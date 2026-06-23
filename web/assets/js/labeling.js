@@ -299,6 +299,7 @@ document.addEventListener("DOMContentLoaded", () => {
         image_name: imageName,
         label_count: boxes.length,
       });
+      ABC.logActivity("라벨 저장", `${imageName} (${boxes.length}개)`);
       ABC.toast(`${result.message} — 미리보기에 반영됨`);
     } catch {
       /* api()가 toast */
@@ -438,6 +439,7 @@ document.addEventListener("DOMContentLoaded", () => {
         confidence.className = "status gray";
         ABC.toast("이미지를 ‘교체’로 올리면 실제 분석합니다 (지금은 예시)");
       }
+      ABC.logActivity("이미지 분석", preset);
     } catch {
       ABC.toast("분석에 실패했습니다");
     } finally {

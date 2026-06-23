@@ -111,6 +111,7 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const data = await ABC.api("/api/query", { question });
       typing.querySelector(".message-body").innerHTML = renderAnswer(data);
+      ABC.logActivity("자연어 질의", question);
     } catch {
       typing.querySelector(".message-body").innerHTML = "<p>답변을 가져오지 못했습니다. 잠시 후 다시 시도해주세요.</p>";
     } finally {
