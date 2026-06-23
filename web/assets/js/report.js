@@ -119,8 +119,12 @@ document.addEventListener("DOMContentLoaded", () => {
     else reportPage.insertAdjacentHTML("beforeend", section);
   };
 
+  // 마지막으로 렌더한 보고서(AI 수정 시 제목·섹션만 교체하고 나머지는 유지).
+  let lastReport = null;
+
   // 구조화 응답 → 편집 가능한 제출 보고서 문서로 렌더.
   const renderReport = (r) => {
+    lastReport = r;
     const sections = (r.sections || [])
       .map(
         (s) =>
@@ -155,6 +159,17 @@ document.addEventListener("DOMContentLoaded", () => {
       ${table}
       <footer><b>출처</b>${sources}</footer>`;
     renderItemsIntoReport(); // 재생성 시에도 첨부 자료 유지
+  };
+
+  // 추가 예정(staged) 자료 안내 — 본문에는 '보고서 생성' 시에만 반영된다.
+  const stagedNote = document.querySelector(".staged-note");
+  const updateStagedNote = () => {
+    if (!stagedNote) return;
+    const n = reportItems.length;
+    stagedNote.hidden = n === 0;
+    stagedNote.textContent = n
+      ? `추가 예정 자료 ${n}건 — ‘보고서 생성’을 누르면 본문에 반영됩니다`
+      : "";
   };
 
   // ── 내 작업에서 가져오기(아티팩트 picker) ───────────────────────
@@ -196,8 +211,8 @@ document.addEventListener("DOMContentLoaded", () => {
       reportItems.push({ type: "image", src: a.image, caption: a.caption || a.title });
     }
     renderThumbs();
-    renderItemsIntoReport();
-    ABC.toast("보고서에 자료를 추가했습니다");
+    updateStagedNote();
+    ABC.toast("자료를 추가했습니다 — ‘보고서 생성’ 시 반영됩니다");
   });
 
   renderArtifactPicker();
@@ -232,8 +247,8 @@ document.addEventListener("DOMContentLoaded", () => {
         reportItems.push({ type: "image", src: String(reader.result || ""), caption: "첨부 사진" });
         if (--remaining === 0) {
           renderThumbs();
-          renderItemsIntoReport();
-          ABC.toast(`사진 ${files.length}장을 보고서에 추가했습니다`);
+          updateStagedNote();
+          ABC.toast(`사진 ${files.length}장 추가 — ‘보고서 생성’ 시 반영됩니다`);
         }
       };
       reader.readAsDataURL(file);
@@ -246,7 +261,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!del) return;
     reportItems.splice(Number(del.dataset.i), 1);
     renderThumbs();
-    renderItemsIntoReport();
+    updateStagedNote();
   });
 
   // web=true 면 인터넷 웹 검색(Gemini 그라운딩) 기반, false 면 빠른 예시.
@@ -394,9 +409,22 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // AI 대화 패널이 '이 보고서 내용만' 근거로 답하도록 핸들러 등록.
-  ABC.registerAskHandler(
-    async (q) => (await ABC.api("/api/ask/context", { context: reportPage.innerText, question: q })).answer,
-    "이 보고서 내용을 근거로 답합니다",
-  );
+  // AI 대화 패널 = 보고서 편집기. 수정 지시면 본문을 다시 쓰고, 질문이면 답한다.
+  // 예: "서론·본론·결론으로 나눠줘", "서론에 포트홀이 뭔지 추가해줘".
+  ABC.registerAskHandler(async (q) => {
+    const r = await ABC.api("/api/report/revise", {
+      content: reportPage.innerText,
+      instruction: q,
+    });
+    if (r.mode === "edit" && r.sections && r.sections.length) {
+      // 제목·섹션만 교체하고 머리말·통계표·출처·첨부 자료는 유지.
+      renderReport({
+        ...(lastReport || {}),
+        title: r.title || lastReport?.title || "보고서",
+        sections: r.sections,
+      });
+      return "보고서를 수정했습니다. 왼쪽 미리보기를 확인하세요. (본문을 직접 더 고칠 수도 있어요)";
+    }
+    return r.answer;
+  }, "보고서를 수정하거나 질문하세요 — 예: ‘서론·본론·결론으로 나눠줘’");
 });
