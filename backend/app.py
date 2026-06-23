@@ -72,6 +72,14 @@ class ReportFromRagIn(BaseModel):
     include_chart: bool = True
 
 
+class ReportActivityIn(BaseModel):
+    activities: list[dict] = []
+    start: str = ""
+    end: str = ""
+    report_type: str = "활동 요약"
+    include_chart: bool = True
+
+
 class UploadIn(BaseModel):
     name: str = ""
 
@@ -226,6 +234,14 @@ def report_from_rag(body: ReportFromRagIn) -> dict:
         body.report_type,
         body.period,
         body.include_chart,
+    )
+
+
+@app.post("/api/report/activity")
+def report_activity(body: ReportActivityIn) -> dict:
+    """사용자가 웹에서 한 활동(검색·이미지 분석·라벨·문서 등)을 통계 낸 활동 요약 보고서."""
+    return services.generate_report_activity(
+        body.activities, body.start, body.end, body.report_type, body.include_chart
     )
 
 

@@ -1093,6 +1093,117 @@ def generate_report_from_rag(
     }
 
 
+def generate_report_activity(
+    activities: list[dict] | None = None,
+    start: str = "",
+    end: str = "",
+    report_type: str = "활동 요약",
+    include_chart: bool = True,
+) -> dict:
+    """사용자가 웹에서 한 활동(검색·이미지 분석·라벨·문서 등)을 분석·통계 낸 보고서."""
+    acts = activities or []
+    n = len(acts)
+    period_label = f"{start} ~ {end}" if (start or end) else "전체 기간"
+
+    by_type: dict[str, int] = {}
+    queries: list[str] = []
+    images: list[str] = []
+    for a in acts:
+        t = (a.get("type") or "기타").strip()
+        by_type[t] = by_type.get(t, 0) + 1
+        label = (a.get("label") or "").strip()
+        if label and ("질의" in t or "검색" in t):
+            queries.append(label)
+        if label and ("이미지" in t or "분석" in t or "라벨" in t):
+            images.append(label)
+
+    rows = [[k, str(v)] for k, v in sorted(by_type.items(), key=lambda kv: -kv[1])]
+    table = {
+        "columns": ["활동 유형", "횟수"],
+        "rows": rows or [["활동 없음", "0"]],
+        "caption": f"활동 통계 ({period_label})",
+    }
+
+    context = f"기간: {period_label}\n총 활동 {n}건\n" + "\n".join(
+        f"- {k}: {v}회" for k, v in by_type.items()
+    )
+    if queries:
+        context += "\n주요 질의/검색: " + " · ".join(dict.fromkeys(queries))[:600]
+    if images:
+        context += "\n분석/라벨 대상: " + " · ".join(dict.fromkeys(images))[:400]
+
+    sections = None
+    backend = "MOCK"
+    key = _gemini_key()
+    if key and n:
+        try:
+            from google import genai
+
+            client = genai.Client(api_key=key)
+            prompt = (
+                "다음은 사용자의 도로 유지보수 AI 플랫폼 사용 활동 로그 요약이다. 이를 분석해 한국어 "
+                "'활동 요약 보고서'를 작성하라. 활동 통계·패턴·주요 작업·인사이트를 포함하고, "
+                "5개 섹션 '## N. 제목' 한 줄 + 본문 2~3문장 또는 '- ' 불릿으로. 머리말/맺음말 없이.\n\n"
+                + context
+            )
+            resp = client.models.generate_content(model="gemini-2.5-flash", contents=prompt)
+            parsed = _parse_md_sections(resp.text or "")
+            if parsed:
+                sections = parsed
+                backend = "GEMINI"
+        except Exception:
+            pass
+
+    if not sections:
+        sections = [
+            {
+                "heading": "1. 개요",
+                "body": f"{period_label} 동안 총 {n}건의 활동이 기록되었습니다.",
+            },
+            {
+                "heading": "2. 활동 통계",
+                "body": "\n".join(f"- {k}: {v}회" for k, v in by_type.items())
+                or "- 기록된 활동이 없습니다.",
+            },
+        ]
+        if queries:
+            sections.append(
+                {
+                    "heading": "3. 주요 질의·검색",
+                    "body": "\n".join(f"- {q}" for q in dict.fromkeys(queries))[:800],
+                }
+            )
+        if images:
+            sections.append(
+                {
+                    "heading": "4. 분석·라벨 대상",
+                    "body": "\n".join(f"- {im}" for im in dict.fromkeys(images))[:600],
+                }
+            )
+        sections.append(
+            {
+                "heading": f"{len(sections) + 1}. 종합",
+                "body": "위 활동을 바탕으로 도로 파손 데이터 수집·분석·라벨링이 진행되었습니다."
+                if n
+                else "아직 기록된 활동이 없습니다. 검색·이미지 분석·문서 색인 등을 사용하면 활동이 집계됩니다.",
+            }
+        )
+
+    rtype = (report_type or "활동 요약").strip()
+    return {
+        "backend": backend,
+        "report_type": rtype,
+        "org": f"GNSOFT · {rtype}",
+        "date": "2026.6.24",
+        "period": period_label,
+        "title": f"내 {rtype} 보고서",
+        "subtitle": f"{period_label} · 총 활동 {n}건",
+        "sections": sections,
+        "table": table if include_chart else None,
+        "sources": [f"세션 활동 로그 {n}건"],
+    }
+
+
 # ────────────────────────────────────────────────────────────────────
 # 6. 데이터 관리 (MOCK)
 # ────────────────────────────────────────────────────────────────────
