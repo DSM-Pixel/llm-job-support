@@ -53,30 +53,20 @@
         <section class="report-layout">
           <aside class="report-form">
             <h2>▣ 보고서 구성</h2>
+            <p class="report-hint">
+              내가 웹에서 한 활동(질의·검색·이미지 분석·라벨·업로드)을 분석·통계 내어
+              보고서를 만듭니다.
+            </p>
             <h3>보고서 유형</h3>
             <div class="select-list">
               <button class="active">
-                <i class="chart-icon" aria-hidden="true"></i>현황 분석</button
-              ><button>▤ 정책 브리핑</button><button>▢ 검수 요약</button>
-            </div>
-            <h3>데이터 소스 <small>(3)</small></h3>
-            <div class="source-toggle">
-              <span>▱ 도로 파손 신고 현황</span><span class="switch"></span>
-            </div>
-            <div class="source-toggle">
-              <span>▱ 도로보수 예산 현황</span><span class="switch"></span>
-            </div>
-            <div class="source-toggle">
-              <span>▣ Vision AI 검수 리포트</span><span class="switch"></span>
-            </div>
-            <div class="source-toggle">
-              <span>◇ pothole_set_2025Q2</span><span class="switch off"></span>
+                <i class="chart-icon" aria-hidden="true"></i>활동 요약</button
+              ><button>▤ 활동 통계</button><button>▢ 상세 내역</button>
             </div>
             <h3>기간</h3>
-            <div class="chips">
-              <span class="pill">최근 1년</span
-              ><span class="pill active">최근 3년</span
-              ><span class="pill">최근 5년</span>
+            <div class="date-range">
+              <label>시작 <input type="date" class="date-start" /></label>
+              <label>종료 <input type="date" class="date-end" /></label>
             </div>
             <div class="source-toggle">
               <b>통계 차트 포함</b><span class="switch"></span>

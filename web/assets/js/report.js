@@ -2,11 +2,28 @@ document.addEventListener("DOMContentLoaded", () => {
   const esc = ABC.escapeHtml;
   const reportPage = document.querySelector(".report-page");
 
-  document.querySelectorAll(".select-list button, .chips .pill").forEach((item) => {
-    item.addEventListener("click", () =>
-      ABC.activateInGroup(item, item.tagName === "BUTTON" ? "button" : ".pill"),
-    );
+  document.querySelectorAll(".select-list button").forEach((item) => {
+    item.addEventListener("click", () => ABC.activateInGroup(item, "button"));
   });
+
+  // 기간 입력(시작/종료). 비어 있으면 기본값(최근 30일 ~ 오늘)을 채운다.
+  const startEl = document.querySelector(".date-start");
+  const endEl = document.querySelector(".date-end");
+  // 로컬 기준 YYYY-MM-DD (toISOString은 UTC라 KST에서 하루 어긋나므로 보정).
+  const fmtDate = (d) => {
+    const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+    return local.toISOString().slice(0, 10);
+  };
+  if (endEl && !endEl.value) endEl.value = fmtDate(new Date());
+  if (startEl && !startEl.value) {
+    startEl.value = fmtDate(new Date(Date.now() - 30 * 86400000));
+  }
+  // 시작/종료 → "YYYY-MM-DD ~ YYYY-MM-DD" 라벨(둘 다 없으면 전체 기간).
+  const periodLabel = () => {
+    const s = startEl?.value || "";
+    const e = endEl?.value || "";
+    return s || e ? `${s} ~ ${e}` : "전체 기간";
+  };
 
   document.querySelectorAll(".source-toggle .switch").forEach((switchEl) => {
     const row = switchEl.closest(".source-toggle");
@@ -102,7 +119,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const generate = async (button, web, query) => {
     const reportType =
       document.querySelector(".select-list .active")?.textContent.trim() || "현황 분석";
-    const period = document.querySelector(".chips .active")?.textContent.trim() || "최근 3년";
+    const period = periodLabel();
     const done = button ? ABC.setBusy(button, web ? "웹 검색 중…" : "생성 중") : () => {};
     try {
       const result = await ABC.api(web ? "/api/report/web" : "/api/report", {
@@ -127,16 +144,50 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  // "보고서 생성" 버튼 = 웹 검색 기반 생성.
+  // 내 웹 활동(질의·검색·이미지 분석·라벨·업로드)을 날짜 범위로 필터해 분석·통계 보고서 생성.
+  const generateActivity = async (button) => {
+    const reportType =
+      document.querySelector(".select-list .active")?.textContent.trim() || "활동 요약";
+    const start = startEl?.value || "";
+    const end = endEl?.value || "";
+    // localStorage 활동을 날짜 범위(ts 기준)로 필터.
+    const startMs = start ? new Date(`${start}T00:00:00`).getTime() : -Infinity;
+    const endMs = end ? new Date(`${end}T23:59:59`).getTime() : Infinity;
+    const activities = ABC.getActivity().filter((a) => a.ts >= startMs && a.ts <= endMs);
+    const done = button ? ABC.setBusy(button, "분석 중…") : () => {};
+    try {
+      const result = await ABC.api("/api/report/activity", {
+        activities,
+        start,
+        end,
+        report_type: reportType,
+        include_chart: includeChart(),
+      });
+      renderReport(result);
+      if (button) {
+        ABC.toast(
+          activities.length
+            ? `내 활동 ${activities.length}건을 분석해 보고서를 생성했습니다 (본문 수정 가능)`
+            : "선택한 기간에 기록된 활동이 없습니다 — 질의·검색·이미지 분석을 사용하면 집계됩니다",
+        );
+      }
+    } catch {
+      /* api()가 toast */
+    } finally {
+      done();
+    }
+  };
+
+  // "보고서 생성" 버튼 = 내 활동 기반 통계 보고서 생성(기본 동작).
   document
     .querySelector(".report-form .primary")
-    ?.addEventListener("click", (e) => generate(e.currentTarget, true));
+    ?.addEventListener("click", (e) => generateActivity(e.currentTarget));
 
   // RAG 검색 결과를 그대로 이어받아 보고서로 생성.
   const generateFromRag = async (ctx) => {
     const reportType =
       document.querySelector(".select-list .active")?.textContent.trim() || "현황 분석";
-    const period = document.querySelector(".chips .active")?.textContent.trim() || "최근 3년";
+    const period = periodLabel();
     const btn = document.querySelector(".report-form .primary");
     const done = ABC.setBusy(btn, "생성 중…");
     try {
@@ -174,8 +225,8 @@ document.addEventListener("DOMContentLoaded", () => {
     ABC.toast(`‘${incomingQuery}’ 관련 보고서를 생성합니다…`);
     generate(document.querySelector(".report-form .primary"), true, incomingQuery);
   } else {
-    // 첫 진입은 빠른 예시로 렌더(웹 검색 지연 없이 화면을 먼저 보여줌).
-    generate(null, false);
+    // 기본 진입: 내 웹 활동을 분석한 활동 요약 보고서.
+    generateActivity(null);
   }
 
   // 내보내기/공유는 (수정 반영된) 문서 전체 텍스트를 사용.

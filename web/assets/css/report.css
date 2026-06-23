@@ -109,6 +109,41 @@
   color: var(--blue);
 }
 
+.report-hint {
+  margin: 0 0 6px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #f1f5fb;
+  color: #51607a;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.date-range {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.date-range label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #51607a;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.date-range input[type="date"] {
+  min-height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: #334155;
+  font-weight: 800;
+}
+
 .source-toggle {
   display: flex;
   align-items: center;
