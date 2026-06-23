@@ -41,11 +41,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  document.querySelectorAll(".chips .pill").forEach((pill) => {
-    pill.addEventListener("click", () => {
-      ABC.activateInGroup(pill, ".pill");
-      askInput.value = pill.textContent.trim();
-    });
+  // 추천 질문 클릭(델리게이션) — 목록이 파일에 따라 갱신돼도 동작.
+  document.querySelector(".chips")?.addEventListener("click", (e) => {
+    const pill = e.target.closest(".pill");
+    if (!pill) return;
+    ABC.activateInGroup(pill, ".pill");
+    askInput.value = pill.textContent.trim();
   });
 
   askButton?.addEventListener("click", search);
@@ -102,6 +103,15 @@ document.addEventListener("DOMContentLoaded", () => {
             `<li><i>▤</i><b>${ABC.escapeHtml(f.source)}</b><small>청크 ${f.chunks}개</small>${fileDelBtn}</li>`,
         )
         .join("");
+      // 추천 질문을 참고 파일에 맞춰 갱신.
+      const chips = document.querySelector(".chips");
+      if (chips && r.suggestions && r.suggestions.length) {
+        chips.innerHTML =
+          "<span>추천</span>" +
+          r.suggestions
+            .map((q, i) => `<span class="pill${i === 0 ? " active" : ""}">${ABC.escapeHtml(q)}</span>`)
+            .join("");
+      }
     } catch {
       /* 정적 항목 유지 */
     }
@@ -229,7 +239,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const label = button.textContent.trim();
     if (label.includes("보고서")) {
       button.addEventListener("click", () => {
-        window.location.href = "report.html";
+        // 방금 검색한 질문을 보고서 주제로 전달(기능 연결).
+        const q = askInput.value.trim();
+        window.location.href = q ? `report.html?q=${encodeURIComponent(q)}` : "report.html";
       });
     } else if (label.includes("복사")) {
       button.addEventListener("click", async () => {

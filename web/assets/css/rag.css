@@ -393,7 +393,8 @@
 
 .doc-body {
   display: grid;
-  gap: 10px;
+  gap: 12px;
+  padding: 18px 20px 22px;
 }
 
 .doc-chunk {

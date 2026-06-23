@@ -868,8 +868,9 @@ def _web_answer(question: str) -> tuple[str, list[dict], str]:
         except Exception:
             pass
     return (
-        "지금은 외부 검색을 사용할 수 없어 정확한 답변을 드리기 어렵습니다. 잠시 후 다시 시도하거나, "
-        "아래 버튼으로 관련 작업 화면으로 이동해 직접 처리할 수 있습니다.",
+        "AI 사용량(토큰)이 일시적으로 소진되어 지금은 답변을 생성하지 못했습니다. "
+        "사용량이 회복되거나 API 키를 교체하면 자동으로 실제 답변이 표시됩니다. "
+        "그 사이에는 아래 버튼으로 관련 작업 화면에서 직접 처리할 수 있습니다.",
         [],
         "MOCK",
     )
@@ -905,7 +906,7 @@ def ask_about_text(context: str, question: str) -> dict:
             pass
     return {
         "backend": "MOCK",
-        "answer": "지금은 AI 응답을 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.",
+        "answer": "AI 사용량(토큰)이 일시적으로 소진되었습니다. 회복되거나 API 키 교체 시 자동으로 답변이 표시됩니다.",
     }
 
 
@@ -931,7 +932,7 @@ def ask_about_image(image_bytes: bytes, question: str, mime: str = "image/png") 
             pass
     return {
         "backend": "MOCK",
-        "answer": "지금은 이미지 분석 응답을 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.",
+        "answer": "AI 사용량(토큰)이 일시적으로 소진되었습니다. 회복되거나 API 키 교체 시 자동으로 이미지 답변이 표시됩니다.",
     }
 
 
@@ -1118,13 +1119,42 @@ def rag_get_doc(source: str) -> dict:
     return {"backend": BACKEND, "source": name, "found": bool(chunks), "chunks": chunks}
 
 
+# 파일명 키워드 → 추천 질문.
+_SUGGEST_MAP = [
+    ("포트홀", "심각한 포트홀은 며칠 안에 보수해야 해?"),
+    ("균열", "거북등 균열은 어떻게 보수해?"),
+    ("시설물", "가드레일 점검 주기는 어떻게 돼?"),
+    ("우천", "우천 시 쓸 수 있는 긴급 보수 공법은?"),
+    ("예산", "지역별 도로보수 예산 집행률은 어때?"),
+    ("cctv", "CCTV로 어떤 이상행동을 탐지해?"),
+]
+
+
+def _suggest_for(source: str) -> str:
+    low = source.lower()
+    for kw, q in _SUGGEST_MAP:
+        if kw in low:
+            return q
+    base = source.rsplit(".", 1)[0]
+    return f"‘{base}’ 문서의 핵심 내용은?"
+
+
 def rag_list_files() -> dict:
-    """현재 색인된 참고 파일 목록 + 실제 청크 수(파일 목록 렌더용)."""
+    """현재 색인된 참고 파일 목록 + 실제 청크 수 + 파일 기반 추천 질문."""
     counts: dict[str, int] = {}
+    order: list[str] = []
     for d in _active_corpus():
+        if d["source"] not in counts:
+            order.append(d["source"])
         counts[d["source"]] = counts.get(d["source"], 0) + 1
-    files = [{"source": s, "chunks": n} for s, n in counts.items()]
-    return {"backend": BACKEND, "files": files}
+    files = [{"source": s, "chunks": counts[s]} for s in order]
+    # 참고 파일에 따라 달라지는 추천 질문(중복 제거, 최대 4개).
+    suggestions: list[str] = []
+    for s in order:
+        q = _suggest_for(s)
+        if q not in suggestions:
+            suggestions.append(q)
+    return {"backend": BACKEND, "files": files, "suggestions": suggestions[:4]}
 
 
 def rag_remove_doc(source: str) -> dict:

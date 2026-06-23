@@ -168,6 +168,11 @@ with sync_playwright() as p:
     )
     check("rag: 참고 파일 삭제", len(page.query_selector_all(".file-list li")) == files_n - 1)
 
+    # 추천 질문이 참고 파일에 따라 변함(포트홀 파일 삭제 후 포트홀 추천 사라짐)
+    page.wait_for_function("() => document.querySelectorAll('.chips .pill').length >= 1")
+    chips_text = page.inner_text(".chips")
+    check("rag: 추천 질문이 파일 따라 변화", "포트홀" not in chips_text, chips_text[:30])
+
     # 4) Labeling ─ 설명 분석 + 모달(그리기/AI탐지/중복방지/저장→미리보기 유지)
     page.goto(f"{BASE}/pages/labeling.html")
     page.click(".label-panel .primary")
@@ -339,6 +344,11 @@ with sync_playwright() as p:
     page.click(".page-ask-btn")
     page.wait_for_selector(".page-ask-answer:not([hidden])", timeout=70000)
     check("report: AI에게 물어보기", len(page.inner_text(".page-ask-answer").strip()) > 0)
+
+    # RAG에서 ?q=질문 으로 넘어오면 그 주제로 보고서 생성(기능 연결)
+    page.goto(f"{BASE}/pages/report.html?q=" + "포트홀 보수".replace(" ", "%20"))
+    page.wait_for_selector(".report-page section [contenteditable='true']", timeout=70000)
+    check("report: RAG 질문 연결(?q)", len(page.query_selector_all(".report-page section")) >= 1)
 
     # 6) Data ─ 목록 + 필터 + 업로드(행추가) + ⋮메뉴 삭제
     page.goto(f"{BASE}/pages/data.html")

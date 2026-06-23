@@ -602,29 +602,30 @@ textarea {
   letter-spacing: 0.01em;
 }
 
+/* RAG '웹에서 찾아넣기' 검색칸과 동일한 사각 박스 + 버튼 느낌 */
 .page-ask-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto;
   gap: 8px;
 }
 
 .page-ask-input {
-  flex: 1;
   min-width: 0;
-  height: 40px;
+  min-height: 38px;
   padding: 0 14px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: 8px;
   outline: none;
+  color: #334155;
 }
 
 .page-ask-input:focus {
   border-color: #8fb0ff;
-  box-shadow: 0 0 0 3px rgba(37, 99, 255, 0.1);
 }
 
-.page-ask-row .btn.primary {
-  border-radius: 999px;
-  padding: 0 18px;
+.page-ask-row .btn {
+  min-width: 64px;
+  border-radius: 8px;
 }
 
 .page-ask-answer {

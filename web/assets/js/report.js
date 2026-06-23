@@ -98,7 +98,8 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   // web=true 면 인터넷 웹 검색(Gemini 그라운딩) 기반, false 면 빠른 예시.
-  const generate = async (button, web) => {
+  // query 가 있으면(예: RAG에서 넘어온 질문) 그 주제로 생성.
+  const generate = async (button, web, query) => {
     const reportType =
       document.querySelector(".select-list .active")?.textContent.trim() || "현황 분석";
     const period = document.querySelector(".chips .active")?.textContent.trim() || "최근 3년";
@@ -109,6 +110,7 @@ document.addEventListener("DOMContentLoaded", () => {
         period,
         sources: activeSources(),
         include_chart: includeChart(),
+        query: query || "",
       });
       renderReport(result);
       if (button) {
@@ -130,8 +132,15 @@ document.addEventListener("DOMContentLoaded", () => {
     .querySelector(".report-form .primary")
     ?.addEventListener("click", (e) => generate(e.currentTarget, true));
 
-  // 첫 진입은 빠른 예시로 렌더(웹 검색 지연 없이 화면을 먼저 보여줌).
-  generate(null, false);
+  // RAG 등에서 ?q=질문 으로 넘어오면 그 주제로 웹 검색 보고서를 자동 생성.
+  const incomingQuery = new URLSearchParams(location.search).get("q");
+  if (incomingQuery) {
+    ABC.toast(`‘${incomingQuery}’ 관련 보고서를 생성합니다…`);
+    generate(document.querySelector(".report-form .primary"), true, incomingQuery);
+  } else {
+    // 첫 진입은 빠른 예시로 렌더(웹 검색 지연 없이 화면을 먼저 보여줌).
+    generate(null, false);
+  }
 
   // 내보내기/공유는 (수정 반영된) 문서 전체 텍스트를 사용.
   const getReportText = () => reportPage?.innerText.trim() || "보고서";
