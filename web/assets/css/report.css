@@ -176,6 +176,74 @@
   font-size: 15px;
 }
 
+/* 사진 추가 버튼 + 썸네일 그리드(왼쪽 패널) */
+.add-report-image {
+  width: 100%;
+  justify-content: center;
+  border-style: dashed;
+  color: var(--blue);
+}
+
+.report-thumbs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.report-thumb {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+}
+
+.report-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.report-thumb .thumb-del {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(15, 23, 42, 0.72);
+  color: #fff;
+  font-size: 11px;
+  line-height: 20px;
+  cursor: pointer;
+}
+
+/* 보고서 본문에 들어가는 첨부 이미지 */
+.report-images .report-img-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.report-images figure {
+  margin: 0;
+}
+
+.report-images img {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid #e5ebf4;
+}
+
+.report-images figcaption {
+  margin-top: 6px;
+  color: #718097;
+  font-size: 13px;
+}
+
 .source-toggle {
   display: flex;
   align-items: center;

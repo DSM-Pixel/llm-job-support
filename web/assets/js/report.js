@@ -77,6 +77,26 @@ document.addEventListener("DOMContentLoaded", () => {
     return html || "<p></p>";
   };
 
+  // 보고서에 첨부할 이미지(data URL). 보고서를 재생성해도 유지되도록 모듈 상태로 둔다.
+  let reportImages = [];
+
+  // 첨부 이미지를 보고서 문서(출처 위)에 섹션으로 주입/갱신.
+  const renderImagesIntoReport = () => {
+    if (!reportPage) return;
+    reportPage.querySelector(".report-images")?.remove();
+    if (!reportImages.length) return;
+    const figs = reportImages
+      .map(
+        (src, i) =>
+          `<figure><img src="${src}" alt="첨부 이미지 ${i + 1}" /><figcaption contenteditable="true">사진 ${i + 1}</figcaption></figure>`,
+      )
+      .join("");
+    const section = `<section class="report-images"><h3 contenteditable="true">첨부 이미지</h3><div class="report-img-grid">${figs}</div></section>`;
+    const footer = reportPage.querySelector("footer");
+    if (footer) footer.insertAdjacentHTML("beforebegin", section);
+    else reportPage.insertAdjacentHTML("beforeend", section);
+  };
+
   // 구조화 응답 → 편집 가능한 제출 보고서 문서로 렌더.
   const renderReport = (r) => {
     const sections = (r.sections || [])
@@ -112,7 +132,53 @@ document.addEventListener("DOMContentLoaded", () => {
       ${sections}
       ${table}
       <footer><b>출처</b>${sources}</footer>`;
+    renderImagesIntoReport(); // 재생성 시에도 첨부 이미지 유지
   };
+
+  // ── 이미지 첨부(왼쪽 패널) ──────────────────────────────────────
+  const imgInput = document.querySelector(".report-image-input");
+  const thumbsEl = document.querySelector(".report-thumbs");
+
+  const renderThumbs = () => {
+    if (!thumbsEl) return;
+    thumbsEl.innerHTML = reportImages
+      .map(
+        (src, i) =>
+          `<div class="report-thumb"><img src="${src}" alt="첨부 ${i + 1}" /><button type="button" class="thumb-del" data-i="${i}" aria-label="삭제">✕</button></div>`,
+      )
+      .join("");
+  };
+
+  document
+    .querySelector(".add-report-image")
+    ?.addEventListener("click", () => imgInput?.click());
+
+  imgInput?.addEventListener("change", () => {
+    const files = [...(imgInput.files || [])].filter((f) => f.type.startsWith("image/"));
+    if (!files.length) return;
+    let remaining = files.length;
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        reportImages.push(String(reader.result || ""));
+        if (--remaining === 0) {
+          renderThumbs();
+          renderImagesIntoReport();
+          ABC.toast(`사진 ${files.length}장을 보고서에 추가했습니다`);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+    imgInput.value = ""; // 같은 파일 다시 선택 가능
+  });
+
+  thumbsEl?.addEventListener("click", (e) => {
+    const del = e.target.closest(".thumb-del");
+    if (!del) return;
+    reportImages.splice(Number(del.dataset.i), 1);
+    renderThumbs();
+    renderImagesIntoReport();
+  });
 
   // web=true 면 인터넷 웹 검색(Gemini 그라운딩) 기반, false 면 빠른 예시.
   // query 가 있으면(예: RAG에서 넘어온 질문) 그 주제로 생성.

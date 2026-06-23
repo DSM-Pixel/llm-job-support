@@ -430,9 +430,25 @@ with sync_playwright() as p:
     page.evaluate("(el)=>{el.textContent='수정된 본문 테스트';}", p)
     check("report: 본문 편집 가능", "수정된 본문 테스트" in page.inner_text(".report-page"))
 
-    # AI 대화 패널(우측 슬라이드) — 이 보고서 내용 근거로 응답
+    # 왼쪽 패널에서 사진 첨부 → 보고서 본문에 이미지 섹션으로 들어감
+    page.set_input_files(
+        ".report-image-input",
+        files=[{"name": "shot.png", "mimeType": "image/png", "buffer": make_png()}],
+    )
+    page.wait_for_selector(".report-page .report-images img")
+    check(
+        "report: 사진 첨부(본문 반영)",
+        page.query_selector(".report-thumbs .report-thumb img") is not None
+        and page.query_selector(".report-page .report-images img") is not None,
+    )
+
+    # AI 대화 패널(우측 슬라이드) — 본문이 왼쪽으로 밀리고, 보고서 내용 근거로 응답
     page.click(".ai-open")
     page.wait_for_selector(".ai-panel.open")
+    check(
+        "report: AI 패널 열 때 본문 밀림",
+        page.evaluate("() => document.body.classList.contains('ai-pushed')"),
+    )
     page.fill(".ai-chat-input input", "핵심 권고가 뭐야?")
     page.click(".ai-send")
     page.wait_for_function(
