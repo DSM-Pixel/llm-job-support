@@ -42,7 +42,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     const sources = (r.sources || [])
-      .map((s) => `<span class="pill">${esc(s)}</span>`)
+      .map((s) =>
+        s && typeof s === "object"
+          ? `<a class="pill src-link" href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.title)}</a>`
+          : `<span class="pill">${esc(s)}</span>`,
+      )
       .join("");
 
     reportPage.innerHTML = `
@@ -77,6 +81,29 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   document.querySelector(".report-form .primary")?.addEventListener("click", (e) => generate(e.currentTarget));
+
+  // 웹 검색(Gemini 그라운딩)으로 실제 데이터 기반 보고서 생성.
+  const generateWeb = async (button) => {
+    const reportType =
+      document.querySelector(".select-list .active")?.textContent.trim() || "현황 분석";
+    const period = document.querySelector(".chips .active")?.textContent.trim() || "최근 3년";
+    const query = document.querySelector(".report-topic")?.value.trim() || "";
+    const done = ABC.setBusy(button, "웹 검색 중");
+    try {
+      const result = await ABC.api("/api/report/web", { report_type: reportType, period, query });
+      renderReport(result);
+      ABC.toast(
+        result.backend === "GEMINI_WEB"
+          ? "웹 검색으로 보고서를 생성했습니다 (출처 클릭 가능)"
+          : "웹 검색을 사용할 수 없어 예시로 생성했습니다",
+      );
+    } catch {
+      /* api()가 toast */
+    } finally {
+      done();
+    }
+  };
+  document.querySelector(".web-generate")?.addEventListener("click", (e) => generateWeb(e.currentTarget));
 
   // 첫 진입 시 편집 가능한 문서로 한 번 렌더.
   generate(null);

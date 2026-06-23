@@ -54,6 +54,12 @@ class ReportIn(BaseModel):
     sources: list[str] = []
 
 
+class ReportWebIn(BaseModel):
+    report_type: str = "현황 분석"
+    period: str = "최근 3년"
+    query: str = ""
+
+
 class UploadIn(BaseModel):
     name: str = ""
 
@@ -147,6 +153,12 @@ def labeling_save(body: SaveLabelsIn) -> dict:
 @app.post("/api/report")
 def report(body: ReportIn) -> dict:
     return services.generate_report(body.report_type, body.period, body.sources)
+
+
+@app.post("/api/report/web")
+def report_web(body: ReportWebIn) -> dict:
+    """웹 검색(Gemini 그라운딩) 기반 보고서 생성."""
+    return services.generate_report_web(body.report_type, body.period, body.query)
 
 
 @app.get("/api/datasets")

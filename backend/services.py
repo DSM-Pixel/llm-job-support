@@ -663,6 +663,94 @@ def generate_report(
     }
 
 
+def _parse_md_sections(text: str) -> list[dict]:
+    """'## 제목 / 본문' 마크다운을 섹션 목록으로 파싱."""
+    sections: list[dict] = []
+    cur: dict | None = None
+    for line in (text or "").splitlines():
+        s = line.strip()
+        if s.startswith("#"):
+            if cur:
+                sections.append(cur)
+            cur = {"heading": s.lstrip("#").strip(), "body": ""}
+        elif s and cur is not None:
+            cur["body"] = (cur["body"] + " " + s).strip()
+    if cur:
+        sections.append(cur)
+    return [x for x in sections if x["heading"] and x["body"]]
+
+
+def _grounding_sources(resp) -> list[dict]:
+    """Gemini 응답의 grounding 메타에서 실제 출처(제목+URL)를 추출."""
+    out: list[dict] = []
+    try:
+        gm = resp.candidates[0].grounding_metadata
+        for ch in getattr(gm, "grounding_chunks", None) or []:
+            w = getattr(ch, "web", None)
+            if w and getattr(w, "uri", None):
+                out.append({"title": w.title or w.uri, "url": w.uri})
+    except Exception:
+        pass
+    seen, ded = set(), []
+    for s in out:
+        if s["title"] in seen:
+            continue
+        seen.add(s["title"])
+        ded.append(s)
+    return ded[:6]
+
+
+def generate_report_web(
+    report_type: str = "현황 분석", period: str = "최근 3년", query: str = ""
+) -> dict:
+    """Gemini Google 검색 그라운딩으로 실제 웹 데이터 기반 보고서 생성. 실패 시 MOCK 폴백."""
+    kind = re.sub(r"[▥▤▢]", "", report_type).strip() or "현황 분석"
+    topic = (query or "").strip() or "도로 파손(포트홀) 현황"
+    key = _gemini_key()
+    if key:
+        try:
+            from google import genai
+            from google.genai import types
+
+            client = genai.Client(api_key=key)
+            tool = types.Tool(google_search=types.GoogleSearch())
+            prompt = (
+                f"'{topic}' 주제로 한국어 {kind} 보고서를 작성해라. "
+                "반드시 웹을 검색해 최신 사실·수치에 근거하고, 수치에는 맥락을 붙여라. "
+                f"기간 관점: {period}. "
+                "출력 형식은 정확히 4개 섹션. 각 섹션은 '## 제목' 한 줄 다음 줄에 본문 2~3문장. "
+                "그 외 머리말/맺음말/코드펜스 없이 섹션만 출력."
+            )
+            resp = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt,
+                config=types.GenerateContentConfig(tools=[tool]),
+            )
+            sections = _parse_md_sections(resp.text or "")
+            sources = _grounding_sources(resp)
+            if sections:
+                return {
+                    "backend": "GEMINI_WEB",
+                    "report_type": kind,
+                    "org": "GNSOFT",
+                    "date": "2026.6.23",
+                    "period": period,
+                    "query": topic,
+                    "title": f"{topic} {kind} 보고서",
+                    "subtitle": f"생성일 2026.6.23 · 웹 검색 기반 · {period}",
+                    "sections": sections,
+                    "table": None,
+                    "sources": sources
+                    or [{"title": "Google 검색", "url": "https://www.google.com"}],
+                }
+        except Exception:
+            pass
+    # 폴백: 기존 MOCK 보고서 + 안내.
+    res = generate_report(report_type, period, None)
+    res["subtitle"] += " · (웹 검색 불가 → 예시)"
+    return res
+
+
 # ────────────────────────────────────────────────────────────────────
 # 6. 데이터 관리 (MOCK)
 # ────────────────────────────────────────────────────────────────────

@@ -305,6 +305,17 @@ with sync_playwright() as p:
     page.evaluate("(el)=>{el.textContent='수정된 본문 테스트';}", p)
     check("report: 본문 편집 가능", "수정된 본문 테스트" in page.inner_text(".report-page"))
 
+    # 웹 검색으로 생성(실제 Gemini 그라운딩 / 실패 시 폴백) — 내용 재생성 확인
+    before_report = page.inner_text(".report-page")
+    page.fill(".report-topic", "도로 포트홀 신고 통계 최신")
+    page.click(".web-generate")
+    page.wait_for_function(
+        "(t) => document.querySelector('.report-page').innerText !== t",
+        arg=before_report,
+        timeout=70000,
+    )
+    check("report: 웹 검색 생성", len(page.query_selector_all(".report-page section")) >= 1)
+
     # 6) Data ─ 목록 로드 + 검색 필터
     page.goto(f"{BASE}/pages/data.html")
     page.wait_for_selector("tbody tr")
