@@ -354,13 +354,17 @@ const ABC = (() => {
     overlay.hidden = true;
     overlay.innerHTML = `
       <div class="modal help-modal" role="dialog" aria-modal="true" aria-label="사용법">
-        <header class="modal-head"><h3>사용법 안내</h3>
+        <header class="modal-head"><h3>사용법 가이드</h3>
           <button class="modal-close" type="button" aria-label="닫기">✕</button></header>
         <div class="modal-body">
           <div class="help-slide">
-            <div class="help-badge"></div>
-            <h4 class="help-title"></h4>
-            <ul class="help-list"></ul>
+            <figure class="help-shot"><img alt="화면 미리보기" /></figure>
+            <div class="help-text">
+              <div class="help-badge"></div>
+              <h4 class="help-title"></h4>
+              <ul class="help-list"></ul>
+              <button class="btn primary help-go" type="button">이 화면으로 이동 →</button>
+            </div>
           </div>
         </div>
         <div class="modal-foot help-foot">
@@ -386,6 +390,12 @@ const ABC = (() => {
       helpIndex = (helpIndex + 1) % HELP_SLIDES.length;
       renderHelp();
     });
+    overlay.querySelector(".help-go").addEventListener("click", () => {
+      const key = HELP_SLIDES[helpIndex].key;
+      const cur = (location.pathname.split("/").pop() || "").replace(".html", "");
+      if (key && key !== cur) location.href = `${key}.html`;
+      else close(); // 이미 그 화면이면 닫기만
+    });
     document.addEventListener("keydown", (e) => {
       if (overlay.hidden) return;
       if (e.key === "Escape") close();
@@ -399,11 +409,18 @@ const ABC = (() => {
   const renderHelp = () => {
     const s = HELP_SLIDES[helpIndex];
     const m = helpModal;
-    m.querySelector(".help-badge").textContent = `${helpIndex + 1} / ${HELP_SLIDES.length}`;
+    m.querySelector(".help-badge").textContent = `STEP ${helpIndex + 1} / ${HELP_SLIDES.length}`;
     m.querySelector(".help-title").textContent = s.title;
     m.querySelector(".help-list").innerHTML = s.body
       .map((b) => `<li>${escapeHtml(b)}</li>`)
       .join("");
+    const shot = m.querySelector(".help-shot img");
+    shot.src = `../assets/img/guide/${s.key}.png`;
+    shot.alt = `${s.title} 화면 미리보기`;
+    // 현재 화면이면 '이 화면으로 이동' 대신 닫기 안내.
+    const cur = (location.pathname.split("/").pop() || "").replace(".html", "");
+    const go = m.querySelector(".help-go");
+    go.textContent = s.key === cur ? "지금 이 화면이에요 · 닫기" : "이 화면으로 이동 →";
     m.querySelector(".help-dots").innerHTML = HELP_SLIDES.map(
       (_, i) => `<i class="help-dot${i === helpIndex ? " on" : ""}"></i>`,
     ).join("");

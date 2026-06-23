@@ -517,6 +517,10 @@ textarea {
   max-width: 1080px;
 }
 
+.modal.help-modal {
+  max-width: 880px;
+}
+
 .modal-head {
   display: flex;
   align-items: center;
@@ -910,7 +914,48 @@ textarea {
 }
 
 .help-slide {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 22px;
   padding: 4px 2px;
+}
+
+/* 실제 화면 캡쳐 미리보기 */
+.help-shot {
+  margin: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 30px -18px rgba(8, 12, 22, 0.45);
+  background: #f3f6fb;
+}
+
+.help-shot img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top left;
+}
+
+.help-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.help-go {
+  margin-top: auto;
+  align-self: flex-start;
+  padding: 10px 16px;
+}
+
+@media (max-width: 760px) {
+  .help-slide {
+    grid-template-columns: 1fr;
+  }
+  .help-shot {
+    max-height: 220px;
+  }
 }
 
 .help-badge {
