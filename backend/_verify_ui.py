@@ -430,16 +430,31 @@ with sync_playwright() as p:
     page.evaluate("(el)=>{el.textContent='수정된 본문 테스트';}", p)
     check("report: 본문 편집 가능", "수정된 본문 테스트" in page.inner_text(".report-page"))
 
-    # 왼쪽 패널에서 사진 첨부 → 보고서 본문에 이미지 섹션으로 들어감
+    # 왼쪽 패널에서 사진 첨부 → 보고서 본문 '첨부 자료' 섹션으로 들어감
     page.set_input_files(
         ".report-image-input",
         files=[{"name": "shot.png", "mimeType": "image/png", "buffer": make_png()}],
     )
-    page.wait_for_selector(".report-page .report-images img")
+    page.wait_for_selector(".report-page .report-attachments img")
     check(
         "report: 사진 첨부(본문 반영)",
         page.query_selector(".report-thumbs .report-thumb img") is not None
-        and page.query_selector(".report-page .report-images img") is not None,
+        and page.query_selector(".report-page .report-attachments img") is not None,
+    )
+
+    # 내 작업 산출물(RAG 도출) 주입 → picker에 표시 → '추가' 시 본문에 삽입
+    page.evaluate(
+        "() => localStorage.setItem('gnsoft.artifacts', JSON.stringify([{ts:Date.now(),"
+        "kind:'rag',title:'RAG 검색 결과',question:'2026.04.24 포트홀 위치',"
+        "answer:'문지로 272 부근 1건(심각 상)',source:'도로파손_탐지로그_2026Q2.csv'}]))"
+    )
+    page.reload()
+    page.wait_for_selector(".artifact-list .artifact-item")
+    page.click(".artifact-list .artifact-add")
+    page.wait_for_selector(".report-page .report-attachments .report-finding")
+    check(
+        "report: 내 작업 자료(RAG 도출) 삽입",
+        "문지로 272" in page.inner_text(".report-page .report-attachments"),
     )
 
     # AI 대화 패널(우측 슬라이드) — 본문이 왼쪽으로 밀리고, 보고서 내용 근거로 응답

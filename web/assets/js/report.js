@@ -77,21 +77,43 @@ document.addEventListener("DOMContentLoaded", () => {
     return html || "<p></p>";
   };
 
-  // 보고서에 첨부할 이미지(data URL). 보고서를 재생성해도 유지되도록 모듈 상태로 둔다.
-  let reportImages = [];
+  // 보고서에 넣을 자료. 이미지(분석·라벨·직접첨부) 또는 RAG 도출 결과.
+  // 보고서를 재생성해도 유지되도록 모듈 상태로 둔다.
+  // item = {type:"image", src, caption} | {type:"rag", question, answer, source, snippet}
+  let reportItems = [];
 
-  // 첨부 이미지를 보고서 문서(출처 위)에 섹션으로 주입/갱신.
-  const renderImagesIntoReport = () => {
+  // 첨부 자료를 보고서 문서(출처 위)에 섹션으로 주입/갱신.
+  const renderItemsIntoReport = () => {
     if (!reportPage) return;
-    reportPage.querySelector(".report-images")?.remove();
-    if (!reportImages.length) return;
-    const figs = reportImages
+    reportPage.querySelector(".report-attachments")?.remove();
+    if (!reportItems.length) return;
+    const images = reportItems.filter((it) => it.type === "image");
+    const rags = reportItems.filter((it) => it.type === "rag");
+    let inner = "";
+    if (images.length) {
+      inner +=
+        `<div class="report-img-grid">` +
+        images
+          .map(
+            (it) =>
+              `<figure><img src="${it.src}" alt="" /><figcaption contenteditable="true">${esc(it.caption || "")}</figcaption></figure>`,
+          )
+          .join("") +
+        `</div>`;
+    }
+    inner += rags
       .map(
-        (src, i) =>
-          `<figure><img src="${src}" alt="첨부 이미지 ${i + 1}" /><figcaption contenteditable="true">사진 ${i + 1}</figcaption></figure>`,
+        (it) =>
+          `<div class="report-finding"><b>RAG 도출 결과</b>` +
+          `<p contenteditable="true">질문: ${esc(it.question || "")}</p>` +
+          `<p contenteditable="true">결과: ${esc(it.answer || "")}</p>` +
+          (it.source
+            ? `<p class="rf-src">근거: ${esc(it.source)}${it.snippet ? ` — ${esc(it.snippet)}` : ""}</p>`
+            : "") +
+          `</div>`,
       )
       .join("");
-    const section = `<section class="report-images"><h3 contenteditable="true">첨부 이미지</h3><div class="report-img-grid">${figs}</div></section>`;
+    const section = `<section class="report-attachments"><h3 contenteditable="true">근거 자료 · 내 작업 결과</h3>${inner}</section>`;
     const footer = reportPage.querySelector("footer");
     if (footer) footer.insertAdjacentHTML("beforebegin", section);
     else reportPage.insertAdjacentHTML("beforeend", section);
@@ -132,19 +154,66 @@ document.addEventListener("DOMContentLoaded", () => {
       ${sections}
       ${table}
       <footer><b>출처</b>${sources}</footer>`;
-    renderImagesIntoReport(); // 재생성 시에도 첨부 이미지 유지
+    renderItemsIntoReport(); // 재생성 시에도 첨부 자료 유지
   };
 
-  // ── 이미지 첨부(왼쪽 패널) ──────────────────────────────────────
+  // ── 내 작업에서 가져오기(아티팩트 picker) ───────────────────────
+  const artifactListEl = document.querySelector(".artifact-list");
+
+  const renderArtifactPicker = () => {
+    if (!artifactListEl) return;
+    const arts = ABC.getArtifacts().slice().reverse(); // 최신 먼저
+    if (!arts.length) {
+      artifactListEl.innerHTML =
+        `<p class="artifact-empty">아직 분석·검색한 자료가 없습니다. 이미지 분석·라벨링이나 RAG 검색을 사용하면 여기에 나타납니다.</p>`;
+      return;
+    }
+    artifactListEl.innerHTML = arts
+      .map((a) => {
+        const thumb = a.image
+          ? `<img src="${a.image}" alt="" />`
+          : `<span class="artifact-ic">${a.kind === "rag" ? "⌕" : "▣"}</span>`;
+        const sub = a.kind === "rag" ? a.question || a.title : a.caption || a.title;
+        return `<div class="artifact-item" data-ts="${a.ts}"><div class="artifact-thumb">${thumb}</div><div class="artifact-meta"><b>${esc(a.title)}</b><small>${esc(sub || "")}</small></div><button type="button" class="btn artifact-add">추가</button></div>`;
+      })
+      .join("");
+  };
+
+  artifactListEl?.addEventListener("click", (e) => {
+    if (!e.target.closest(".artifact-add")) return;
+    const ts = Number(e.target.closest(".artifact-item")?.dataset.ts);
+    const a = ABC.getArtifacts().find((x) => x.ts === ts);
+    if (!a) return;
+    if (a.kind === "rag") {
+      reportItems.push({
+        type: "rag",
+        question: a.question,
+        answer: a.answer,
+        source: a.source,
+        snippet: a.snippet,
+      });
+    } else if (a.image) {
+      reportItems.push({ type: "image", src: a.image, caption: a.caption || a.title });
+    }
+    renderThumbs();
+    renderItemsIntoReport();
+    ABC.toast("보고서에 자료를 추가했습니다");
+  });
+
+  renderArtifactPicker();
+
+  // ── 직접 사진 첨부(왼쪽 패널) ───────────────────────────────────
   const imgInput = document.querySelector(".report-image-input");
   const thumbsEl = document.querySelector(".report-thumbs");
 
+  // 이미지 타입 자료만 썸네일로 보여주고 ✕로 개별 삭제.
   const renderThumbs = () => {
     if (!thumbsEl) return;
-    thumbsEl.innerHTML = reportImages
-      .map(
-        (src, i) =>
-          `<div class="report-thumb"><img src="${src}" alt="첨부 ${i + 1}" /><button type="button" class="thumb-del" data-i="${i}" aria-label="삭제">✕</button></div>`,
+    thumbsEl.innerHTML = reportItems
+      .map((it, i) =>
+        it.type === "image"
+          ? `<div class="report-thumb"><img src="${it.src}" alt="첨부 ${i + 1}" /><button type="button" class="thumb-del" data-i="${i}" aria-label="삭제">✕</button></div>`
+          : "",
       )
       .join("");
   };
@@ -160,10 +229,10 @@ document.addEventListener("DOMContentLoaded", () => {
     files.forEach((file) => {
       const reader = new FileReader();
       reader.onload = () => {
-        reportImages.push(String(reader.result || ""));
+        reportItems.push({ type: "image", src: String(reader.result || ""), caption: "첨부 사진" });
         if (--remaining === 0) {
           renderThumbs();
-          renderImagesIntoReport();
+          renderItemsIntoReport();
           ABC.toast(`사진 ${files.length}장을 보고서에 추가했습니다`);
         }
       };
@@ -175,9 +244,9 @@ document.addEventListener("DOMContentLoaded", () => {
   thumbsEl?.addEventListener("click", (e) => {
     const del = e.target.closest(".thumb-del");
     if (!del) return;
-    reportImages.splice(Number(del.dataset.i), 1);
+    reportItems.splice(Number(del.dataset.i), 1);
     renderThumbs();
-    renderImagesIntoReport();
+    renderItemsIntoReport();
   });
 
   // web=true 면 인터넷 웹 검색(Gemini 그라운딩) 기반, false 면 빠른 예시.

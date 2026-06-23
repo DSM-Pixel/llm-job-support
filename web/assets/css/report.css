@@ -221,25 +221,119 @@
   cursor: pointer;
 }
 
-/* 보고서 본문에 들어가는 첨부 이미지 */
-.report-images .report-img-grid {
+/* 내 작업에서 가져오기(아티팩트 picker) */
+.artifact-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.artifact-empty {
+  margin: 0;
+  color: #8a97ab;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.artifact-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.artifact-thumb {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f1f5fb;
+}
+
+.artifact-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.artifact-ic {
+  font-size: 18px;
+  color: var(--blue);
+}
+
+.artifact-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.artifact-meta b {
+  display: block;
+  font-size: 13px;
+}
+
+.artifact-meta small {
+  display: block;
+  color: #8a97ab;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.artifact-add {
+  flex: none;
+  padding: 6px 12px;
+  font-size: 13px;
+}
+
+/* 보고서 본문에 들어가는 첨부 자료(이미지 + RAG 도출 결과) */
+.report-attachments .report-img-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 14px;
 }
 
-.report-images figure {
+.report-attachments figure {
   margin: 0;
 }
 
-.report-images img {
+.report-attachments img {
   width: 100%;
   border-radius: 10px;
   border: 1px solid #e5ebf4;
 }
 
-.report-images figcaption {
+.report-attachments figcaption {
   margin-top: 6px;
+  color: #718097;
+  font-size: 13px;
+}
+
+.report-finding {
+  margin-top: 12px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: #f7f9fc;
+  border: 1px solid #e5ebf4;
+}
+
+.report-finding b {
+  color: #14b8a6;
+}
+
+.report-finding p {
+  margin: 6px 0 0;
+}
+
+.report-finding .rf-src {
   color: #718097;
   font-size: 13px;
 }
