@@ -63,7 +63,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const useSamples = !document.querySelector(".toggle-row .switch")?.classList.contains("off");
       const result = await ABC.api("/api/rag/index", { use_samples: useSamples });
       document.querySelector(".indexed").textContent = `✓ ${result.message}`;
-      ABC.toast("문서 색인이 완료되었습니다");
+      await loadFiles();
+      ABC.toast("문서 색인이 완료되었습니다 — 참고중인 파일 갱신됨");
     } catch {
       /* handled */
     } finally {
@@ -77,7 +78,8 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const result = await ABC.api("/api/rag/reset", {});
       document.querySelector(".indexed").textContent = `✓ ${result.message}`;
-      ABC.toast("색인을 초기화했습니다");
+      await loadFiles();
+      ABC.toast("색인을 초기화했습니다 — 샘플 문서만 남김");
     } catch {
       /* handled */
     } finally {
@@ -87,29 +89,35 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const fileList = document.querySelector(".file-list");
 
-  const fileDelBtn = '<button class="file-del" type="button" title="삭제" aria-label="삭제">✕</button>';
+  const fileDelBtn = '<button class="file-del" type="button" title="색인에서 삭제" aria-label="삭제">✕</button>';
 
-  // 색인된 문서를 "참고중인 파일" 목록에 추가.
-  const addToFileList = (name, sub) => {
-    const item = document.createElement("li");
-    item.innerHTML = `<i>▤</i><b>${ABC.escapeHtml(name)}</b><small>${ABC.escapeHtml(sub)}</small>${fileDelBtn}`;
-    fileList?.prepend(item);
+  // 참고중인 파일 목록을 백엔드에서 받아 렌더(실제 청크 수 표시).
+  const loadFiles = async () => {
+    if (!fileList) return;
+    try {
+      const r = await ABC.api("/api/rag/files");
+      fileList.innerHTML = (r.files || [])
+        .map(
+          (f) =>
+            `<li><i>▤</i><b>${ABC.escapeHtml(f.source)}</b><small>청크 ${f.chunks}개</small>${fileDelBtn}</li>`,
+        )
+        .join("");
+    } catch {
+      /* 정적 항목 유지 */
+    }
   };
 
-  // 기존 정적 파일 항목에도 삭제 버튼 주입.
-  fileList?.querySelectorAll("li").forEach((li) => {
-    if (!li.querySelector(".file-del")) li.insertAdjacentHTML("beforeend", fileDelBtn);
-  });
-
-  const removeFile = async (li, name) => {
+  const removeFile = async (name) => {
     try {
       const r = await ABC.api("/api/rag/remove", { source: name });
-      li.remove();
+      await loadFiles();
       ABC.toast(r.message || `‘${name}’ 삭제됨`);
     } catch {
       /* api()가 toast */
     }
   };
+
+  loadFiles(); // 진입 시 실제 색인 파일 목록 표시
 
   // 참고중인 파일 클릭 → 문서 내용 열람(모달).
   const docModal = document.createElement("div");
@@ -154,7 +162,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const name = li?.querySelector("b")?.textContent.trim();
     if (!name) return;
     if (e.target.closest(".file-del")) {
-      removeFile(li, name); // 삭제 버튼 → 색인에서 제거
+      removeFile(name); // 삭제 버튼 → 색인에서 제거
       return;
     }
     openDoc(name); // 그 외 클릭 → 문서 열람
@@ -186,7 +194,7 @@ document.addEventListener("DOMContentLoaded", () => {
       try {
         const docs = picked.map((r) => ({ name: r.title, text: r.snippet }));
         const res = await ABC.api("/api/rag/index", { docs, use_samples: true });
-        picked.forEach((r) => addToFileList(r.title, r.url));
+        await loadFiles();
         document.querySelector(".indexed").textContent = `✓ ${res.message}`;
         webResults.innerHTML = "";
         ABC.toast(`${picked.length}개 문서를 색인에 추가했습니다`);
@@ -261,7 +269,7 @@ document.addEventListener("DOMContentLoaded", () => {
         files.map(async (file) => ({ name: file.name, text: await readText(file) })),
       );
       const res = await ABC.api("/api/rag/index", { docs, use_samples: true });
-      docs.forEach((d) => addToFileList(d.name, d.text ? "색인됨" : "이름만 색인(본문 없음)"));
+      await loadFiles();
       document.querySelector(".indexed").textContent = `✓ ${res.message}`;
       ABC.toast("업로드한 문서를 색인했습니다 — 이제 검색 근거에 포함됩니다");
     } catch {

@@ -30,21 +30,25 @@
 
           <section class="kb-section">
             <h3><span>1</span>문서 준비</h3>
-            <div class="toggle-row">
-              <div><b>샘플 점검 문서 사용</b><p>도로·포트홀·시설물</p></div>
+            <div class="toggle-row" title="켜면 도로·포트홀·시설물 기본 샘플 문서를 검색 대상(근거)에 포함합니다">
+              <div><b>샘플 점검 문서 사용</b><p>기본 제공 문서를 검색 근거에 포함</p></div>
               <span class="switch"></span>
             </div>
             <label class="upload card">
               <input type="file" class="upload-input" multiple accept=".txt,.md,.pdf">
               <span class="upload-icon">⇧</span>
               <b>내 문서 업로드</b>
-              <small>txt · md · pdf · 여러 개</small>
+              <small>txt · md · pdf · 여러 개 — 업로드하면 검색 근거에 추가</small>
             </label>
             <div class="index-actions">
-              <button class="btn primary">문서 색인</button>
-              <button class="btn flat">↻ 초기화</button>
+              <button class="btn primary" title="업로드/샘플 문서를 검색 가능한 색인으로 만듭니다">문서 색인</button>
+              <button class="btn flat" title="추가·삭제한 문서를 비우고 기본 샘플만 남깁니다">↻ 초기화</button>
             </div>
-            <div class="indexed">✓ 색인됨 — 소스 3개 · 청크 14개</div>
+            <p class="kb-help">
+              <b>문서 색인</b>은 문서를 검색 가능한 형태로 등록하는 것이고,
+              <b>초기화</b>는 추가/삭제한 문서를 비우고 기본 샘플만 남깁니다.
+            </p>
+            <div class="indexed">✓ 색인됨</div>
           </section>
 
           <section class="kb-section">

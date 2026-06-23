@@ -17,11 +17,21 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  // 데이터 소스(통계 차트 토글 행은 제외) 중 켜진 것.
   const activeSources = () =>
     [...document.querySelectorAll(".source-toggle")]
+      .filter((row) => !row.textContent.includes("통계 차트"))
       .filter((row) => !row.querySelector(".switch")?.classList.contains("off"))
       .map((row) => row.querySelector("span, b")?.textContent.trim())
       .filter(Boolean);
+
+  // '통계 차트 포함' 토글 상태.
+  const includeChart = () => {
+    const row = [...document.querySelectorAll(".source-toggle")].find((r) =>
+      r.textContent.includes("통계 차트"),
+    );
+    return !row?.querySelector(".switch")?.classList.contains("off");
+  };
 
   // 본문(여러 문단 + '- ' 불릿)을 문단/목록 HTML로 렌더.
   const renderBody = (body) => {
@@ -98,6 +108,7 @@ document.addEventListener("DOMContentLoaded", () => {
         report_type: reportType,
         period,
         sources: activeSources(),
+        include_chart: includeChart(),
       });
       renderReport(result);
       if (button) {

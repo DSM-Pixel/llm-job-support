@@ -49,6 +49,19 @@ with sync_playwright() as p:
     check("dashboard: 모델 상태 4행", len(models) == 4, f"{len(models)}행")
     check("dashboard: 최근 활동 4건", len(acts) == 4, f"{len(acts)}건")
 
+    # 상단 ? 사용법 모달 + 클로바(♧) 제거
+    clover = page.evaluate(
+        "() => [...document.querySelectorAll('.top-actions span')].some(s => s.textContent.trim()==='♧')"
+    )
+    check("topbar: 클로바(♧) 제거", not clover)
+    page.click(".help-trigger")
+    page.wait_for_selector("#help-modal:not([hidden])")
+    slide1 = page.inner_text(".help-title")
+    page.click(".help-next")
+    slide2 = page.inner_text(".help-title")
+    check("help: 사용법 모달 + 화살표 이동", slide1 != slide2, f"{slide1}→{slide2}")
+    page.click("#help-modal .modal-close")
+
     # 2) Query ─ 의도 라우팅 + 답변 렌더
     page.goto(f"{BASE}/pages/query.html")
     page.fill(".input-wrap input", "포트홀 영역을 찾아줘")
@@ -150,7 +163,9 @@ with sync_playwright() as p:
     # 참고중인 파일 삭제(✕)
     files_n = len(page.query_selector_all(".file-list li"))
     page.locator(".file-list li .file-del").first.click()
-    page.wait_for_function("(n) => document.querySelectorAll('.file-list li').length === n - 1", arg=files_n)
+    page.wait_for_function(
+        "(n) => document.querySelectorAll('.file-list li').length === n - 1", arg=files_n
+    )
     check("rag: 참고 파일 삭제", len(page.query_selector_all(".file-list li")) == files_n - 1)
 
     # 4) Labeling ─ 설명 분석 + 모달(그리기/AI탐지/중복방지/저장→미리보기 유지)
@@ -342,7 +357,9 @@ with sync_playwright() as p:
         "input[type=file]",
         files=[{"name": "newset.csv", "mimeType": "text/csv", "buffer": b"a,b,c"}],
     )
-    page.wait_for_function("(n) => document.querySelectorAll('tbody tr').length > n", arg=before_rows)
+    page.wait_for_function(
+        "(n) => document.querySelectorAll('tbody tr').length > n", arg=before_rows
+    )
     check("data: 업로드 행 추가", len(page.query_selector_all("tbody tr")) == before_rows + 1)
 
     # ⋮ 메뉴 → 삭제
@@ -350,7 +367,9 @@ with sync_playwright() as p:
     page.click("tbody tr:first-child .row-menu")
     page.wait_for_selector(".row-pop:not([hidden])")
     page.click(".row-pop button[data-act='delete']")
-    page.wait_for_function("(n) => document.querySelectorAll('tbody tr').length === n - 1", arg=now_rows)
+    page.wait_for_function(
+        "(n) => document.querySelectorAll('tbody tr').length === n - 1", arg=now_rows
+    )
     check("data: ⋮ 메뉴 삭제", len(page.query_selector_all("tbody tr")) == now_rows - 1)
 
     browser.close()

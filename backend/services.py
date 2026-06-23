@@ -638,7 +638,10 @@ def _report_sections(kind: str, period: str, sources: list[str]) -> list[dict]:
 
 
 def generate_report(
-    report_type: str = "현황 분석", period: str = "최근 3년", sources: list[str] | None = None
+    report_type: str = "현황 분석",
+    period: str = "최근 3년",
+    sources: list[str] | None = None,
+    include_chart: bool = True,
 ) -> dict:
     """선택한 유형·소스·기간에 맞춘 보고서 문서를 생성. (MOCK)"""
     kind = re.sub(r"[▥▤▢]", "", report_type).strip() or "현황 분석"
@@ -652,7 +655,7 @@ def generate_report(
         "title": f"도로 파손 {kind} 보고서",
         "subtitle": f"생성일 2026.6.22 · 소스 {len(srcs) or 3}개 · {period}",
         "sections": _report_sections(kind, period, srcs),
-        "table": _report_table(period) if kind == "현황 분석" else None,
+        "table": _report_table(period) if include_chart else None,
         "sources": srcs or ["도로 파손 신고 현황", "도로보수 예산 현황", "Vision AI 검수 리포트"],
     }
 
@@ -937,6 +940,7 @@ def generate_report_web(
     period: str = "최근 3년",
     sources: list[str] | None = None,
     query: str = "",
+    include_chart: bool = True,
 ) -> dict:
     """Gemini Google 검색 그라운딩으로 실제 웹 데이터 기반 보고서 생성. 실패 시 MOCK 폴백.
 
@@ -983,7 +987,7 @@ def generate_report_web(
                     "title": f"도로 파손 {kind} 보고서",
                     "subtitle": f"생성일 2026.6.23 · 웹 검색 기반 · {period} · 소스 {len(srcs) or 3}개",
                     "sections": sections,
-                    "table": _report_table(period) if kind == "현황 분석" else None,
+                    "table": _report_table(period) if include_chart else None,
                     "sources": sources
                     or [{"title": "Google 검색", "url": "https://www.google.com"}],
                 }
@@ -999,7 +1003,7 @@ def generate_report_web(
         "title": f"도로 파손 {kind} 보고서",
         "subtitle": f"생성일 2026.6.23 · 예시(웹 검색 불가) · {period} · 소스 {len(srcs) or 3}개",
         "sections": _rich_report_sections(kind, period, focus),
-        "table": _report_table(period),
+        "table": _report_table(period) if include_chart else None,
         "sources": srcs or ["도로 파손 신고 현황", "도로보수 예산 현황", "Vision AI 검수 리포트"],
     }
 
@@ -1112,6 +1116,15 @@ def rag_get_doc(source: str) -> dict:
     name = (source or "").strip()
     chunks = [d["text"] for d in _active_corpus() if d["source"] == name]
     return {"backend": BACKEND, "source": name, "found": bool(chunks), "chunks": chunks}
+
+
+def rag_list_files() -> dict:
+    """현재 색인된 참고 파일 목록 + 실제 청크 수(파일 목록 렌더용)."""
+    counts: dict[str, int] = {}
+    for d in _active_corpus():
+        counts[d["source"]] = counts.get(d["source"], 0) + 1
+    files = [{"source": s, "chunks": n} for s, n in counts.items()]
+    return {"backend": BACKEND, "files": files}
 
 
 def rag_remove_doc(source: str) -> dict:

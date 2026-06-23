@@ -52,6 +52,7 @@ class ReportIn(BaseModel):
     report_type: str = "현황 분석"
     period: str = "최근 3년"
     sources: list[str] = []
+    include_chart: bool = True
 
 
 class ReportWebIn(BaseModel):
@@ -59,6 +60,7 @@ class ReportWebIn(BaseModel):
     period: str = "최근 3년"
     sources: list[str] = []
     query: str = ""
+    include_chart: bool = True
 
 
 class UploadIn(BaseModel):
@@ -124,6 +126,11 @@ def rag_doc(source: str) -> dict:
     return services.rag_get_doc(source)
 
 
+@app.get("/api/rag/files")
+def rag_files() -> dict:
+    return services.rag_list_files()
+
+
 @app.post("/api/rag/remove")
 def rag_remove(body: RagRemoveIn) -> dict:
     return services.rag_remove_doc(body.source)
@@ -180,13 +187,15 @@ def labeling_save(body: SaveLabelsIn) -> dict:
 
 @app.post("/api/report")
 def report(body: ReportIn) -> dict:
-    return services.generate_report(body.report_type, body.period, body.sources)
+    return services.generate_report(body.report_type, body.period, body.sources, body.include_chart)
 
 
 @app.post("/api/report/web")
 def report_web(body: ReportWebIn) -> dict:
     """웹 검색(Gemini 그라운딩) 기반 보고서 생성."""
-    return services.generate_report_web(body.report_type, body.period, body.sources, body.query)
+    return services.generate_report_web(
+        body.report_type, body.period, body.sources, body.query, body.include_chart
+    )
 
 
 @app.get("/api/datasets")

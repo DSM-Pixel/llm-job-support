@@ -346,6 +346,13 @@
   font-weight: 900;
 }
 
+.kb-help {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.6;
+}
+
 /* 참고중인 파일 — 클릭하면 내용 열람, ✕로 삭제 */
 .file-list li {
   position: relative;
