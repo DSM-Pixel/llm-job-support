@@ -324,41 +324,75 @@ with sync_playwright() as p:
         f"{saved} / {page.inner_text('.user-name')}",
     )
 
-    # 5) Report ─ '보고서 생성'(웹 검색 기반) + 유형별 + 편집 가능
+    # 5) Report ─ 내 웹 활동 기반 통계 보고서 + 시작/종료 날짜 + 편집 가능
     page.goto(f"{BASE}/pages/report.html")
-    # 첫 진입은 빠른 예시로 즉시 렌더(웹 지연 없음)
+    # 기본 진입 = 내 활동 분석 보고서(편집 가능 문서 즉시 렌더)
     page.wait_for_selector(".report-page section [contenteditable='true']")
     check(
-        "report: 편집 가능 문서 렌더",
+        "report: 편집 가능 활동 보고서 렌더",
         page.query_selector(".report-page h2[contenteditable]") is not None,
     )
 
-    # 정책 브리핑 + '보고서 생성'(웹 검색, 실패 시 폴백) — 내용 재생성
+    # 시작/종료 날짜 입력이 기본값(최근 30일~오늘)으로 채워져 있음
+    d_start = page.input_value(".date-start")
+    d_end = page.input_value(".date-end")
+    check(
+        "report: 시작/종료 날짜 입력 기본값",
+        bool(d_start) and bool(d_end) and d_start <= d_end,
+        f"{d_start} ~ {d_end}",
+    )
+
+    # 내 활동 로그를 주입(질의 2 + 이미지 분석 1)하고 '보고서 생성' → 활동 통계 집계
+    page.evaluate(
+        "() => { const now = Date.now(); localStorage.setItem('gnsoft.activity', "
+        "JSON.stringify([{ts:now,page:'query',type:'자연어 질의',label:'포트홀'},"
+        "{ts:now,page:'query',type:'자연어 질의',label:'균열'},"
+        "{ts:now,page:'labeling',type:'이미지 분석',label:'도로 파손/포트홀 찾기'}])); }"
+    )
     before = page.inner_text(".report-page")
-    page.click(".select-list button:nth-child(2)")
     page.click(".report-form .primary")
     page.wait_for_function(
-        "(t) => { const h=document.querySelector('.report-page header h2'); "
-        "return h && h.innerText.includes('정책 브리핑') "
-        "&& document.querySelector('.report-page').innerText !== t; }",
+        "(t) => { const r=document.querySelector('.report-page'); "
+        "return r && r.innerText !== t && r.innerText.includes('총 활동 3건'); }",
         arg=before,
         timeout=70000,
     )
-    secs = len(page.query_selector_all(".report-page section"))
-    check("report: 보고서 생성(웹 검색)", secs >= 3, f"sections={secs}")
+    rep = page.inner_text(".report-page")
+    check(
+        "report: 내 활동 기반 통계 보고서", "자연어 질의" in rep and "총 활동 3건" in rep, rep[:40]
+    )
 
-    # 검수 요약 → 내용이 달라짐
+    # 활동 유형별 통계 표 렌더(통계 차트 포함 ON 기본)
+    check("report: 활동 통계 표 렌더", page.query_selector(".report-page table") is not None)
+
+    # 보고서 유형 전환(활동 통계) → 제목에 반영
+    page.click(".select-list button:nth-child(2)")
     before2 = page.inner_text(".report-page")
-    page.click(".select-list button:nth-child(3)")
     page.click(".report-form .primary")
     page.wait_for_function(
         "(t) => { const h=document.querySelector('.report-page header h2'); "
-        "return h && h.innerText.includes('검수 요약') "
+        "return h && h.innerText.includes('활동 통계') "
         "&& document.querySelector('.report-page').innerText !== t; }",
         arg=before2,
         timeout=70000,
     )
-    check("report: 유형별 내용 변화", "검수 요약" in page.inner_text(".report-page header h2"))
+    check("report: 유형 전환 제목 반영", "활동 통계" in page.inner_text(".report-page header h2"))
+
+    # 과거 날짜 범위로 좁히면 활동 0건 → '없습니다' 안내
+    page.fill(".date-start", "2000-01-01")
+    page.fill(".date-end", "2000-01-31")
+    before3 = page.inner_text(".report-page")
+    page.click(".report-form .primary")
+    page.wait_for_function(
+        "(t) => { const r=document.querySelector('.report-page'); "
+        "return r && r.innerText !== t && r.innerText.includes('총 활동 0건'); }",
+        arg=before3,
+        timeout=70000,
+    )
+    check(
+        "report: 날짜 범위 필터(과거→0건)",
+        "총 활동 0건" in page.inner_text(".report-page"),
+    )
 
     # 본문 직접 수정(편집 가능)
     p = page.query_selector(".report-page section p")
