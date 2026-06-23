@@ -216,36 +216,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // 답변 액션: "보고서로 생성" / "복사"
-  document.querySelectorAll(".answer-actions button").forEach((button) => {
-    const label = button.textContent.trim();
-    if (label.includes("보고서")) {
-      button.addEventListener("click", () => {
-        // 지금 RAG에서 하던 내용(질문·AI답변·근거 문서)을 그대로 보고서로 이어받기.
-        const sources = [...document.querySelectorAll(".source-list .source")].map((card) => ({
-          source: card.querySelector("b")?.textContent.replace(/^\d+\s*/, "").trim() || "",
-          text: card.querySelector("p")?.textContent.trim() || "",
-        }));
-        const ctx = {
-          question: askInput.value.trim() || "도로 파손 현황",
-          answer: answer.textContent.trim(),
-          sources,
-        };
-        sessionStorage.setItem("ragReport", JSON.stringify(ctx));
-        window.location.href = "report.html?from=rag";
-      });
-    } else if (label.includes("복사")) {
-      button.addEventListener("click", async () => {
-        try {
-          await navigator.clipboard.writeText(answer.textContent.trim());
-          ABC.toast("답변을 복사했습니다");
-        } catch {
-          ABC.toast("복사를 지원하지 않는 브라우저입니다");
-        }
-      });
-    }
-  });
-
   const uploadInput = document.querySelector(".upload-input");
   const uploadBox = document.querySelector(".upload");
   const stagedEl = document.querySelector(".staged-files");
