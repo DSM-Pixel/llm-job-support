@@ -3,8 +3,8 @@ const ABC = (() => {
   const SETTINGS_KEY = "gnsoft.settings";
   const DEFAULT_SETTINGS = {
     engine: "Gemini",
-    minConf: 0,
-    defaultClass: "포트홀",
+    name: "김연우",
+    team: "R&D · 청년 1팀",
     notify: true,
   };
 
@@ -103,20 +103,17 @@ const ABC = (() => {
         </header>
         <div class="modal-body">
           <div class="modal-form">
-            <label class="field">탐지 엔진
+            <label class="field">탐지 엔진 (모델)
               <select name="engine">
                 <option value="Gemini">Gemini (VLM)</option>
                 <option value="YOLO-World">YOLO-World</option>
               </select>
             </label>
-            <label class="field">기본 신뢰도 임계값 <span class="set-conf-val"></span>
-              <input type="range" name="minConf" min="0" max="100" step="5" />
+            <label class="field">이름
+              <input type="text" name="name" placeholder="이름" />
             </label>
-            <label class="field">기본 클래스명
-              <input type="text" name="defaultClass" />
-            </label>
-            <label class="field row">토스트 알림 표시
-              <input type="checkbox" name="notify" />
+            <label class="field">직함 · 소속
+              <input type="text" name="team" placeholder="예: R&D · 청년 1팀" />
             </label>
           </div>
         </div>
@@ -132,15 +129,10 @@ const ABC = (() => {
     };
     overlay._fill = () => {
       overlay.querySelector("[name=engine]").value = settings.engine;
-      overlay.querySelector("[name=minConf]").value = settings.minConf;
-      overlay.querySelector("[name=defaultClass]").value = settings.defaultClass;
-      overlay.querySelector("[name=notify]").checked = settings.notify !== false;
-      overlay.querySelector(".set-conf-val").textContent = `${settings.minConf}%`;
+      overlay.querySelector("[name=name]").value = settings.name || "";
+      overlay.querySelector("[name=team]").value = settings.team || "";
     };
 
-    overlay.querySelector("[name=minConf]").addEventListener("input", (e) => {
-      overlay.querySelector(".set-conf-val").textContent = `${e.target.value}%`;
-    });
     overlay.querySelector(".modal-close").addEventListener("click", close);
     overlay.querySelector(".modal-cancel").addEventListener("click", close);
     overlay.addEventListener("click", (e) => {
@@ -149,14 +141,24 @@ const ABC = (() => {
     overlay.querySelector(".modal-save-settings").addEventListener("click", () => {
       saveSettings({
         engine: overlay.querySelector("[name=engine]").value,
-        minConf: Number(overlay.querySelector("[name=minConf]").value) || 0,
-        defaultClass: overlay.querySelector("[name=defaultClass]").value.trim() || "객체",
-        notify: overlay.querySelector("[name=notify]").checked,
+        name: overlay.querySelector("[name=name]").value.trim() || "사용자",
+        team: overlay.querySelector("[name=team]").value.trim(),
       });
+      applyProfile();
       close();
       toast("설정을 저장했습니다");
     });
     return overlay;
+  };
+
+  // 설정의 이름/소속을 사이드바 프로필에 반영.
+  const applyProfile = () => {
+    const nameEl = document.querySelector(".user-name");
+    const teamEl = document.querySelector(".user-team");
+    const avatar = document.querySelector(".user-box .avatar");
+    if (nameEl) nameEl.textContent = settings.name || "사용자";
+    if (teamEl) teamEl.textContent = settings.team || "";
+    if (avatar) avatar.textContent = (settings.name || "사용자").slice(0, 2);
   };
 
   const openSettings = () => {
@@ -166,6 +168,7 @@ const ABC = (() => {
   };
 
   document.addEventListener("DOMContentLoaded", () => {
+    applyProfile(); // 저장된 이름/소속을 사이드바에 반영
     document.querySelectorAll(".gear").forEach((gear) => {
       gear.style.cursor = "pointer";
       gear.setAttribute("role", "button");
@@ -202,49 +205,53 @@ const ABC = (() => {
   const HELP_SLIDES = [
     {
       key: "dashboard",
-      title: "메인 대시보드",
+      title: "STEP 1 · 메인 대시보드",
       body: [
-        "오늘의 운영 현황(색인 문서·라벨·모델 정확도·처리량)을 한눈에 봅니다.",
-        "‘빠른 작업’ 카드로 RAG 검색·라벨링·보고서·질의 화면으로 바로 이동합니다.",
+        "여기서 시작합니다. 오늘의 운영 현황(색인 문서·라벨·모델 정확도·처리량)을 한눈에 봅니다.",
+        "‘빠른 작업’ 카드를 누르면 원하는 작업 화면으로 바로 이동합니다.",
+        "왼쪽 사이드바의 메뉴로 각 기능을, 맨 아래 ‘AI와 대화하기’로 AI 어시스턴트를 엽니다.",
       ],
     },
     {
       key: "query",
-      title: "자연어 질의",
+      title: "STEP 2 · 자연어 질의",
       body: [
-        "궁금한 것을 자연어로 물어보면 웹 검색 기반으로 답하고 출처를 함께 보여줍니다.",
-        "질문 의도에 맞는 작업 화면(RAG·라벨링·보고서) 바로가기 버튼도 제시합니다.",
+        "궁금한 것을 자연어로 입력하면 웹 검색 기반으로 답하고 출처를 함께 보여줍니다.",
+        "답변 아래 버튼으로 관련 작업 화면(RAG·라벨링·보고서)으로 이어서 작업할 수 있습니다.",
       ],
     },
     {
       key: "rag",
-      title: "RAG 공공데이터 검색",
+      title: "STEP 3 · RAG 공공데이터 검색",
       body: [
-        "질문하면 색인된 문서를 근거로 답하고, 아래에 근거 파일·내용을 보여줍니다.",
-        "내 문서 업로드·웹 검색으로 문서를 추가하고, 참고 파일을 클릭해 열람하거나 ✕로 삭제합니다.",
+        "① 왼쪽 ‘문서 준비’에서 문서를 선택하고 ‘문서 색인’을 눌러 참고 문서를 추가합니다.",
+        "② 질문하면 색인 문서를 근거로 답하고, 아래에 근거 파일·내용을 보여줍니다.",
+        "③ 참고 파일을 클릭하면 내용 열람, ✕로 삭제. 답변의 ‘보고서로 생성’으로 그 내용을 보고서로 이어갑니다.",
       ],
     },
     {
       key: "labeling",
-      title: "이미지 분석·라벨링",
+      title: "STEP 4 · 이미지 분석·라벨링",
       body: [
-        "이미지를 ‘교체’로 올린 뒤 ‘분석하기’로 설명 분석, ‘크게 열어 라벨링’으로 박스 라벨링을 합니다.",
-        "모달에서 드래그로 박스 그리기·AI 자동 탐지·COCO/YOLO 내보내기·저장이 가능하고, 이미지에 대해 AI에게 물어볼 수 있습니다.",
+        "① ‘교체’로 이미지를 올립니다.",
+        "② ‘분석하기’로 설명 분석, ‘크게 열어 라벨링’으로 박스 라벨링(드래그·AI 자동 탐지·삭제·편집).",
+        "③ COCO/YOLO 내보내기·저장. ‘AI와 대화하기’로 그 이미지에 대해 질문할 수 있습니다.",
       ],
     },
     {
       key: "report",
-      title: "요약·보고서 생성",
+      title: "STEP 5 · 요약·보고서 생성",
       body: [
-        "유형·데이터 소스·기간·통계차트 포함 여부를 고르고 ‘보고서 생성’을 누르면 웹 검색 기반으로 문서를 만듭니다.",
-        "본문은 클릭해서 직접 수정할 수 있고, 보고서 내용에 대해 AI에게 물어볼 수 있습니다.",
+        "① 보고서 유형·데이터 소스·기간·통계차트 포함을 고릅니다.",
+        "② ‘보고서 생성’을 누르면 AI(웹 검색)가 문서를 작성해 미리보기에 띄웁니다.",
+        "③ 본문을 클릭해 직접 수정. ‘AI와 대화하기’로 보고서 내용을 질문할 수 있습니다.",
       ],
     },
     {
       key: "data",
-      title: "데이터 관리",
+      title: "STEP 6 · 데이터 관리",
       body: [
-        "데이터셋을 검색·필터하고, ‘업로드’로 파일을 추가합니다.",
+        "데이터셋을 검색·필터하고, ‘업로드’로 파일을 추가(표에 행으로 표시)합니다.",
         "각 행의 ⋮ 메뉴에서 미리보기·이름 수정·삭제를 할 수 있습니다.",
       ],
     },
@@ -326,6 +333,135 @@ const ABC = (() => {
     helpModal.hidden = false;
   };
 
+  // ── AI 대화 패널 (오른쪽 슬라이드 바) ───────────────────────────
+  // 페이지가 자신의 컨텍스트로 답하도록 핸들러를 등록할 수 있다.
+  let askHandler = null;
+  let askScope = "웹 검색 기반으로 무엇이든 물어보세요";
+  const registerAskHandler = (fn, scopeLabel) => {
+    askHandler = fn;
+    if (scopeLabel) askScope = scopeLabel;
+  };
+
+  const renderRich = (text) => {
+    const lines = String(text || "")
+      .split(/\n+/)
+      .map((l) => l.trim())
+      .filter(Boolean);
+    let html = "";
+    let inList = false;
+    for (const ln of lines) {
+      if (/^[-*•]\s+/.test(ln)) {
+        if (!inList) {
+          html += "<ul>";
+          inList = true;
+        }
+        html += `<li>${escapeHtml(ln.replace(/^[-*•]\s+/, ""))}</li>`;
+      } else {
+        if (inList) {
+          html += "</ul>";
+          inList = false;
+        }
+        html += `<p>${escapeHtml(ln)}</p>`;
+      }
+    }
+    if (inList) html += "</ul>";
+    return html || "<p></p>";
+  };
+
+  let aiPanel = null;
+  const buildAiPanel = () => {
+    if (aiPanel) return aiPanel;
+    const panel = document.createElement("aside");
+    panel.className = "ai-panel";
+    panel.hidden = true;
+    panel.innerHTML = `
+      <header class="ai-panel-head">
+        <span class="ai-panel-title"><span class="ai-ava">AI</span> 어시스턴트</span>
+        <button class="ai-panel-close" type="button" aria-label="닫기">✕</button>
+      </header>
+      <p class="ai-panel-scope"></p>
+      <div class="ai-chat-log"></div>
+      <div class="ai-chat-input">
+        <input type="text" placeholder="메시지를 입력하세요" />
+        <button class="ai-send btn primary" type="button" aria-label="보내기">↑</button>
+      </div>`;
+    document.body.appendChild(panel);
+
+    const log = panel.querySelector(".ai-chat-log");
+    const input = panel.querySelector(".ai-chat-input input");
+
+    const addBubble = (role, html) => {
+      const el = document.createElement("div");
+      el.className = `ai-msg ${role}`;
+      el.innerHTML = role === "user" ? `<div class="ai-bubble">${html}</div>` : `<span class="ai-ava sm">AI</span><div class="ai-bubble">${html}</div>`;
+      log.appendChild(el);
+      log.scrollTop = log.scrollHeight;
+      return el;
+    };
+
+    const send = async () => {
+      const q = input.value.trim();
+      if (!q) return;
+      addBubble("user", escapeHtml(q));
+      input.value = "";
+      const typing = addBubble("assistant", '<div class="ai-typing"><span></span><span></span><span></span></div>');
+      try {
+        const ans = askHandler
+          ? await askHandler(q)
+          : (await api("/api/query", { question: q })).answer;
+        typing.querySelector(".ai-bubble").innerHTML = renderRich(ans);
+      } catch {
+        typing.querySelector(".ai-bubble").innerHTML = "<p>답변을 가져오지 못했습니다. 잠시 후 다시 시도해주세요.</p>";
+      } finally {
+        log.scrollTop = log.scrollHeight;
+      }
+    };
+
+    panel.querySelector(".ai-send").addEventListener("click", send);
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") send();
+    });
+    panel.querySelector(".ai-panel-close").addEventListener("click", () => {
+      panel.classList.remove("open");
+      window.setTimeout(() => {
+        panel.hidden = true;
+      }, 200);
+    });
+    aiPanel = panel;
+    return panel;
+  };
+
+  const openAi = () => {
+    const panel = buildAiPanel();
+    panel.querySelector(".ai-panel-scope").textContent = askScope;
+    if (!panel.querySelector(".ai-chat-log").children.length) {
+      panel
+        .querySelector(".ai-chat-log")
+        .insertAdjacentHTML(
+          "beforeend",
+          '<div class="ai-msg assistant"><span class="ai-ava sm">AI</span><div class="ai-bubble"><p>안녕하세요! 무엇을 도와드릴까요?</p></div></div>',
+        );
+    }
+    panel.hidden = false;
+    requestAnimationFrame(() => panel.classList.add("open"));
+    panel.querySelector(".ai-chat-input input").focus();
+  };
+
+  document.addEventListener("DOMContentLoaded", () => {
+    // 사이드바 하단에 'AI와 대화하기' 버튼 추가.
+    const sidebar = document.querySelector(".sidebar");
+    const userBox = sidebar?.querySelector(".user-box");
+    if (sidebar && !sidebar.querySelector(".ai-open")) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "ai-open";
+      btn.innerHTML = "✦ AI와 대화하기";
+      btn.addEventListener("click", openAi);
+      if (userBox) sidebar.insertBefore(btn, userBox);
+      else sidebar.appendChild(btn);
+    }
+  });
+
   return {
     toast,
     setBusy,
@@ -336,5 +472,7 @@ const ABC = (() => {
     saveSettings,
     openSettings,
     openHelp,
+    registerAskHandler,
+    openAi,
   };
 })();

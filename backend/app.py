@@ -84,6 +84,10 @@ class RagRemoveIn(BaseModel):
     source: str = ""
 
 
+class RagSamplesIn(BaseModel):
+    on: bool = True
+
+
 class AskContextIn(BaseModel):
     context: str = ""
     question: str = ""
@@ -143,6 +147,11 @@ def rag_files() -> dict:
 @app.post("/api/rag/remove")
 def rag_remove(body: RagRemoveIn) -> dict:
     return services.rag_remove_doc(body.source)
+
+
+@app.post("/api/rag/samples")
+def rag_samples(body: RagSamplesIn) -> dict:
+    return services.rag_set_samples(body.on)
 
 
 @app.post("/api/ask/context")

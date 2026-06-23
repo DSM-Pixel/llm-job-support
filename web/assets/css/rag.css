@@ -353,6 +353,32 @@
   line-height: 1.6;
 }
 
+/* 색인 전 선택된 문서(스테이징) 표시 */
+.staged-files {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border: 1px dashed #8fb0ff;
+  border-radius: 8px;
+  background: #f3f7ff;
+  color: #334155;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.staged-files[hidden] {
+  display: none;
+}
+
+.staged-files b {
+  color: var(--blue);
+}
+
+/* 전체 참고 파일 초기화 버튼(목록 아래) */
+.reset-all {
+  width: 100%;
+  margin-top: 12px;
+}
+
 /* 참고중인 파일 — 클릭하면 내용 열람, ✕로 삭제 */
 .file-list li {
   position: relative;

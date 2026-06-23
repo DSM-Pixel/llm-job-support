@@ -445,42 +445,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // 이 이미지만 참조해 AI에게 물어보기.
-  const askBtn = document.querySelector(".page-ask-btn");
-  const askInput = document.querySelector(".page-ask-input");
-  const askAnswer = document.querySelector(".page-ask-answer");
-  const askImage = async () => {
-    const question = askInput.value.trim();
-    if (!question) {
-      ABC.toast("질문을 입력해주세요");
-      return;
-    }
-    if (!imageFile) {
-      ABC.toast("먼저 ‘교체’로 이미지를 올려주세요");
-      return;
-    }
-    const done = ABC.setBusy(askBtn, "답변 중…");
-    try {
-      const fd = new FormData();
-      fd.append("image", imageFile);
-      fd.append("question", question);
-      const res = await fetch("/api/ask/image", { method: "POST", body: fd });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const r = await res.json();
-      askAnswer.innerHTML = (r.answer || "")
-        .split(/\n+/)
-        .filter(Boolean)
-        .map((l) => `<p>${ABC.escapeHtml(l.replace(/^[-*•]\s*/, ""))}</p>`)
-        .join("");
-      askAnswer.hidden = false;
-    } catch {
-      ABC.toast("답변에 실패했습니다");
-    } finally {
-      done();
-    }
-  };
-  askBtn?.addEventListener("click", askImage);
-  askInput?.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") askImage();
-  });
+  // AI 대화 패널이 '이 페이지에 올린 이미지'를 근거로 답하도록 핸들러 등록.
+  ABC.registerAskHandler(async (q) => {
+    if (!imageFile) return "먼저 ‘교체’로 이미지를 올려주세요. 그 이미지를 보고 답해드립니다.";
+    const fd = new FormData();
+    fd.append("image", imageFile);
+    fd.append("question", q);
+    const res = await fetch("/api/ask/image", { method: "POST", body: fd });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return (await res.json()).answer;
+  }, "이 페이지에 올린 이미지를 근거로 답합니다");
 });

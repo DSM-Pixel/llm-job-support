@@ -230,11 +230,14 @@ _SAMPLE_DOCS = [
 _user_docs: list[dict] = []
 # 사용자가 삭제한 소스명(샘플 포함). 활성 코퍼스에서 제외.
 _removed_sources: set[str] = set()
+# 샘플 문서 포함 여부(샘플 토글). 전체 초기화 시 꺼진다.
+_rag_state = {"samples_on": True}
 
 
 def _active_corpus() -> list[dict]:
-    """삭제된 소스를 제외한 현재 활성 코퍼스(샘플 + 사용자 문서)."""
-    return [d for d in (_SAMPLE_DOCS + _user_docs) if d["source"] not in _removed_sources]
+    """현재 활성 코퍼스(샘플 토글 + 사용자 문서, 삭제분 제외)."""
+    base = (_SAMPLE_DOCS if _rag_state["samples_on"] else []) + _user_docs
+    return [d for d in base if d["source"] not in _removed_sources]
 
 
 # 한국어 조사 근사 제거용(끝 한 글자).
@@ -388,12 +391,13 @@ def rag_index(
     # 다시 추가하면 삭제 상태 해제.
     for d in docs or []:
         _removed_sources.discard((d.get("name") or "문서").strip())
+    # 색인 시 샘플 포함 여부 반영(토글 ON이면 전체 초기화로 빠졌던 샘플도 복원).
+    _rag_state["samples_on"] = bool(use_samples)
+    if use_samples:
+        for d in _SAMPLE_DOCS:
+            _removed_sources.discard(d["source"])
 
-    corpus = (
-        _active_corpus()
-        if use_samples
-        else [d for d in _user_docs if d["source"] not in _removed_sources]
-    )
+    corpus = _active_corpus()
     source_count = len({d["source"] for d in corpus})
     return {
         "backend": BACKEND,
@@ -1048,14 +1052,14 @@ def generate_report_from_rag(
                 return {
                     "backend": "GEMINI_RAG",
                     "report_type": kind,
-                    "org": "GNSOFT",
+                    "org": "GNSOFT · RAG 검색 보고서",
                     "date": "2026.6.24",
                     "period": period,
                     "query": question,
-                    "title": f"도로 파손 {kind} 보고서",
+                    "title": question.strip() or f"{kind} 보고서",
                     "subtitle": f"생성일 2026.6.24 · RAG 검색 결과 기반 · 근거 {len(file_names)}건",
                     "sections": sections,
-                    "table": _report_table(period) if include_chart else None,
+                    "table": None,
                     "sources": file_names or ["RAG 근거 문서"],
                 }
         except Exception:
@@ -1077,14 +1081,14 @@ def generate_report_from_rag(
     return {
         "backend": "MOCK",
         "report_type": kind,
-        "org": "GNSOFT",
+        "org": "GNSOFT · RAG 검색 보고서",
         "date": "2026.6.24",
         "period": period,
         "query": question,
-        "title": f"도로 파손 {kind} 보고서",
+        "title": question.strip() or f"{kind} 보고서",
         "subtitle": f"생성일 2026.6.24 · RAG 검색 결과 기반(예시) · 근거 {len(file_names)}건",
         "sections": sections,
-        "table": _report_table(period) if include_chart else None,
+        "table": None,
         "sources": file_names or ["RAG 근거 문서"],
     }
 
@@ -1256,16 +1260,32 @@ def rag_remove_doc(source: str) -> dict:
 
 
 def rag_reset() -> dict:
-    """색인 초기화 — 사용자가 추가/삭제한 변경을 비우고 샘플만 남긴다."""
+    """전체 초기화 — 샘플 포함 모든 참고 파일을 비운다(샘플 토글 OFF)."""
     _user_docs.clear()
     _removed_sources.clear()
-    source_count = len({d["source"] for d in _SAMPLE_DOCS})
+    _rag_state["samples_on"] = False
     return {
         "backend": BACKEND,
         "indexed": True,
-        "source_count": source_count,
-        "chunk_count": len(_SAMPLE_DOCS),
-        "message": f"색인을 초기화했습니다 — 샘플 소스 {source_count}개만 유지",
+        "source_count": 0,
+        "chunk_count": 0,
+        "message": "전체 초기화 — 참고 파일 0개 (샘플 토글을 켜면 샘플 복원)",
+    }
+
+
+def rag_set_samples(on: bool) -> dict:
+    """샘플 점검 문서 포함/제외(토글). 켜면 샘플이 참고 파일에 다시 들어간다."""
+    _rag_state["samples_on"] = bool(on)
+    if on:
+        for d in _SAMPLE_DOCS:
+            _removed_sources.discard(d["source"])
+    corpus = _active_corpus()
+    return {
+        "backend": BACKEND,
+        "samples_on": _rag_state["samples_on"],
+        "source_count": len({d["source"] for d in corpus}),
+        "chunk_count": len(corpus),
+        "message": "샘플 문서를 포함했습니다" if on else "샘플 문서를 제외했습니다",
     }
 
 

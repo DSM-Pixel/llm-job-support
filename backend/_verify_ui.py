@@ -123,7 +123,8 @@ with sync_playwright() as p:
     )
     check("rag: 웹 결과 선택 추가", web_items == 3, f"{web_items}건 표시")
 
-    # 업로드 문서가 검색 근거에 포함되는지
+    # 문서 선택은 '스테이징'만(아직 참고중인 파일에 안 들어감) → 문서 색인 눌러야 추가
+    files_pre = len(page.query_selector_all(".file-list li"))
     page.set_input_files(
         ".upload-input",
         files=[
@@ -134,7 +135,14 @@ with sync_playwright() as p:
             }
         ],
     )
-    page.wait_for_function("() => document.querySelector('.indexed').innerText.includes('색인')")
+    page.wait_for_selector(".staged-files:not([hidden])")
+    staged_not_indexed = len(page.query_selector_all(".file-list li")) == files_pre
+    check("rag: 선택만으론 미추가(스테이징)", staged_not_indexed)
+    page.click(".index-btn")
+    page.wait_for_function(
+        "(n) => document.querySelectorAll('.file-list li').length > n", arg=files_pre
+    )
+    check("rag: 문서 색인 시 추가됨", len(page.query_selector_all(".file-list li")) > files_pre)
     rag_query("특이키워드 자이로 지침")
     check(
         "rag: 업로드 문서가 근거에 표시",
@@ -142,11 +150,14 @@ with sync_playwright() as p:
         page.inner_text(".source-list .source:first-child b"),
     )
 
-    # 답변 복사 + 색인 초기화
+    # 답변 복사 + 전체 참고 파일 초기화(샘플 포함 0개) → 샘플 토글로 복원
     page.click(".answer-actions button:has-text('복사')")
-    page.click(".index-actions .flat")
-    page.wait_for_function("() => document.querySelector('.indexed').innerText.includes('초기화')")
-    check("rag: 색인 초기화", "초기화" in page.inner_text(".indexed"), page.inner_text(".indexed"))
+    page.click(".reset-all")
+    page.wait_for_function("() => document.querySelectorAll('.file-list li').length === 0")
+    check("rag: 전체 초기화(샘플 포함 0개)", len(page.query_selector_all(".file-list li")) == 0)
+    page.click(".toggle-row .switch")  # 샘플 토글 ON → 복원
+    page.wait_for_function("() => document.querySelectorAll('.file-list li').length > 0")
+    check("rag: 샘플 토글로 복원", len(page.query_selector_all(".file-list li")) > 0)
 
     # 참고중인 파일 클릭 → 문서 내용 열람
     page.locator(".file-list li").filter(has_text="포트홀_보수_기준").first.click()
@@ -178,7 +189,11 @@ with sync_playwright() as p:
     page.click(".answer-actions button:has-text('보고서')")
     page.wait_for_selector(".report-page section [contenteditable='true']", timeout=70000)
     rep_text = page.inner_text(".report-page")
-    check("report: RAG 내용 이어받기", "균열" in rep_text and "rag" in page.url, page.url.split("/")[-1])
+    check(
+        "report: RAG 내용 이어받기",
+        "균열" in rep_text and "rag" in page.url,
+        page.url.split("/")[-1],
+    )
 
     # 4) Labeling ─ 설명 분석 + 모달(그리기/AI탐지/중복방지/저장→미리보기 유지)
     page.goto(f"{BASE}/pages/labeling.html")
@@ -298,11 +313,16 @@ with sync_playwright() as p:
     page.click(".gear")
     page.wait_for_selector("#settings-modal:not([hidden])")
     check("settings: 모달 열림", page.is_visible("#settings-modal"))
-    page.fill("#settings-modal [name=defaultClass]", "균열")
+    page.fill("#settings-modal [name=name]", "테스트유저")
+    page.fill("#settings-modal [name=team]", "QA팀")
     page.click(".modal-save-settings")
     page.wait_for_selector("#settings-modal", state="hidden")
-    saved = page.evaluate("() => JSON.parse(localStorage.getItem('gnsoft.settings')).defaultClass")
-    check("settings: 저장/영속", saved == "균열", f"defaultClass={saved}")
+    saved = page.evaluate("() => JSON.parse(localStorage.getItem('gnsoft.settings')).name")
+    check(
+        "settings: 이름/소속 저장 + 사이드바 반영",
+        saved == "테스트유저" and page.inner_text(".user-name") == "테스트유저",
+        f"{saved} / {page.inner_text('.user-name')}",
+    )
 
     # 5) Report ─ '보고서 생성'(웹 검색 기반) + 유형별 + 편집 가능
     page.goto(f"{BASE}/pages/report.html")
@@ -346,11 +366,18 @@ with sync_playwright() as p:
     page.evaluate("(el)=>{el.textContent='수정된 본문 테스트';}", p)
     check("report: 본문 편집 가능", "수정된 본문 테스트" in page.inner_text(".report-page"))
 
-    # 이 페이지 내용만 참조하는 'AI에게 물어보기'(Gemini/폴백 모두 답변 표시)
-    page.fill(".page-ask-input", "핵심 권고가 뭐야?")
-    page.click(".page-ask-btn")
-    page.wait_for_selector(".page-ask-answer:not([hidden])", timeout=70000)
-    check("report: AI에게 물어보기", len(page.inner_text(".page-ask-answer").strip()) > 0)
+    # AI 대화 패널(우측 슬라이드) — 이 보고서 내용 근거로 응답
+    page.click(".ai-open")
+    page.wait_for_selector(".ai-panel.open")
+    page.fill(".ai-chat-input input", "핵심 권고가 뭐야?")
+    page.click(".ai-send")
+    page.wait_for_function(
+        "() => { const b=document.querySelector('.ai-msg.assistant:last-child .ai-bubble'); "
+        "return b && !b.querySelector('.ai-typing') && b.innerText.trim().length>0; }",
+        timeout=70000,
+    )
+    check("report: AI 대화 패널", len(page.query_selector_all(".ai-msg.assistant")) >= 2)
+    page.click(".ai-panel-close")
 
     # RAG에서 ?q=질문 으로 넘어오면 그 주제로 보고서 생성(기능 연결)
     page.goto(f"{BASE}/pages/report.html?q=" + "포트홀 보수".replace(" ", "%20"))

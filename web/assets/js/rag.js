@@ -54,39 +54,20 @@ document.addEventListener("DOMContentLoaded", () => {
     if (event.key === "Enter") search();
   });
 
-  document.querySelector(".switch")?.addEventListener("click", (event) =>
-    event.currentTarget.classList.toggle("off"),
-  );
-
-  document.querySelector(".index-actions .primary")?.addEventListener("click", async (event) => {
-    const done = ABC.setBusy(event.currentTarget, "색인 중");
+  // '샘플 점검 문서 사용' 토글 → 즉시 샘플 포함/제외(참고 파일 목록 갱신).
+  document.querySelector(".toggle-row .switch")?.addEventListener("click", async (event) => {
+    const sw = event.currentTarget;
+    sw.classList.toggle("off");
+    const on = !sw.classList.contains("off");
     try {
-      const useSamples = !document.querySelector(".toggle-row .switch")?.classList.contains("off");
-      const result = await ABC.api("/api/rag/index", { use_samples: useSamples });
-      document.querySelector(".indexed").textContent = `✓ ${result.message}`;
+      await ABC.api("/api/rag/samples", { on });
       await loadFiles();
-      ABC.toast("문서 색인이 완료되었습니다 — 참고중인 파일 갱신됨");
+      ABC.toast(on ? "샘플 문서를 포함했습니다" : "샘플 문서를 제외했습니다");
     } catch {
       /* handled */
-    } finally {
-      done();
     }
   });
-
-  // 색인 초기화
-  document.querySelector(".index-actions .flat")?.addEventListener("click", async (event) => {
-    const done = ABC.setBusy(event.currentTarget, "초기화 중");
-    try {
-      const result = await ABC.api("/api/rag/reset", {});
-      document.querySelector(".indexed").textContent = `✓ ${result.message}`;
-      await loadFiles();
-      ABC.toast("색인을 초기화했습니다 — 샘플 문서만 남김");
-    } catch {
-      /* handled */
-    } finally {
-      done();
-    }
-  });
+  // 색인/초기화/선택 처리는 아래(업로드 스테이징 영역)에서 일괄 정의한다.
 
   const fileList = document.querySelector(".file-list");
 
@@ -266,6 +247,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const uploadInput = document.querySelector(".upload-input");
   const uploadBox = document.querySelector(".upload");
+  const stagedEl = document.querySelector(".staged-files");
+  const indexBtn = document.querySelector(".index-btn");
+  const stageClearBtn = document.querySelector(".stage-clear");
+  const resetAllBtn = document.querySelector(".reset-all");
 
   const readText = (file) =>
     new Promise((resolve) => {
@@ -277,22 +262,80 @@ document.addEventListener("DOMContentLoaded", () => {
       reader.readAsText(file);
     });
 
+  // 색인 전 '선택만' 보관(스테이징).
+  let stagedDocs = [];
+
+  const renderStaged = () => {
+    if (!stagedEl) return;
+    stagedEl.hidden = stagedDocs.length === 0;
+    stagedEl.innerHTML = stagedDocs.length
+      ? `<b>선택됨 ${stagedDocs.length}개</b> — ${stagedDocs.map((d) => ABC.escapeHtml(d.name)).join(", ")}`
+      : "";
+    if (uploadBox) {
+      uploadBox.querySelector("b").textContent = stagedDocs.length
+        ? `${stagedDocs.length}개 문서 선택됨`
+        : "내 문서 선택";
+    }
+  };
+
+  // 파일 선택 → 스테이징만(아직 참고중인 파일에 추가하지 않음).
   uploadInput?.addEventListener("change", async () => {
     const files = [...uploadInput.files];
     if (!files.length) return;
+    const docs = await Promise.all(
+      files.map(async (file) => ({ name: file.name, text: await readText(file) })),
+    );
+    docs.forEach((d) => {
+      if (!stagedDocs.some((s) => s.name === d.name)) stagedDocs.push(d);
+    });
+    renderStaged();
+    ABC.toast(`${files.length}개 선택됨 — ‘문서 색인’을 누르면 추가됩니다`);
+  });
 
-    uploadBox.querySelector("b").textContent = `${files.length}개 문서 선택됨`;
-    uploadBox.querySelector("small").textContent = files.map((file) => file.name).join(" · ");
-
-    const done = ABC.setBusy(document.querySelector(".index-actions .primary"), "색인 중");
+  // 문서 색인 → 스테이징한 문서를 참고중인 파일에 추가.
+  indexBtn?.addEventListener("click", async () => {
+    if (!stagedDocs.length) {
+      ABC.toast("먼저 문서를 선택하세요");
+      return;
+    }
+    const done = ABC.setBusy(indexBtn, "색인 중");
     try {
-      const docs = await Promise.all(
-        files.map(async (file) => ({ name: file.name, text: await readText(file) })),
-      );
-      const res = await ABC.api("/api/rag/index", { docs, use_samples: true });
+      const useSamples = !document.querySelector(".toggle-row .switch")?.classList.contains("off");
+      const res = await ABC.api("/api/rag/index", { docs: stagedDocs, use_samples: useSamples });
+      stagedDocs = [];
+      renderStaged();
+      if (uploadInput) uploadInput.value = "";
       await loadFiles();
       document.querySelector(".indexed").textContent = `✓ ${res.message}`;
-      ABC.toast("업로드한 문서를 색인했습니다 — 이제 검색 근거에 포함됩니다");
+      ABC.toast("선택한 문서를 참고중인 파일에 추가했습니다");
+    } catch {
+      /* handled */
+    } finally {
+      done();
+    }
+  });
+
+  // 선택 취소 → 스테이징만 비움(참고중인 파일은 그대로).
+  stageClearBtn?.addEventListener("click", () => {
+    if (!stagedDocs.length) {
+      ABC.toast("취소할 선택이 없습니다");
+      return;
+    }
+    stagedDocs = [];
+    if (uploadInput) uploadInput.value = "";
+    renderStaged();
+    ABC.toast("선택을 취소했습니다");
+  });
+
+  // 전체 참고 파일 초기화 → 추가/삭제 내역을 비우고 샘플만 남김.
+  resetAllBtn?.addEventListener("click", async () => {
+    const done = ABC.setBusy(resetAllBtn, "초기화 중");
+    try {
+      const result = await ABC.api("/api/rag/reset", {});
+      document.querySelector(".toggle-row .switch")?.classList.add("off"); // 샘플 토글 OFF 동기화
+      await loadFiles();
+      document.querySelector(".indexed").textContent = `✓ ${result.message}`;
+      ABC.toast("참고 파일을 전체 초기화했습니다 (샘플 포함) — 샘플 토글을 켜면 복원");
     } catch {
       /* handled */
     } finally {

@@ -37,16 +37,17 @@
             <label class="upload card">
               <input type="file" class="upload-input" multiple accept=".txt,.md,.pdf">
               <span class="upload-icon">⇧</span>
-              <b>내 문서 업로드</b>
-              <small>txt · md · pdf · 여러 개 — 업로드하면 검색 근거에 추가</small>
+              <b>내 문서 선택</b>
+              <small>txt · md · pdf · 여러 개 — 선택 후 ‘문서 색인’을 눌러야 추가됩니다</small>
             </label>
+            <div class="staged-files" hidden></div>
             <div class="index-actions">
-              <button class="btn primary" title="업로드/샘플 문서를 검색 가능한 색인으로 만듭니다">문서 색인</button>
-              <button class="btn flat" title="추가·삭제한 문서를 비우고 기본 샘플만 남깁니다">↻ 초기화</button>
+              <button class="btn primary index-btn" title="선택한 문서를 참고중인 파일(검색 근거)에 추가합니다">문서 색인</button>
+              <button class="btn flat stage-clear" title="아직 색인하지 않은 선택만 취소합니다(참고중인 파일은 그대로)">선택 취소</button>
             </div>
             <p class="kb-help">
-              <b>문서 색인</b>은 문서를 검색 가능한 형태로 등록하는 것이고,
-              <b>초기화</b>는 추가/삭제한 문서를 비우고 기본 샘플만 남깁니다.
+              문서를 <b>선택</b>한 뒤 <b>문서 색인</b>을 눌러야 ‘참고중인 파일’에 추가됩니다.
+              <b>선택 취소</b>는 색인 전 선택만 비웁니다.
             </p>
             <div class="indexed">✓ 색인됨</div>
           </section>
@@ -59,11 +60,10 @@
 
           <section class="kb-section">
             <h3><span>⌘</span>참고중인 파일</h3>
-            <ul class="file-list">
-              <li><i>▤</i><b>포트홀_보수_기준.md</b><small>청크 5개</small></li>
-              <li><i>▤</i><b>도로_균열_점검.md</b><small>청크 4개</small></li>
-              <li><i>▤</i><b>시설물_점검_주기.md</b><small>청크 5개</small></li>
-            </ul>
+            <ul class="file-list"></ul>
+            <button class="btn flat wide reset-all" type="button" title="참고중인 파일 전체를 비우고 기본 샘플만 남깁니다">
+              ↻ 전체 참고 파일 초기화
+            </button>
           </section>
         </aside>
 
