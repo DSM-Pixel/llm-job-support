@@ -46,10 +46,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     modelModal.querySelector(".mm-title").textContent = `${m.name} · 사용 현황`;
     modelModal.querySelector(".mm-body").innerHTML = (m.detail || [])
-      .map(
-        (d) =>
-          `<div class="mm-row"><span>${ABC.escapeHtml(d.k)}</span><b>${ABC.escapeHtml(d.v)}</b></div>`,
-      )
+      .map((d) => {
+        const k = ABC.escapeHtml(d.k);
+        const v = ABC.escapeHtml(d.v);
+        // 퍼센트(pct)가 있으면 막대로 — 한도 사용률을 시각화.
+        if (typeof d.pct === "number") {
+          const lvl = d.pct >= 90 ? " crit" : d.pct >= 70 ? " warn" : "";
+          return `<div class="mm-row mm-bar-row"><div class="mm-bar-top"><span>${k}</span><b>${v}</b></div><i class="mm-bar${lvl}"><span style="width:${Math.min(100, d.pct)}%"></span></i></div>`;
+        }
+        return `<div class="mm-row"><span>${k}</span><b>${v}</b></div>`;
+      })
       .join("");
     modelModal.hidden = false;
   };

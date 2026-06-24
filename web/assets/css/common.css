@@ -673,6 +673,77 @@ textarea {
   overflow: auto;
 }
 
+/* 모델 사용 현황 상세(Gemini 한도 사용률 %) */
+.mm-body {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+}
+
+.mm-row {
+  font-size: 13px;
+}
+
+.mm-row:not(.mm-bar-row) {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mm-row > span {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.mm-row > b {
+  color: var(--text);
+  font-weight: 800;
+  text-align: right;
+}
+
+.mm-bar-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 7px;
+}
+
+.mm-bar-top span {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.mm-bar-top b {
+  color: var(--text);
+  font-weight: 800;
+}
+
+.mm-bar {
+  display: block;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.mm-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--blue);
+  transition: width 0.4s ease;
+}
+
+.mm-bar.warn > span {
+  background: var(--orange);
+}
+
+.mm-bar.crit > span {
+  background: var(--red);
+}
+
 .modal-form {
   display: grid;
   gap: 14px;

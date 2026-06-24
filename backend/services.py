@@ -32,6 +32,10 @@ _GEMINI_TIMEOUT_S = 15
 # retry_at: 429일 때 재시도 가능 추정 시각(epoch). 응답의 retryDelay 를 파싱.
 _gemini_usage = {"requests": 0, "success": 0, "tokens": 0, "rate_limited": False, "retry_at": 0.0}
 
+# 분당(RPM)·일일(RPD) 사용률을 퍼센트로 보여주기 위한 호출 로그.
+# 각 항목 {"ts": 요청시각, "tok": 사용토큰}. 24시간 지난 항목은 상태조회 때 정리.
+_gemini_calls: list[dict] = []
+
 
 def _gemini_generate(client, **kwargs):
     """client.models.generate_content 를 하드 타임아웃으로 감싼다.
@@ -40,6 +44,8 @@ def _gemini_generate(client, **kwargs):
     요청 수·성공 수·사용 토큰·한도소진(429) 여부를 실제로 추적한다.
     """
     _gemini_usage["requests"] += 1
+    call = {"ts": time.time(), "tok": 0}  # 분당/일일 사용률 집계용
+    _gemini_calls.append(call)
     try:
         fut = _GEMINI_POOL.submit(lambda: client.models.generate_content(**kwargs))
         resp = fut.result(timeout=_GEMINI_TIMEOUT_S)
@@ -60,6 +66,7 @@ def _gemini_generate(client, **kwargs):
         total = getattr(um, "total_token_count", None) if um else None
         if total:
             _gemini_usage["tokens"] += int(total)
+            call["tok"] = int(total)  # 분당 토큰 사용률 집계용
     except Exception:
         pass
     return resp
@@ -181,13 +188,20 @@ def real_model_status(yolo_ok: bool) -> list[dict]:
         g_state, g_tone = "한도 소진", "orange"  # 429 관측됨
     else:
         g_state, g_tone = "운영", "green"
-    # 막대 = 일일 요청 사용률(RPD 대비). 한도 소진이면 가득 채움.
-    g_load = (
-        100
-        if (gemini_ok and u["rate_limited"])
-        else min(100, round(u["requests"] / _GEMINI_RPD * 100))
-    )
-    # 사용자 관점 — 지금 쓸 수 있는지 / 언제 다시 쓸 수 있는지에 집중(기술 스펙은 생략).
+    # ── 한도별 사용률(%) 계산 ─────────────────────────────────────────
+    # 분당(최근 60초) / 일일(최근 24시간) 실제 요청·토큰을 무료 한도 대비 비율로.
+    now = time.time()
+    _gemini_calls[:] = [c for c in _gemini_calls if now - c["ts"] < 86400]  # 24h 정리
+    min_reqs = sum(1 for c in _gemini_calls if now - c["ts"] < 60)
+    min_toks = sum(c["tok"] for c in _gemini_calls if now - c["ts"] < 60)
+    day_reqs = len(_gemini_calls)  # = 최근 24시간 요청 수
+    pct = lambda used, cap: min(100, round(used / cap * 100)) if cap else 0  # noqa: E731
+    rpm_pct = pct(min_reqs, _GEMINI_RPM)
+    tpm_pct = pct(min_toks, _GEMINI_TPM)
+    rpd_pct = pct(day_reqs, _GEMINI_RPD)
+    # 막대 = 한도에 가장 근접한 사용률(병목). 한도 소진이면 가득 채움.
+    g_load = 100 if (gemini_ok and u["rate_limited"]) else max(rpm_pct, tpm_pct, rpd_pct)
+    # 사용자 관점 — 지금 쓸 수 있는지 / 언제 다시 쓸 수 있는지에 집중.
     if not gemini_ok:
         status_v = "API 키 없음"
     elif u["requests"] == 0:
@@ -197,8 +211,23 @@ def real_model_status(yolo_ok: bool) -> list[dict]:
     else:
         status_v = "사용 가능"
     g_detail = [{"k": "상태", "v": status_v}]
+    if gemini_ok:
+        # 분당·일일 한도를 각각 퍼센트 막대로(수치 + 비율).
+        g_detail.append(
+            {"k": "분당 요청", "v": f"{min_reqs} / {_GEMINI_RPM}회  ({rpm_pct}%)", "pct": rpm_pct}
+        )
+        g_detail.append(
+            {
+                "k": "분당 토큰",
+                "v": f"{min_toks:,} / {_GEMINI_TPM:,}  ({tpm_pct}%)",
+                "pct": tpm_pct,
+            }
+        )
+        g_detail.append(
+            {"k": "하루 요청", "v": f"{day_reqs} / {_GEMINI_RPD}회  ({rpd_pct}%)", "pct": rpd_pct}
+        )
     if gemini_ok and u["rate_limited"]:
-        remain = int(max(0, u.get("retry_at", 0) - time.time()))
+        remain = int(max(0, u.get("retry_at", 0) - now))
         if remain <= 0:
             when = "지금 다시 시도하면 될 수 있어요"
         elif remain < 60:
@@ -209,12 +238,8 @@ def real_model_status(yolo_ok: bool) -> list[dict]:
         g_detail.append(
             {
                 "k": "한도 초기화",
-                "v": "짧은(분당) 한도는 약 1분 뒤 자동 복구 · 하루 한도는 자정(태평양 시간)에 초기화",
+                "v": "분당 한도는 약 1분 뒤 자동 복구 · 하루 한도는 자정(태평양 시간)에 초기화",
             }
-        )
-    elif gemini_ok and u["success"]:
-        g_detail.append(
-            {"k": "지금까지 사용", "v": f"{u['tokens']:,} 토큰 · 응답 {u['success']}회"}
         )
     return [
         {
