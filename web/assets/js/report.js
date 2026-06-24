@@ -119,6 +119,30 @@ document.addEventListener("DOMContentLoaded", () => {
     else reportPage.insertAdjacentHTML("beforeend", section);
   };
 
+  // 각 섹션에 '삭제(휴지통)' 버튼을 달아 마우스 올리면 보이게 한다.
+  const addSectionControls = () => {
+    if (!reportPage) return;
+    reportPage.querySelectorAll("section").forEach((sec) => {
+      if (sec.querySelector(":scope > .sec-del")) return;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "sec-del";
+      btn.setAttribute("contenteditable", "false");
+      btn.title = "이 섹션 삭제";
+      btn.setAttribute("aria-label", "이 섹션 삭제");
+      btn.textContent = "🗑";
+      sec.appendChild(btn);
+    });
+  };
+
+  // 휴지통 클릭 → 해당 섹션 삭제(위임).
+  reportPage?.addEventListener("click", (e) => {
+    const del = e.target.closest(".sec-del");
+    if (!del) return;
+    del.closest("section")?.remove();
+    ABC.toast("섹션을 삭제했습니다");
+  });
+
   // 마지막으로 렌더한 보고서(AI 수정 시 제목·섹션만 교체하고 나머지는 유지).
   let lastReport = null;
 
@@ -159,6 +183,7 @@ document.addEventListener("DOMContentLoaded", () => {
       ${table}
       <footer><b>출처</b>${sources}</footer>`;
     renderItemsIntoReport(); // 재생성 시에도 첨부 자료 유지
+    addSectionControls(); // 섹션 삭제 버튼 부착
   };
 
   // 추가 예정(staged) 자료 안내 — 본문에는 '보고서 생성' 시에만 반영된다.
@@ -450,8 +475,13 @@ document.addEventListener("DOMContentLoaded", () => {
     generateActivity(null);
   }
 
-  // 내보내기/공유는 (수정 반영된) 문서 전체 텍스트를 사용.
-  const getReportText = () => reportPage?.innerText.trim() || "보고서";
+  // 내보내기/공유는 (수정 반영된) 문서 전체 텍스트를 사용. 삭제 버튼(🗑)은 제외.
+  const getReportText = () => {
+    if (!reportPage) return "보고서";
+    const clone = reportPage.cloneNode(true);
+    clone.querySelectorAll(".sec-del").forEach((b) => b.remove());
+    return clone.innerText.trim() || "보고서";
+  };
 
   document.querySelector(".copy-report")?.addEventListener("click", async () => {
     try {

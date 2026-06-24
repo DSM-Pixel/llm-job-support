@@ -314,6 +314,52 @@
   max-width: 720px;
 }
 
+/* 사진 상세 모달 본문 여백(기본 modal-body는 패딩이 없음) */
+.art-modal .modal-body {
+  padding: 22px 24px;
+}
+
+/* 섹션 삭제(휴지통) — 섹션에 마우스 올리면 우상단에 나타남 */
+.report-page section {
+  position: relative;
+}
+
+.report-page section > .sec-del {
+  position: absolute;
+  top: 4px;
+  right: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: #ef4444;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.report-page section:hover > .sec-del,
+.report-page section > .sec-del:focus {
+  opacity: 1;
+}
+
+.report-page section > .sec-del:hover {
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
+@media print {
+  .report-page .sec-del {
+    display: none !important;
+  }
+}
+
 .art-image {
   margin-bottom: 14px;
   border-radius: 10px;
