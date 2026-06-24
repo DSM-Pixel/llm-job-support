@@ -168,11 +168,14 @@ document.addEventListener("DOMContentLoaded", () => {
     closeSecConfirm();
   });
 
-  // 휴지통 클릭 → 바로 지우지 않고 확인 모달(위임).
+  // 휴지통 클릭 → 바로 지우지 않고 확인 모달(섹션 이름 표시).
   reportPage?.addEventListener("click", (e) => {
     const del = e.target.closest(".sec-del");
     if (!del) return;
     pendingSec = del.closest("section");
+    const name = pendingSec?.querySelector("h3")?.textContent.trim() || "이 섹션";
+    secConfirm.querySelector(".confirm-text").innerHTML =
+      `‘${esc(name)}’ 섹션을 삭제하시겠습니까?<br />이 작업은 되돌릴 수 없습니다.`;
     secConfirm.hidden = false;
   });
 

@@ -326,18 +326,18 @@
 
 .report-page section > .sec-del {
   position: absolute;
-  top: 4px;
-  right: 0;
-  width: 30px;
-  height: 30px;
+  top: 18px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--line);
+  border: 1px solid #fca5a5;
   border-radius: 8px;
   background: #fff;
   color: #ef4444;
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1;
   cursor: pointer;
   opacity: 0;
@@ -350,13 +350,39 @@
 }
 
 .report-page section > .sec-del:hover {
-  background: #fef2f2;
-  border-color: #fca5a5;
+  background: #ef4444;
+  color: #fff;
+}
+
+/* 휴지통에 마우스를 올리면 그 섹션을 하이라이팅(어느 섹션이 지워질지 표시) */
+.report-page section:has(> .sec-del:hover) {
+  background: #fff5f5;
+  box-shadow: inset 0 0 0 2px #fecaca;
+  border-radius: 8px;
 }
 
 @media print {
   .report-page .sec-del {
     display: none !important;
+  }
+
+  /* PDF 저장 시 화면의 다른 부분은 빼고 미리보기 서류만 출력 */
+  body * {
+    visibility: hidden !important;
+  }
+
+  .report-page,
+  .report-page * {
+    visibility: visible !important;
+  }
+
+  .report-page {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    box-shadow: none;
   }
 }
 
@@ -488,7 +514,7 @@
 }
 
 .report-page > header {
-  padding: 26px 34px;
+  padding: 34px 44px;
   background: #183f8f;
   color: #fff;
 }
@@ -522,7 +548,7 @@
 
 .report-page section,
 .report-page footer {
-  padding: 22px 34px 0;
+  padding: 28px 44px 4px;
 }
 
 .report-page section p {
@@ -559,8 +585,8 @@
 }
 
 .report-page table {
-  width: calc(100% - 68px);
-  margin: 14px 34px 22px;
+  width: calc(100% - 88px);
+  margin: 16px 44px 24px;
   border-collapse: collapse;
 }
 

@@ -340,6 +340,26 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
+  // 라벨 박스가 그려진 이미지 다운로드.
+  modal.querySelector(".modal-export-img")?.addEventListener("click", async (event) => {
+    if (!boxes.length) return ABC.toast("내보낼 박스가 없습니다");
+    if (!previewImg?.src) return ABC.toast("먼저 이미지를 올려주세요");
+    const done = ABC.setBusy(event.currentTarget, "생성 중");
+    try {
+      const url = await makeLabeledThumb(previewImg, boxes, 1600);
+      if (!url) return ABC.toast("이미지를 만들지 못했습니다");
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${baseName()}_labeled.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      ABC.toast("라벨 이미지를 내려받았습니다");
+    } finally {
+      done();
+    }
+  });
+
   // 라벨 데이터셋에 저장 — 박스를 영속(미리보기 유지) + 백엔드 저장.
   const saveLabels = async (button) => {
     persist(); // 미리보기에 박스 반영(닫아도 유지)
