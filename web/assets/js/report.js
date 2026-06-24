@@ -194,11 +194,8 @@ document.addEventListener("DOMContentLoaded", () => {
       .join("");
   };
 
-  artifactListEl?.addEventListener("click", (e) => {
-    if (!e.target.closest(".artifact-add")) return;
-    const ts = Number(e.target.closest(".artifact-item")?.dataset.ts);
-    const a = ABC.getArtifacts().find((x) => x.ts === ts);
-    if (!a) return;
+  // 아티팩트를 보고서 자료로 staged.
+  const addArtifact = (a) => {
     if (a.kind === "rag") {
       reportItems.push({
         type: "rag",
@@ -213,6 +210,80 @@ document.addEventListener("DOMContentLoaded", () => {
     renderThumbs();
     updateStagedNote();
     ABC.toast("자료를 추가했습니다 — ‘보고서 생성’ 시 반영됩니다");
+  };
+
+  // 아티팩트 상세 모달 — 사진 크게 보기 + 일시·결과·근거 등.
+  const artModal = document.createElement("div");
+  artModal.className = "modal-overlay";
+  artModal.hidden = true;
+  artModal.innerHTML =
+    '<div class="modal art-modal"><header class="modal-head"><h3 class="art-title"></h3>' +
+    '<button class="modal-close" type="button" aria-label="닫기">✕</button></header>' +
+    '<div class="modal-body"><div class="art-detail"></div></div>' +
+    '<div class="modal-foot"><button class="btn modal-cancel" type="button">닫기</button>' +
+    '<button class="btn primary art-add" type="button">보고서에 추가</button></div></div>';
+  document.body.appendChild(artModal);
+
+  let artModalTs = null;
+  const closeArt = () => {
+    artModal.hidden = true;
+    artModalTs = null;
+  };
+  artModal.querySelector(".modal-close").addEventListener("click", closeArt);
+  artModal.querySelector(".modal-cancel").addEventListener("click", closeArt);
+  artModal.addEventListener("click", (e) => {
+    if (e.target === artModal) closeArt();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !artModal.hidden) closeArt();
+  });
+  artModal.querySelector(".art-add").addEventListener("click", () => {
+    const a = ABC.getArtifacts().find((x) => x.ts === artModalTs);
+    if (a) addArtifact(a);
+    closeArt();
+  });
+
+  const fmtTs = (ts) => {
+    try {
+      return new Date(ts).toLocaleString("ko-KR");
+    } catch {
+      return "";
+    }
+  };
+
+  const openArtDetail = (a) => {
+    artModalTs = a.ts;
+    artModal.querySelector(".art-title").textContent = a.title || "자료";
+    const rows = [`<div class="art-row"><span>일시</span><b>${esc(fmtTs(a.ts))}</b></div>`];
+    if (a.page) rows.push(`<div class="art-row"><span>출처 화면</span><b>${esc(a.page)}</b></div>`);
+    let body = "";
+    if (a.image) {
+      body += `<div class="art-image"><img src="${a.image}" alt="${esc(a.title || "")}" /></div>`;
+      if (a.caption) rows.push(`<div class="art-row"><span>결과</span><b>${esc(a.caption)}</b></div>`);
+    }
+    if (a.kind === "rag") {
+      if (a.question) rows.push(`<div class="art-row"><span>질문</span><b>${esc(a.question)}</b></div>`);
+      if (a.answer) rows.push(`<div class="art-row"><span>도출</span><b>${esc(a.answer)}</b></div>`);
+      if (a.source) {
+        rows.push(
+          `<div class="art-row"><span>근거</span><b>${esc(a.source)}${a.snippet ? ` — ${esc(a.snippet)}` : ""}</b></div>`,
+        );
+      }
+    }
+    artModal.querySelector(".art-detail").innerHTML = `${body}<div class="art-rows">${rows.join("")}</div>`;
+    artModal.hidden = false;
+  };
+
+  artifactListEl?.addEventListener("click", (e) => {
+    const item = e.target.closest(".artifact-item");
+    if (!item) return;
+    const a = ABC.getArtifacts().find((x) => x.ts === Number(item.dataset.ts));
+    if (!a) return;
+    if (e.target.closest(".artifact-add")) {
+      addArtifact(a); // '추가' 버튼 → 바로 staged
+    } else {
+      openArtDetail(a); // 썸네일·내용 클릭 → 상세 모달(사진 크게·날짜 등)
+    }
   });
 
   renderArtifactPicker();
