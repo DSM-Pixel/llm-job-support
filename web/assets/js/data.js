@@ -157,6 +157,51 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (e.target === previewModal) previewModal.hidden = true;
   });
 
+  // 이미지 데이터셋 미리보기용 대표 도로 프레임을 캔버스로 생성(샘플 — 실제 파일 없음).
+  const roadFrame = (seed, w = 360, h = 200) => {
+    const cv = document.createElement("canvas");
+    cv.width = w;
+    cv.height = h;
+    const ctx = cv.getContext("2d");
+    const g = ctx.createLinearGradient(0, 0, 0, h);
+    g.addColorStop(0, "#3a4150");
+    g.addColorStop(1, "#23272f");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, w, h);
+    for (let i = 0; i < 360; i++) {
+      const x = (Math.sin(seed * 12.9 + i * 7.1) * 0.5 + 0.5) * w;
+      const y = (Math.cos(seed * 4.3 + i * 3.7) * 0.5 + 0.5) * h;
+      ctx.fillStyle = `rgba(255,255,255,${(i % 5) * 0.012})`;
+      ctx.fillRect(x, y, 1.5, 1.5);
+    }
+    ctx.strokeStyle = "rgba(230,225,200,0.6)";
+    ctx.lineWidth = 6;
+    ctx.setLineDash([22, 18]);
+    ctx.beginPath();
+    ctx.moveTo(w * 0.5, h);
+    ctx.lineTo(w * 0.5 + 8, 0);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    const cx = w * (0.3 + (seed % 3) * 0.14);
+    const cy = h * 0.62;
+    const r = 24 + (seed % 4) * 6;
+    ctx.fillStyle = "#15171c";
+    ctx.beginPath();
+    for (let a = 0; a <= Math.PI * 2 + 0.01; a += 0.4) {
+      const rr = r * (0.78 + 0.3 * Math.sin(a * 3 + seed));
+      const x = cx + Math.cos(a) * rr;
+      const y = cy + Math.sin(a) * rr * 0.7;
+      if (a === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "rgba(0,0,0,0.45)";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    return cv.toDataURL("image/jpeg", 0.8);
+  };
+
   const showPreview = (row) => {
     const c = row.children;
     const fields = {
@@ -167,12 +212,29 @@ document.addEventListener("DOMContentLoaded", async () => {
       "검수 상태": c[5].innerText.trim(),
       업데이트: c[6].innerText.trim(),
     };
-    previewModal.querySelector(".preview-body").innerHTML = Object.entries(fields)
+    // 이미지성 데이터셋(원본·라벨, JPG/PNG/BMP/MP4)은 대표 프레임 미리보기를 함께 보여준다.
+    const kind = fields["유형"];
+    const fmt = fields["형식"].toUpperCase();
+    const isImage =
+      kind === "원본" ||
+      kind === "라벨" ||
+      /JPG|JPEG|PNG|BMP|MP4|프레임|COCO/.test(fmt);
+    const seed = fields["이름"].length;
+    const frames = isImage
+      ? `<div class="preview-frames">${[0, 1, 2]
+          .map(
+            (i) =>
+              `<img class="preview-frame" src="${roadFrame(seed + i * 3)}" alt="대표 프레임 ${i + 1}" />`,
+          )
+          .join("")}</div><p class="preview-note">대표 프레임 미리보기 (샘플)</p>`
+      : "";
+    const rows = Object.entries(fields)
       .map(
         ([k, v]) =>
           `<div class="field row"><span>${ABC.escapeHtml(k)}</span><b>${ABC.escapeHtml(v)}</b></div>`,
       )
       .join("");
+    previewModal.querySelector(".preview-body").innerHTML = frames + rows;
     previewModal.hidden = false;
   };
 

@@ -675,6 +675,17 @@ with sync_playwright() as p:
     )
     check("data: 업로드 행 추가", len(page.query_selector_all("tbody tr")) == before_rows + 1)
 
+    # ⋮ 메뉴 → 미리보기 → 이미지 데이터셋이면 대표 프레임(사진) 표시
+    page.click("tbody tr:nth-child(2) .row-menu")  # road_raw_2026Q1 (원본/JPG)
+    page.wait_for_selector(".row-pop:not([hidden])")
+    page.click(".row-pop button[data-act='preview']")
+    page.wait_for_selector(".modal-overlay:not([hidden]) .preview-frame")
+    check(
+        "data: 이미지 데이터셋 미리보기에 사진 표시",
+        len(page.query_selector_all(".preview-frame")) == 3,
+    )
+    page.click(".modal-overlay:not([hidden]) .modal-close")
+
     # ⋮ 메뉴 → 삭제 → 확인 모달에서 한 번 더 묻기
     now_rows = len(page.query_selector_all("tbody tr"))
     page.click("tbody tr:first-child .row-menu")

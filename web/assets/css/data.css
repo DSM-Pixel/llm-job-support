@@ -123,6 +123,27 @@
   overflow: hidden;
 }
 
+/* 데이터셋 미리보기 — 이미지성 데이터셋의 대표 프레임 */
+.preview-frames {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.preview-frame {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+
+.preview-note {
+  margin: -4px 0 2px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -131,7 +152,8 @@ table {
 th,
 td {
   padding: 12px 16px;
-  border-bottom: 1px solid var(--line);
+  /* 행 구분선 — 흰색처럼 튀지 않게 은은한 반투명 회색(라이트·다크 공통) */
+  border-bottom: 1px solid rgba(120, 140, 170, 0.16);
   color: var(--text);
   text-align: left;
   vertical-align: middle;
