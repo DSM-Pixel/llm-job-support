@@ -1025,6 +1025,21 @@ textarea {
   object-fit: cover;
   border-radius: 6px;
   border: 1px solid var(--line);
+  cursor: zoom-in;
+}
+
+/* 사진 크게 보기(라이트박스) */
+.lightbox-overlay {
+  z-index: 200;
+  cursor: zoom-out;
+  background: rgba(8, 12, 22, 0.82);
+}
+
+.lightbox-img {
+  max-width: 92vw;
+  max-height: 88vh;
+  border-radius: 10px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
 }
 
 .hist-empty {

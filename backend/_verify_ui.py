@@ -708,7 +708,8 @@ with sync_playwright() as p:
         "{ts:n-1000,page:'query',type:'자연어 질의',label:'포트홀이 뭐야?'},"
         "{ts:n-2000,page:'rag',type:'RAG 검색',label:'도로 파손 통계'}]));"
         "localStorage.setItem('gnsoft.artifacts', JSON.stringify(["
-        "{ts:n-3000,page:'labeling',kind:'label',title:'라벨 결과'}])); }"
+        "{ts:n-3000,page:'labeling',kind:'label',title:'라벨 결과',"
+        "image:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='}])); }"
     )
     page.reload()
     page.wait_for_selector(".sidebar .history-open")
@@ -716,6 +717,13 @@ with sync_playwright() as p:
     page.wait_for_selector(".history-modal:not([hidden]) .hist-row")
     hist_rows = page.query_selector_all(".history-list .hist-row")
     check("history: 실제 기록 나열(활동·작업)", len(hist_rows) == 3, f"{len(hist_rows)}건")
+
+    # 사진 썸네일 클릭 → 라이트박스로 크게 보기
+    page.click(".history-list .hist-thumb")
+    page.wait_for_selector(".lightbox-overlay:not([hidden]) .lightbox-img")
+    check("history: 사진 클릭 시 확대", page.is_visible(".lightbox-overlay"))
+    page.click(".lightbox-overlay")  # 클릭하면 닫힘
+    page.wait_for_selector(".lightbox-overlay", state="hidden")
 
     # 전체 선택 → 선택 삭제 → 확인 모달 → 영구 삭제(localStorage 반영)
     page.check(".hist-select-all")

@@ -709,6 +709,27 @@ const ABC = (() => {
   };
   let historyModal = null;
 
+  // 사진 크게 보기(라이트박스) — 기록 관리의 썸네일 클릭 시.
+  let lightbox = null;
+  const openLightbox = (src) => {
+    if (!src) return;
+    if (!lightbox) {
+      lightbox = document.createElement("div");
+      lightbox.className = "modal-overlay lightbox-overlay";
+      lightbox.hidden = true;
+      lightbox.innerHTML = '<img class="lightbox-img" alt="" />';
+      document.body.appendChild(lightbox);
+      lightbox.addEventListener("click", () => {
+        lightbox.hidden = true;
+      });
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && lightbox && !lightbox.hidden) lightbox.hidden = true;
+      });
+    }
+    lightbox.querySelector(".lightbox-img").src = src;
+    lightbox.hidden = false;
+  };
+
   const buildHistoryModal = () => {
     if (historyModal) return historyModal;
     const m = document.createElement("div");
@@ -745,8 +766,13 @@ const ABC = (() => {
       if (e.key === "Escape" && historyModal && !historyModal.hidden) close();
     });
     listEl.addEventListener("change", refresh);
-    // 행 클릭(체크박스 외)도 토글되게.
+    // 클릭: 썸네일이면 크게 보기, 그 외(체크박스 제외)는 행 체크 토글.
     listEl.addEventListener("click", (e) => {
+      const thumb = e.target.closest(".hist-thumb");
+      if (thumb) {
+        openLightbox(thumb.src);
+        return;
+      }
       if (e.target.closest("input")) return;
       const cb = e.target.closest(".hist-row")?.querySelector(".hist-cb");
       if (cb) {
@@ -848,7 +874,7 @@ const ABC = (() => {
       const hbtn = document.createElement("button");
       hbtn.type = "button";
       hbtn.className = "history-open";
-      hbtn.textContent = "⌗ 기록 관리";
+      hbtn.textContent = "기록 관리";
       hbtn.title = "내 질의·검색·이미지 작업 기록을 보고 삭제";
       hbtn.addEventListener("click", openHistory);
       if (userBox) sidebar.insertBefore(hbtn, userBox);
