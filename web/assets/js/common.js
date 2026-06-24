@@ -116,6 +116,8 @@ const ABC = (() => {
     const entry = { ts: Date.now(), page, ...art };
     try {
       let list = JSON.parse(localStorage.getItem(ARTIFACT_KEY) || "[]");
+      // 같은 id(예: 같은 사진의 분석/라벨)는 최신 것으로 교체 — 원본+라벨 중복 방지.
+      if (art.id) list = list.filter((a) => a.id !== art.id);
       list.push(entry);
       list = list.slice(-24); // 최근 24개 유지
       // 용량 초과 시 가장 오래된 이미지 아티팩트부터 제거하며 재시도.

@@ -300,20 +300,14 @@ with sync_playwright() as p:
         di.value.suggested_filename,
     )
 
-    # 라벨 박스가 그려진 이미지 다운로드(이미지 src 있으면 실제 다운로드)
-    img_src = page.evaluate("() => document.querySelector('.preview-img')?.src || ''")
-    if img_src:
-        with page.expect_download() as di_img:
-            page.click(".modal-export-img")
-        check(
-            "labeling: 라벨 이미지 다운로드",
-            di_img.value.suggested_filename.endswith("_labeled.jpg"),
-            di_img.value.suggested_filename,
-        )
-    else:
-        check(
-            "labeling: 라벨 이미지 버튼 존재", page.query_selector(".modal-export-img") is not None
-        )
+    # 라벨 박스가 그려진 이미지 다운로드(샘플도 도로 배경 위에 박스로 생성)
+    with page.expect_download() as di_img:
+        page.click(".modal-export-img")
+    check(
+        "labeling: 라벨 이미지 다운로드",
+        di_img.value.suggested_filename.endswith("_labeled.jpg"),
+        di_img.value.suggested_filename,
+    )
 
     saved_count = len(page.query_selector_all(".box-list li"))
 
