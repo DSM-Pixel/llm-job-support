@@ -540,24 +540,44 @@ def _relevance(query: str, doc: dict) -> int:
 
 
 def _gemini_key() -> str | None:
-    """prototypes/api-test/.env 에서 GEMINI_API_KEY 를 한 번 로드."""
-    if not _gemini_key.loaded:  # type: ignore[attr-defined]
-        _gemini_key.loaded = True  # type: ignore[attr-defined]
+    """prototypes/api-test/.env 의 GEMINI_API_KEY 를 읽는다.
+
+    .env 가 바뀌면(키 교체) 자동으로 다시 읽어 서버 재시작 없이 적용한다.
+    키가 바뀌면 '한도 소진' 플래그도 초기화해 새 키가 바로 시도되게 한다.
+    """
+    from pathlib import Path
+
+    env = Path(__file__).resolve().parent.parent / "prototypes" / "api-test" / ".env"
+    try:
+        mtime = env.stat().st_mtime
+    except OSError:
+        mtime = 0.0
+
+    if mtime != _gemini_key.mtime:  # type: ignore[attr-defined]
+        _gemini_key.mtime = mtime  # type: ignore[attr-defined]
+        value = None
         try:
-            from pathlib import Path
-
-            from dotenv import load_dotenv
-
-            env = Path(__file__).resolve().parent.parent / "prototypes" / "api-test" / ".env"
-            if env.exists():
-                load_dotenv(env)
-        except Exception:
+            for line in env.read_text(encoding="utf-8").splitlines():
+                s = line.strip()
+                if s.startswith("#") or "=" not in s:
+                    continue
+                k, v = s.split("=", 1)
+                if k.strip() == "GEMINI_API_KEY":
+                    value = v.strip().strip('"').strip("'") or None
+                    break
+        except OSError:
             pass
-        _gemini_key.value = os.getenv("GEMINI_API_KEY")  # type: ignore[attr-defined]
+        if value is None:  # 파일에 없으면 환경변수 폴백
+            value = os.getenv("GEMINI_API_KEY")
+        # 키가 실제로 바뀌었으면 한도 소진 플래그 초기화(새 키에 새 기회).
+        if value != _gemini_key.value:  # type: ignore[attr-defined]
+            _gemini_usage["rate_limited"] = False
+            _gemini_usage["retry_at"] = 0.0
+        _gemini_key.value = value  # type: ignore[attr-defined]
     return _gemini_key.value  # type: ignore[attr-defined]
 
 
-_gemini_key.loaded = False  # type: ignore[attr-defined]
+_gemini_key.mtime = None  # type: ignore[attr-defined]
 _gemini_key.value = None  # type: ignore[attr-defined]
 
 
