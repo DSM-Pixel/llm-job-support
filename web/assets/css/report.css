@@ -58,7 +58,7 @@
 .report-form {
   padding: 24px 22px 28px;
   border-right: 1px solid #e1e7f0;
-  background: #fff;
+  background: var(--surface);
 }
 
 .report-form h2 {
@@ -88,8 +88,8 @@
   padding: 0 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
-  color: #334155;
+  background: var(--surface);
+  color: var(--text);
   font-weight: 900;
   text-align: left;
 }
@@ -151,8 +151,8 @@
   padding: 0 14px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: #fff;
-  color: #1f2a44;
+  background: var(--surface);
+  color: var(--text);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
@@ -508,6 +508,7 @@
 }
 
 .report-page {
+  background: #fff;
   width: min(760px, 100%);
   margin: 24px auto 0;
   overflow: hidden;
@@ -618,3 +619,9 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* 다크 모드 — 보고서 구성 패널 텍스트 보정(문서는 흰 종이 유지) */
+[data-theme="dark"] .date-field input { color: var(--text); }
+[data-theme="dark"] .date-field > span,
+[data-theme="dark"] .report-form h3 { color: var(--muted); }
+[data-theme="dark"] .artifact-meta b { color: var(--text); }

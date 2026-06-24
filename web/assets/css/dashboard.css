@@ -54,7 +54,7 @@
 .stat-card p,
 .stat-card small {
   margin: 6px 0 0;
-  color: #273244;
+  color: var(--text);
   font-weight: 800;
 }
 
@@ -105,8 +105,8 @@ h3 {
   display: block;
   width: 28px;
   border-radius: 6px 6px 0 0;
-  background: linear-gradient(180deg, #2563ff 0%, #7aa2ff 100%);
-  box-shadow: 0 6px 12px rgba(37, 99, 255, 0.18);
+  background: linear-gradient(180deg, var(--blue) 0%, #8b9fd6 100%);
+  box-shadow: 0 4px 10px rgba(70, 96, 191, 0.14);
 }
 
 .bar-item b {
@@ -132,8 +132,8 @@ h3 {
   padding: 0 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
-  color: #111827;
+  background: var(--surface);
+  color: var(--text);
   font-weight: 900;
   text-align: left;
 }
@@ -156,7 +156,7 @@ h3 {
 }
 
 .quick-grid button span:not(.quick-icon) {
-  color: #111827;
+  color: var(--text);
 }
 
 .model-card {
@@ -201,7 +201,7 @@ h3 {
 }
 
 .model-row-click:hover {
-  background: #f5f8ff;
+  background: rgba(120, 140, 200, 0.10);
 }
 
 .model-more {

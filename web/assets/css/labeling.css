@@ -5,7 +5,7 @@
   height: 58px;
   padding: 0 26px;
   border-bottom: 1px solid #e5ebf4;
-  background: #fff;
+  background: var(--surface);
 }
 
 .mode-tabs button {
@@ -38,7 +38,7 @@
 .label-panel {
   padding: 20px;
   border-right: 1px solid #e1e7f0;
-  background: #fff;
+  background: var(--surface);
 }
 
 .road-preview {
@@ -131,7 +131,7 @@
   width: min(360px, 86%);
   padding: 22px;
   border-radius: 12px;
-  background: #fff;
+  background: var(--surface);
   box-shadow: 0 18px 40px rgba(8, 12, 22, 0.35);
   text-align: center;
 }
@@ -254,7 +254,7 @@
   gap: 6px;
   font-size: 12px;
   font-weight: 800;
-  color: #475569;
+  color: var(--muted);
 }
 
 .label-side .field input[type="text"],
@@ -301,7 +301,7 @@
   padding: 6px 8px;
   border: 1px solid var(--line-soft, #eef2f6);
   border-radius: 7px;
-  background: #fff;
+  background: var(--surface);
 }
 
 .box-list li.selected {
@@ -345,7 +345,7 @@
 .btn.flat {
   border-color: transparent;
   background: #eef1f6;
-  color: #475569;
+  color: var(--muted);
 }
 
 .result-hint {
@@ -404,7 +404,7 @@
   padding: 0 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  color: #334155;
+  color: var(--text);
   font-weight: 900;
 }
 
@@ -483,7 +483,7 @@ textarea {
 
 .finding-list li {
   margin: 10px 0;
-  color: #334155;
+  color: var(--text);
   font-size: 14px;
 }
 

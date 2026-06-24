@@ -7,7 +7,7 @@
 .knowledge {
   padding: 26px 22px;
   border-right: 1px solid #e1e7f0;
-  background: #fff;
+  background: var(--surface);
 }
 
 .knowledge h2 {
@@ -34,7 +34,7 @@
   align-items: center;
   gap: 10px;
   margin: 0 0 14px;
-  color: #111827;
+  color: var(--text);
   font-size: 14px;
   font-weight: 900;
 }
@@ -62,7 +62,7 @@
 }
 
 .toggle-row b {
-  color: #1f2937;
+  color: var(--text);
 }
 
 .toggle-row p {
@@ -148,15 +148,15 @@
   border: 1px solid var(--line);
   border-radius: 8px;
   outline: none;
-  color: #334155;
+  color: var(--text);
 }
 
 .search-line button {
   min-width: 54px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
-  color: #111827;
+  background: var(--surface);
+  color: var(--text);
   font-weight: 900;
 }
 
@@ -171,7 +171,7 @@
 .file-list li {
   display: grid;
   grid-template-columns: 22px 1fr;
-  color: #253044;
+  color: var(--text);
 }
 
 .file-list i {
@@ -246,7 +246,7 @@
   margin: 18px 0;
   padding-bottom: 18px;
   border-bottom: 1px solid #e7ecf4;
-  color: #334155;
+  color: var(--text);
   font-size: 17px;
   line-height: 1.8;
 }
@@ -360,7 +360,7 @@
   border: 1px dashed #8fb0ff;
   border-radius: 8px;
   background: #f3f7ff;
-  color: #334155;
+  color: var(--text);
   font-size: 12px;
   line-height: 1.5;
 }
@@ -428,8 +428,8 @@
   padding: 12px 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
-  color: #334155;
+  background: var(--surface);
+  color: var(--text);
   font-size: 13px;
   line-height: 1.7;
 }
@@ -467,7 +467,7 @@
   padding: 8px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface);
   cursor: pointer;
 }
 
