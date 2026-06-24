@@ -25,6 +25,15 @@ WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 app = FastAPI(title="GNSoft AI 플랫폼", version="0.1.0")
 
 
+@app.middleware("http")
+async def no_cache(request, call_next):
+    """시연/개발 중 브라우저가 옛 정적 파일(JS/CSS/HTML)을 그대로 쓰지 않도록
+    매 요청 재검증을 요구한다. (ETag와 함께 동작 — 안 바뀌었으면 304)"""
+    response = await call_next(request)
+    response.headers["Cache-Control"] = "no-cache, must-revalidate"
+    return response
+
+
 # ── 요청 스키마 ──────────────────────────────────────────────────────
 class QueryIn(BaseModel):
     question: str
