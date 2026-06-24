@@ -304,6 +304,55 @@
   font-size: 13px;
 }
 
+/* 썸네일·내용 클릭 → 상세 모달 */
+.artifact-thumb,
+.artifact-meta {
+  cursor: pointer;
+}
+
+.art-modal {
+  max-width: 720px;
+}
+
+.art-image {
+  margin-bottom: 14px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: #f3f6fb;
+}
+
+.art-image img {
+  display: block;
+  width: 100%;
+  max-height: 440px;
+  object-fit: contain;
+}
+
+.art-rows {
+  display: grid;
+  gap: 9px;
+}
+
+.art-row {
+  display: grid;
+  grid-template-columns: 78px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.art-row span {
+  color: #8a97ab;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.art-row b {
+  font-weight: 700;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
 /* 보고서 본문에 들어가는 첨부 자료(이미지 + RAG 도출 결과) */
 .report-attachments .report-img-grid {
   display: grid;
@@ -412,6 +461,17 @@
 
 .report-page header span {
   color: #aebee0;
+}
+
+/* 헤더는 어두운 배경 — 편집 시 흰 글자가 흰 배경에 묻히지 않도록 반투명 처리 */
+.report-page header [contenteditable="true"]:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.report-page header [contenteditable="true"]:focus {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.65);
 }
 
 .report-page section,

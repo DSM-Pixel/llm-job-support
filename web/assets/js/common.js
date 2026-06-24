@@ -245,6 +245,10 @@ const ABC = (() => {
     if (nameEl) nameEl.textContent = settings.name || "사용자";
     if (teamEl) teamEl.textContent = settings.team || "";
     if (avatar) avatar.textContent = (settings.name || "사용자").slice(0, 2);
+    // 대시보드 인사말 등 이름을 쓰는 다른 위치도 갱신.
+    document
+      .querySelectorAll(".user-greet")
+      .forEach((el) => (el.textContent = settings.name || "사용자"));
   };
 
   const openSettings = () => {
