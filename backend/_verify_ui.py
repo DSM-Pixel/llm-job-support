@@ -373,6 +373,15 @@ with sync_playwright() as p:
         f"{saved} / {page.inner_text('.user-name')}",
     )
 
+    # 설정한 이름이 대시보드 인사말에도 반영되는지
+    page.goto(f"{BASE}/pages/dashboard.html")
+    page.wait_for_selector(".user-greet")
+    check(
+        "settings: 이름이 대시보드 인사말에 반영",
+        page.inner_text(".user-greet") == "테스트유저",
+        page.inner_text(".user-greet"),
+    )
+
     # 5) Report ─ 내 웹 활동 기반 통계 보고서 + 시작/종료 날짜 + 편집 가능
     page.goto(f"{BASE}/pages/report.html")
     # 기본 진입 = 내 활동 분석 보고서(편집 가능 문서 즉시 렌더)
@@ -380,6 +389,15 @@ with sync_playwright() as p:
     check(
         "report: 편집 가능 활동 보고서 렌더",
         page.query_selector(".report-page h2[contenteditable]") is not None,
+    )
+
+    # 제목 편집 시(어두운 헤더) 글자가 흰색으로 유지돼 보여야 함
+    page.click(".report-page header h2")
+    title_color = page.evaluate(
+        "() => getComputedStyle(document.querySelector('.report-page header h2')).color"
+    )
+    check(
+        "report: 제목 편집 글자 보임(흰색 유지)", title_color == "rgb(255, 255, 255)", title_color
     )
 
     # 시작/종료 날짜 입력이 기본값(최근 30일~오늘)으로 채워져 있음
@@ -463,15 +481,32 @@ with sync_playwright() as p:
         staged_only and page.query_selector(".report-page .report-attachments img") is not None,
     )
 
-    # 내 작업 산출물(RAG 도출) 주입 → picker에서 '추가'(staged) → 생성 시 본문 삽입
+    # 내 작업 산출물(이미지+RAG) 주입 → 썸네일 클릭 시 상세 모달, '추가' → 생성 시 본문
+    px = (
+        "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAA"
+        "C0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+    )
     page.evaluate(
-        "() => localStorage.setItem('gnsoft.artifacts', JSON.stringify([{ts:Date.now(),"
-        "kind:'rag',title:'RAG 검색 결과',question:'2026.04.24 포트홀 위치',"
-        "answer:'문지로 272 부근 1건(심각 상)',source:'도로파손_탐지로그_2026Q2.csv'}]))"
+        "(px) => localStorage.setItem('gnsoft.artifacts', JSON.stringify(["
+        "{ts:Date.now(),kind:'image',title:'라벨링 · road.png',caption:'라벨 2개 · pothole',image:px},"
+        "{ts:Date.now()-5000,kind:'rag',title:'RAG 검색 결과',question:'2026.04.24 포트홀 위치',"
+        "answer:'문지로 272 부근 1건(심각 상)',source:'도로파손_탐지로그_2026Q2.csv'}]))",
+        px,
     )
     page.reload()
     page.wait_for_selector(".artifact-list .artifact-item")
-    page.click(".artifact-list .artifact-add")
+    # 이미지 자료 썸네일 클릭 → 상세 모달(사진 크게)
+    page.click(".artifact-list .artifact-item:has(.artifact-thumb img) .artifact-thumb")
+    page.wait_for_selector(".art-modal:not([hidden]) .art-detail")
+    check(
+        "report: 아티팩트 상세 모달(사진 크게)",
+        page.is_visible(".art-modal")
+        and page.query_selector(".art-modal .art-image img") is not None,
+    )
+    page.click(".art-modal .modal-cancel")
+    page.wait_for_selector(".art-modal", state="hidden")
+    # RAG 자료 추가 → 생성 시 본문 삽입
+    page.click(".artifact-list .artifact-item:has(.artifact-ic) .artifact-add")
     page.wait_for_selector(".staged-note:not([hidden])")
     page.click(".report-form .primary")
     page.wait_for_selector(".report-page .report-attachments .report-finding")
