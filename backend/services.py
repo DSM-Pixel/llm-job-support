@@ -1399,66 +1399,107 @@ def generate_report_activity(
     n = len(acts)
     period_label = f"{start} ~ {end}" if (start or end) else "전체 기간"
 
+    from datetime import datetime
+
+    # 버튼 텍스트의 아이콘(☰ 활동 통계, ▢ 상세 내역 등)을 떼고 유형만 추출.
+    rtype = re.sub(r"[▥☰▢◫]", "", report_type or "활동 요약").strip() or "활동 요약"
+    page_ko = {
+        "query": "자연어 질의",
+        "rag": "RAG 검색",
+        "labeling": "이미지 분석·라벨링",
+        "report": "요약·보고서",
+        "data": "데이터 관리",
+        "dashboard": "대시보드",
+    }
+
+    def _ts(ts, fmt):
+        try:
+            return datetime.fromtimestamp(float(ts) / 1000).strftime(fmt)
+        except Exception:
+            return "-"
+
     by_type: dict[str, int] = {}
+    by_page: dict[str, int] = {}
+    by_day: dict[str, int] = {}
     queries: list[str] = []
     images: list[str] = []
+    log_rows: list[list[str]] = []
     for a in acts:
         t = (a.get("type") or "기타").strip()
         by_type[t] = by_type.get(t, 0) + 1
+        pg = page_ko.get((a.get("page") or "").strip(), (a.get("page") or "기타").strip() or "기타")
+        by_page[pg] = by_page.get(pg, 0) + 1
+        day = _ts(a.get("ts"), "%m-%d")
+        by_day[day] = by_day.get(day, 0) + 1
         label = (a.get("label") or "").strip()
         if label and ("질의" in t or "검색" in t):
             queries.append(label)
         if label and ("이미지" in t or "분석" in t or "라벨" in t):
             images.append(label)
+        log_rows.append([_ts(a.get("ts"), "%m-%d %H:%M"), t, label or "-", pg])
 
-    rows = [[k, str(v)] for k, v in sorted(by_type.items(), key=lambda kv: -kv[1])]
-    table = {
-        "columns": ["활동 유형", "횟수"],
-        "rows": rows or [["활동 없음", "0"]],
-        "caption": f"활동 통계 ({period_label})",
+    # 파생 지표 — 더 다양한 통계
+    active_days = len(by_day)
+    peak_type, peak_type_n = max(by_type.items(), key=lambda kv: kv[1]) if by_type else ("-", 0)
+    busy_day, busy_day_n = max(by_day.items(), key=lambda kv: kv[1]) if by_day else ("-", 0)
+    avg_per_day = round(n / active_days, 1) if active_days else 0
+
+    def pct(v):
+        return f"{round(v / n * 100)}%" if n else "0%"
+
+    # 통계 표(여러 개) — 유형별/일자별/화면별/로그
+    type_table = {
+        "columns": ["활동 유형", "횟수", "비율"],
+        "rows": [[k, str(v), pct(v)] for k, v in sorted(by_type.items(), key=lambda kv: -kv[1])]
+        or [["활동 없음", "0", "0%"]],
+        "caption": f"유형별 활동 ({period_label})",
+    }
+    day_table = {
+        "columns": ["날짜", "횟수"],
+        "rows": [[k, str(v)] for k, v in sorted(by_day.items())] or [["-", "0"]],
+        "caption": "일자별 활동",
+    }
+    page_table = {
+        "columns": ["사용 화면", "횟수"],
+        "rows": [[k, str(v)] for k, v in sorted(by_page.items(), key=lambda kv: -kv[1])]
+        or [["-", "0"]],
+        "caption": "화면별 활동",
+    }
+    log_table = {
+        "columns": ["시각", "유형", "내용", "화면"],
+        "rows": log_rows[:60] or [["-", "활동 없음", "-", "-"]],
+        "caption": f"활동 로그 ({min(n, 60)}건)",
     }
 
-    context = f"기간: {period_label}\n총 활동 {n}건\n" + "\n".join(
-        f"- {k}: {v}회" for k, v in by_type.items()
+    stat_bullets = "\n".join(
+        [
+            f"- 총 활동: {n}건",
+            f"- 활동한 날: {active_days}일",
+            f"- 하루 평균(활동일 기준): {avg_per_day}건",
+            f"- 가장 많이 한 작업: {peak_type} ({peak_type_n}회 · {pct(peak_type_n)})",
+            f"- 가장 활발한 날: {busy_day} ({busy_day_n}건)",
+            f"- 활동 유형 {len(by_type)}종 · 사용 화면 {len(by_page)}곳",
+        ]
+    )
+
+    context = (
+        f"기간: {period_label}\n총 활동 {n}건 · 활동일 {active_days}일 · 하루 평균 {avg_per_day}건\n"
+        + "유형별: "
+        + ", ".join(f"{k} {v}회" for k, v in by_type.items())
     )
     if queries:
         context += "\n주요 질의/검색: " + " · ".join(dict.fromkeys(queries))[:600]
     if images:
         context += "\n분석/라벨 대상: " + " · ".join(dict.fromkeys(images))[:400]
 
-    sections = None
-    backend = "MOCK"
-    key = _gemini_key()
-    if key and n:
-        try:
-            from google import genai
-
-            client = genai.Client(api_key=key, http_options={"timeout": 20000})
-            prompt = (
-                "다음은 사용자의 도로 유지보수 AI 플랫폼 사용 활동 로그 요약이다. 이를 분석해 한국어 "
-                "'활동 요약 보고서'를 작성하라. 활동 통계·패턴·주요 작업·인사이트를 포함하고, "
-                "5개 섹션 '## N. 제목' 한 줄 + 본문 2~3문장 또는 '- ' 불릿으로. 머리말/맺음말 없이.\n\n"
-                + context
-            )
-            resp = _gemini_generate(client, model="gemini-2.5-flash", contents=prompt)
-            parsed = _parse_md_sections(resp.text or "")
-            if parsed:
-                sections = parsed
-                backend = "GEMINI"
-        except Exception:
-            pass
-
-    if not sections:
+    # 보고서 유형별 본문(MOCK) — 유형마다 다른 구성/표
+    if rtype == "상세 내역":
         sections = [
             {
                 "heading": "1. 개요",
-                "body": f"{period_label} 동안 총 {n}건의 활동이 기록되었습니다.",
+                "body": f"{period_label} 동안의 활동을 시간순으로 정리했습니다. 총 {n}건.",
             },
-            {
-                "heading": "2. 활동 통계",
-                "body": "\n".join(f"- {k}: {v}회" for k, v in by_type.items())
-                or "- 기록된 활동이 없습니다.",
-            },
+            {"heading": "2. 통계 요약", "body": stat_bullets},
         ]
         if queries:
             sections.append(
@@ -1470,20 +1511,87 @@ def generate_report_activity(
         if images:
             sections.append(
                 {
-                    "heading": "4. 분석·라벨 대상",
+                    "heading": f"{len(sections) + 1}. 분석·라벨 대상",
+                    "body": "\n".join(f"- {im}" for im in dict.fromkeys(images))[:600],
+                }
+            )
+        tables = [log_table, type_table]
+    elif rtype == "활동 통계":
+        sections = [
+            {"heading": "1. 통계 요약", "body": stat_bullets},
+            {
+                "heading": "2. 해석",
+                "body": (
+                    f"가장 많이 사용한 기능은 '{peak_type}'({pct(peak_type_n)})이며, "
+                    f"'{busy_day}'에 활동이 집중되었습니다."
+                    if n
+                    else "기록된 활동이 없습니다. 검색·이미지 분석·문서 색인 등을 사용하면 통계가 집계됩니다."
+                ),
+            },
+        ]
+        tables = [type_table, day_table, page_table]
+    else:  # 활동 요약 — 요약 + 통계 합본(가장 풍부)
+        sections = [
+            {
+                "heading": "1. 개요",
+                "body": (
+                    f"{period_label} 동안 총 {n}건의 활동이 있었고, {active_days}일에 걸쳐 "
+                    f"하루 평균 {avg_per_day}건을 수행했습니다."
+                    if n
+                    else f"{period_label} 동안 기록된 활동이 없습니다."
+                ),
+            },
+            {"heading": "2. 핵심 지표", "body": stat_bullets},
+        ]
+        if queries:
+            sections.append(
+                {
+                    "heading": "3. 주요 질의·검색",
+                    "body": "\n".join(f"- {q}" for q in dict.fromkeys(queries))[:800],
+                }
+            )
+        if images:
+            sections.append(
+                {
+                    "heading": f"{len(sections) + 1}. 분석·라벨 대상",
                     "body": "\n".join(f"- {im}" for im in dict.fromkeys(images))[:600],
                 }
             )
         sections.append(
             {
                 "heading": f"{len(sections) + 1}. 종합",
-                "body": "위 활동을 바탕으로 도로 파손 데이터 수집·분석·라벨링이 진행되었습니다."
-                if n
-                else "아직 기록된 활동이 없습니다. 검색·이미지 분석·문서 색인 등을 사용하면 활동이 집계됩니다.",
+                "body": (
+                    f"위 활동을 바탕으로 도로 파손 데이터의 수집·분석·라벨링이 진행되었습니다. "
+                    f"'{peak_type}' 작업 비중이 가장 높았습니다."
+                    if n
+                    else "아직 기록된 활동이 없습니다. 검색·이미지 분석·문서 색인 등을 사용하면 활동이 집계됩니다."
+                ),
             }
         )
+        tables = [type_table, day_table]
 
-    rtype = (report_type or "활동 요약").strip()
+    # Gemini 로 본문 품질 향상(가능 시) — 통계 표는 그대로 유지
+    backend = "MOCK"
+    key = _gemini_key()
+    if key and n:
+        try:
+            from google import genai
+
+            client = genai.Client(api_key=key, http_options={"timeout": 20000})
+            prompt = (
+                f"다음은 사용자의 도로 유지보수 AI 플랫폼 사용 활동 로그 요약이다. 이를 분석해 한국어 "
+                f"'{rtype} 보고서'를 작성하라. 활동 통계·패턴·주요 작업·인사이트를 포함하고, "
+                "4~5개 섹션 '## N. 제목' 한 줄 + 본문 2~3문장 또는 '- ' 불릿으로. 머리말/맺음말 없이.\n\n"
+                + context
+            )
+            resp = _gemini_generate(client, model="gemini-2.5-flash", contents=prompt)
+            parsed = _parse_md_sections(resp.text or "")
+            if parsed:
+                sections = parsed
+                backend = "GEMINI"
+        except Exception:
+            pass
+
     return {
         "backend": backend,
         "report_type": rtype,
@@ -1491,9 +1599,10 @@ def generate_report_activity(
         "date": "2026.6.24",
         "period": period_label,
         "title": f"내 {rtype} 보고서",
-        "subtitle": f"{period_label} · 총 활동 {n}건",
+        "subtitle": f"{period_label} · 총 활동 {n}건 · 활동일 {active_days}일 · 평균 {avg_per_day}건/일",
         "sections": sections,
-        "table": table if include_chart else None,
+        "table": None,
+        "tables": tables if include_chart else [],
         "sources": [f"세션 활동 로그 {n}건"],
     }
 

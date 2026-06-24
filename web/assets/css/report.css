@@ -1,7 +1,9 @@
 .report-layout {
   display: grid;
   grid-template-columns: 320px minmax(0, 1fr);
-  min-height: calc(100vh - 54px);
+  /* 구성(왼쪽)·미리보기(오른쪽)를 각자 스크롤되게 — 레이아웃 높이를 뷰포트에 고정 */
+  height: calc(100vh - 54px);
+  overflow: hidden;
 }
 
 /* 보고서 본문 — 문단 + 불릿 목록 */
@@ -33,8 +35,15 @@
 
 /* 보고서 본문 직접 편집(글 수정) — 편집 가능 영역 표시 */
 .report-page [contenteditable="true"] {
-  border-radius: 4px;
+  border-radius: 6px;
   transition: background 0.12s ease, box-shadow 0.12s ease;
+}
+
+/* 호버/포커스 하이라이트가 글자에 딱 붙지 않도록 여백을 준다(표 셀 제외).
+   음수 마진으로 보정해 글 위치는 그대로 두고 강조 영역만 넓힌다. */
+.report-page [contenteditable="true"]:not(td) {
+  margin: -3px -9px;
+  padding: 3px 9px;
 }
 
 .report-page [contenteditable="true"]:hover {
@@ -59,6 +68,7 @@
   padding: 24px 22px 28px;
   border-right: 1px solid #e1e7f0;
   background: var(--surface);
+  overflow-y: auto; /* 구성 패널 독립 스크롤 */
 }
 
 .report-form h2 {
@@ -494,6 +504,15 @@
 
 .preview-zone {
   padding: 0 26px 36px;
+  overflow-y: auto; /* 미리보기 독립 스크롤(구성 패널과 따로 움직임) */
+}
+
+/* 미리보기 도구막대는 스크롤해도 위에 고정 */
+.preview-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--bg);
 }
 
 .preview-toolbar {
@@ -670,8 +689,18 @@
 }
 
 @media (max-width: 1200px) {
+  /* 좁은 화면에선 한 열로 쌓이며 전체가 함께 스크롤(분리 스크롤 해제) */
   .report-layout {
     grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
+  }
+  .report-form,
+  .preview-zone {
+    overflow-y: visible;
+  }
+  .preview-toolbar {
+    position: static;
   }
 }
 

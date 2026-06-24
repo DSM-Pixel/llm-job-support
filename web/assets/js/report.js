@@ -192,14 +192,17 @@ document.addEventListener("DOMContentLoaded", () => {
       )
       .join("");
 
-    let table = "";
-    if (r.table) {
-      const head = r.table.columns.map((c) => `<th>${esc(c)}</th>`).join("");
-      const body = r.table.rows
+    // 표 하나를 섹션으로 — 활동 보고서는 여러 통계표(유형·일자·화면·로그)를 낼 수 있다.
+    const tableHtml = (t) => {
+      if (!t || !t.columns) return "";
+      const head = t.columns.map((c) => `<th>${esc(c)}</th>`).join("");
+      const body = (t.rows || [])
         .map((row) => `<tr>${row.map((c) => `<td contenteditable="true">${esc(c)}</td>`).join("")}</tr>`)
         .join("");
-      table = `<section><h3 contenteditable="true">${esc(r.table.caption)}</h3><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></section>`;
-    }
+      return `<section><h3 contenteditable="true">${esc(t.caption)}</h3><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></section>`;
+    };
+    let table = tableHtml(r.table);
+    if (Array.isArray(r.tables)) table += r.tables.map(tableHtml).join("");
 
     const sources = (r.sources || [])
       .map((s) =>
