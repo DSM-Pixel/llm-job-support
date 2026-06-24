@@ -5,7 +5,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const ICONS = { 라벨: "◇", 원본: "▧", 공공데이터: "▱", 문서: "▤" };
 
-  const rowHtml = (d) => `<tr>
+  // 행에는 이름·아이콘 그대로 두고, 실제 사진은 data-img 에만 담아 '미리보기'에서 보여준다.
+  const rowHtml = (d) => `<tr${d.img ? ` data-img="${d.img}"` : ""}>
     <td><input type="checkbox"></td>
     <td><b class="name-cell"><span class="name-icon">${ICONS[d.kind] || "▱"}</span>${ABC.escapeHtml(d.name)}</b></td>
     <td>${ABC.escapeHtml(d.kind)}</td>
@@ -15,12 +16,32 @@ document.addEventListener("DOMContentLoaded", async () => {
     <td>${ABC.escapeHtml(d.date)}<small>${ABC.escapeHtml(d.owner)}</small></td>
     <td class="row-actions"><button class="row-menu" type="button" aria-label="더보기">⋮</button></td></tr>`;
 
-  // 서버에서 데이터셋 목록을 받아 테이블을 채운다. 실패 시 HTML 기본 행 유지.
+  // 내가 실제로 만든 작업물(라벨·분석한 이미지)을 '실제 데이터'로 표 상단에 올린다.
+  // → 표는 [내 실제 작업물·업로드] + [데모 시드 카탈로그 몇 개]의 혼합이 된다.
+  const myRealRows = (ABC.getArtifacts() || [])
+    .filter((a) => a.image)
+    .slice()
+    .reverse()
+    .map((a) => ({
+      name: a.title || a.caption || "내 작업 이미지",
+      kind: a.kind === "label" ? "라벨" : "원본",
+      count: "1",
+      fmt: "PNG",
+      state: "내 작업",
+      tone: "green",
+      date: ABC.relTime ? ABC.relTime(a.ts) : "방금",
+      owner: "나",
+      img: a.image,
+    }));
+
+  // 서버에서 데모 시드 데이터셋 목록을 받아, 내 실제 작업물과 합쳐 표를 채운다.
   try {
     const data = await ABC.api("/api/datasets");
-    if (tbody && data.datasets) tbody.innerHTML = data.datasets.map(rowHtml).join("");
+    if (tbody && data.datasets) {
+      tbody.innerHTML = [...myRealRows, ...data.datasets].map(rowHtml).join("");
+    }
   } catch {
-    /* 기본 행 사용 */
+    if (tbody && myRealRows.length) tbody.innerHTML = myRealRows.map(rowHtml).join("");
   }
 
   const filterRows = () => {
@@ -101,6 +122,15 @@ document.addEventListener("DOMContentLoaded", async () => {
             owner: "나",
           }),
         );
+        const tr = tbody.firstElementChild;
+        // 업로드한 게 이미지 파일이면 실제 사진을 행에 저장 → '미리보기'에서 보여준다.
+        if (/^image\//.test(f.type) || /\.(jpe?g|png|bmp|gif|webp)$/i.test(f.name)) {
+          const reader = new FileReader();
+          reader.onload = () => {
+            tr.dataset.img = String(reader.result || "");
+          };
+          reader.readAsDataURL(f);
+        }
       });
       filterRows();
       ABC.toast(`${files.length}개 파일을 데이터셋에 추가했습니다 (업로드 대기)`);
@@ -157,51 +187,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (e.target === previewModal) previewModal.hidden = true;
   });
 
-  // 이미지 데이터셋 미리보기용 대표 도로 프레임을 캔버스로 생성(샘플 — 실제 파일 없음).
-  const roadFrame = (seed, w = 360, h = 200) => {
-    const cv = document.createElement("canvas");
-    cv.width = w;
-    cv.height = h;
-    const ctx = cv.getContext("2d");
-    const g = ctx.createLinearGradient(0, 0, 0, h);
-    g.addColorStop(0, "#3a4150");
-    g.addColorStop(1, "#23272f");
-    ctx.fillStyle = g;
-    ctx.fillRect(0, 0, w, h);
-    for (let i = 0; i < 360; i++) {
-      const x = (Math.sin(seed * 12.9 + i * 7.1) * 0.5 + 0.5) * w;
-      const y = (Math.cos(seed * 4.3 + i * 3.7) * 0.5 + 0.5) * h;
-      ctx.fillStyle = `rgba(255,255,255,${(i % 5) * 0.012})`;
-      ctx.fillRect(x, y, 1.5, 1.5);
-    }
-    ctx.strokeStyle = "rgba(230,225,200,0.6)";
-    ctx.lineWidth = 6;
-    ctx.setLineDash([22, 18]);
-    ctx.beginPath();
-    ctx.moveTo(w * 0.5, h);
-    ctx.lineTo(w * 0.5 + 8, 0);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    const cx = w * (0.3 + (seed % 3) * 0.14);
-    const cy = h * 0.62;
-    const r = 24 + (seed % 4) * 6;
-    ctx.fillStyle = "#15171c";
-    ctx.beginPath();
-    for (let a = 0; a <= Math.PI * 2 + 0.01; a += 0.4) {
-      const rr = r * (0.78 + 0.3 * Math.sin(a * 3 + seed));
-      const x = cx + Math.cos(a) * rr;
-      const y = cy + Math.sin(a) * rr * 0.7;
-      if (a === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    }
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = "rgba(0,0,0,0.45)";
-    ctx.lineWidth = 3;
-    ctx.stroke();
-    return cv.toDataURL("image/jpeg", 0.8);
-  };
-
   const showPreview = (row) => {
     const c = row.children;
     const fields = {
@@ -212,22 +197,20 @@ document.addEventListener("DOMContentLoaded", async () => {
       "검수 상태": c[5].innerText.trim(),
       업데이트: c[6].innerText.trim(),
     };
-    // 이미지성 데이터셋(원본·라벨, JPG/PNG/BMP/MP4)은 대표 프레임 미리보기를 함께 보여준다.
+    // 실제 파일(업로드·내 작업물)이 있으면 그 사진을 미리보기에 띄운다. 없으면 안내만.
+    const realImg = row.dataset.img || "";
     const kind = fields["유형"];
     const fmt = fields["형식"].toUpperCase();
-    const isImage =
-      kind === "원본" ||
-      kind === "라벨" ||
-      /JPG|JPEG|PNG|BMP|MP4|프레임|COCO/.test(fmt);
-    const seed = fields["이름"].length;
-    const frames = isImage
-      ? `<div class="preview-frames">${[0, 1, 2]
-          .map(
-            (i) =>
-              `<img class="preview-frame" src="${roadFrame(seed + i * 3)}" alt="대표 프레임 ${i + 1}" />`,
-          )
-          .join("")}</div><p class="preview-note">대표 프레임 미리보기 (샘플)</p>`
-      : "";
+    const isImage = kind === "원본" || kind === "라벨" || /JPG|JPEG|PNG|BMP|MP4|프레임|COCO/.test(fmt);
+    let frames = "";
+    if (realImg) {
+      frames =
+        `<div class="preview-frames one"><img class="preview-frame" src="${realImg}" alt="${ABC.escapeHtml(fields["이름"])}" /></div>` +
+        `<p class="preview-note">실제 파일 미리보기</p>`;
+    } else if (isImage) {
+      frames =
+        `<p class="preview-note no-file">개별 파일 미리보기는 직접 업로드했거나 내가 분석·라벨한 이미지에만 표시됩니다.<br />(이 항목은 대용량·외부 연계 데이터셋이라 개별 파일이 없습니다)</p>`;
+    }
     const rows = Object.entries(fields)
       .map(
         ([k, v]) =>

@@ -123,25 +123,41 @@
   overflow: hidden;
 }
 
-/* 데이터셋 미리보기 — 이미지성 데이터셋의 대표 프레임 */
+/* 데이터셋 미리보기 — 실제 파일(업로드·내 작업물)의 사진 */
 .preview-frames {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
   gap: 8px;
 }
 
 .preview-frame {
   width: 100%;
-  aspect-ratio: 16 / 10;
-  object-fit: cover;
+  max-height: 320px;
+  object-fit: contain;
   border-radius: 8px;
   border: 1px solid var(--line);
+  background: rgba(120, 140, 170, 0.08);
 }
 
 .preview-note {
   margin: -4px 0 2px;
   font-size: 12px;
   color: var(--muted);
+}
+
+.preview-note.no-file {
+  margin: 0;
+  padding: 16px;
+  line-height: 1.6;
+  text-align: center;
+  border-radius: 8px;
+  background: rgba(120, 140, 170, 0.08);
+}
+
+/* 선택된 필터 칩을 또렷하게(채운 파랑) 구분 */
+.table-tools .chips .pill.active {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
 }
 
 table {

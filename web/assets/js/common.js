@@ -903,5 +903,6 @@ const ABC = (() => {
     deleteArtifacts,
     openHistory,
     confirmAction,
+    relTime,
   };
 })();

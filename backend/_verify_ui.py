@@ -647,10 +647,27 @@ with sync_playwright() as p:
     check("report: RAG 질문 연결(?q)", len(page.query_selector_all(".report-page section")) >= 1)
 
     # 6) Data ─ 목록 + 필터 + 업로드(행추가) + ⋮메뉴 삭제
+    # 내 실제 작업물(아티팩트)이 표에 합쳐지므로, 먼저 비워 시드 데이터셋만 확인.
     page.goto(f"{BASE}/pages/data.html")
+    page.evaluate("() => localStorage.removeItem('gnsoft.artifacts')")
+    page.reload()
     page.wait_for_selector("tbody tr")
     rows = page.query_selector_all("tbody tr")
-    check("data: 데이터셋 5행 로드", len(rows) == 5, f"{len(rows)}행")
+    check("data: 시드 데이터셋 5행 로드", len(rows) == 5, f"{len(rows)}행")
+
+    # 내가 분석·라벨한 실제 이미지를 데이터로 합쳐 표 상단에 표시(mock 아님)
+    page.evaluate(
+        "() => { const n=Date.now(); localStorage.setItem('gnsoft.artifacts', JSON.stringify(["
+        "{ts:n,page:'labeling',kind:'label',title:'내가 라벨한 도로',"
+        "image:'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='}])); }"
+    )
+    page.reload()
+    page.wait_for_selector("tbody tr[data-img]")
+    check(
+        "data: 내 실제 작업물 표에 병합",
+        "내가 라벨한 도로" in page.inner_text("tbody")
+        and len(page.query_selector_all("tbody tr")) == 6,
+    )
     page.fill(".search-upload input", "cctv")
     page.wait_for_timeout(200)
     visible = [r for r in page.query_selector_all("tbody tr") if r.is_visible()]
@@ -675,16 +692,29 @@ with sync_playwright() as p:
     )
     check("data: 업로드 행 추가", len(page.query_selector_all("tbody tr")) == before_rows + 1)
 
-    # ⋮ 메뉴 → 미리보기 → 이미지 데이터셋이면 대표 프레임(사진) 표시
-    page.click("tbody tr:nth-child(2) .row-menu")  # road_raw_2026Q1 (원본/JPG)
+    # 이미지 파일 업로드 → 그 행의 '미리보기'에 실제 업로드한 사진이 뜸(이름·행은 그대로)
+    page.set_input_files(
+        "input[type=file]",
+        files=[{"name": "road.png", "mimeType": "image/png", "buffer": make_png()}],
+    )
+    page.wait_for_selector("tbody tr:first-child[data-img]")
+    page.click("tbody tr:first-child .row-menu")
     page.wait_for_selector(".row-pop:not([hidden])")
     page.click(".row-pop button[data-act='preview']")
     page.wait_for_selector(".modal-overlay:not([hidden]) .preview-frame")
-    check(
-        "data: 이미지 데이터셋 미리보기에 사진 표시",
-        len(page.query_selector_all(".preview-frame")) == 3,
-    )
+    psrc = page.get_attribute(".modal-overlay:not([hidden]) .preview-frame", "src")
+    check("data: 업로드 이미지 미리보기에 실제 사진", bool(psrc) and psrc.startswith("data:image"))
     page.click(".modal-overlay:not([hidden]) .modal-close")
+
+    # 필터 칩 선택 시 또렷한 색(채운 파랑)으로 구분
+    page.click(".chips .pill:nth-child(2)")  # '원본 이미지'
+    chip_bg = page.evaluate(
+        "() => getComputedStyle(document.querySelector('.chips .pill.active')).backgroundColor"
+    )
+    check(
+        "data: 선택한 필터 칩 색 구분", chip_bg not in ("rgba(0, 0, 0, 0)", "transparent"), chip_bg
+    )
+    page.click(".chips .pill:first-child")  # 다시 '전체'로
 
     # ⋮ 메뉴 → 삭제 → 확인 모달에서 한 번 더 묻기
     now_rows = len(page.query_selector_all("tbody tr"))

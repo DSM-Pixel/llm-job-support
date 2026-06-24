@@ -25,12 +25,22 @@ WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 app = FastAPI(title="GNSoft AI 플랫폼", version="0.1.0")
 
 
+_CACHEABLE_EXT = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico", ".woff", ".woff2")
+
+
 @app.middleware("http")
 async def no_cache(request, call_next):
     """시연/개발 중 브라우저가 옛 정적 파일(JS/CSS/HTML)을 그대로 쓰지 않도록
-    매 요청 재검증을 요구한다. (ETag와 함께 동작 — 안 바뀌었으면 304)"""
+    매 요청 재검증을 요구한다. (ETag와 함께 동작 — 안 바뀌었으면 304)
+
+    단, 이미지·폰트 등 안 바뀌는 자원은 캐시를 허용한다. 매 화면 전환마다
+    로고가 재요청되며 잠깐 '흰 박스'로 깜빡이던 문제를 막는다.
+    """
     response = await call_next(request)
-    response.headers["Cache-Control"] = "no-cache, must-revalidate"
+    if request.url.path.lower().endswith(_CACHEABLE_EXT):
+        response.headers["Cache-Control"] = "public, max-age=86400"
+    else:
+        response.headers["Cache-Control"] = "no-cache, must-revalidate"
     return response
 
 
