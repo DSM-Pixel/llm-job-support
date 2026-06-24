@@ -467,16 +467,23 @@ with sync_playwright() as p:
     page.evaluate("(el)=>{el.textContent='수정된 본문 테스트';}", p)
     check("report: 본문 편집 가능", "수정된 본문 테스트" in page.inner_text(".report-page"))
 
-    # 섹션에 마우스 올리면 휴지통 → 클릭 시 그 섹션 삭제
+    # 섹션 휴지통 → 확인 모달 → 삭제(되돌릴 수 없음 안내)
     sec_n = len(page.query_selector_all(".report-page section"))
     first_sec = page.locator(".report-page section").first
     first_sec.hover()
     first_sec.locator(".sec-del").click()
+    page.wait_for_selector(".confirm-modal:not([hidden]) .confirm-delete")
+    check(
+        "report: 섹션 삭제 확인 모달",
+        page.is_visible(".confirm-modal")
+        and len(page.query_selector_all(".report-page section")) == sec_n,
+    )
+    page.click(".confirm-modal .confirm-delete")
     page.wait_for_function(
         "(n) => document.querySelectorAll('.report-page section').length === n - 1", arg=sec_n
     )
     check(
-        "report: 섹션 삭제(휴지통)",
+        "report: 섹션 삭제(확인 후)",
         len(page.query_selector_all(".report-page section")) == sec_n - 1,
     )
 

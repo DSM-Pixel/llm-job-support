@@ -135,12 +135,45 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   };
 
-  // 휴지통 클릭 → 해당 섹션 삭제(위임).
+  // 섹션 삭제 확인 모달 — 되돌릴 수 없으니 한 번 더 묻는다.
+  const secConfirm = document.createElement("div");
+  secConfirm.className = "modal-overlay";
+  secConfirm.hidden = true;
+  secConfirm.innerHTML =
+    '<div class="modal confirm-modal"><header class="modal-head"><h3>섹션 삭제</h3>' +
+    '<button class="modal-close" type="button" aria-label="닫기">✕</button></header>' +
+    '<div class="modal-body"><p class="confirm-text">이 섹션을 삭제할까요?<br />이 작업은 되돌릴 수 없습니다.</p></div>' +
+    '<div class="modal-foot"><button class="btn modal-cancel" type="button">취소</button>' +
+    '<button class="btn danger confirm-delete" type="button">삭제</button></div></div>';
+  document.body.appendChild(secConfirm);
+
+  let pendingSec = null;
+  const closeSecConfirm = () => {
+    secConfirm.hidden = true;
+    pendingSec = null;
+  };
+  secConfirm.querySelector(".modal-close").addEventListener("click", closeSecConfirm);
+  secConfirm.querySelector(".modal-cancel").addEventListener("click", closeSecConfirm);
+  secConfirm.addEventListener("click", (e) => {
+    if (e.target === secConfirm) closeSecConfirm();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !secConfirm.hidden) closeSecConfirm();
+  });
+  secConfirm.querySelector(".confirm-delete").addEventListener("click", () => {
+    if (pendingSec) {
+      pendingSec.remove();
+      ABC.toast("섹션을 삭제했습니다");
+    }
+    closeSecConfirm();
+  });
+
+  // 휴지통 클릭 → 바로 지우지 않고 확인 모달(위임).
   reportPage?.addEventListener("click", (e) => {
     const del = e.target.closest(".sec-del");
     if (!del) return;
-    del.closest("section")?.remove();
-    ABC.toast("섹션을 삭제했습니다");
+    pendingSec = del.closest("section");
+    secConfirm.hidden = false;
   });
 
   // 마지막으로 렌더한 보고서(AI 수정 시 제목·섹션만 교체하고 나머지는 유지).

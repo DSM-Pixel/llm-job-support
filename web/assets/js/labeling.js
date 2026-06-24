@@ -290,6 +290,56 @@ document.addEventListener("DOMContentLoaded", () => {
     ABC.toast("YOLO txt를 내려받았습니다");
   });
 
+  // 이미지에 라벨 박스(+클래스명)를 그려 넣은 data URL 생성 — 보고서에 라벨된 사진을 넣기 위함.
+  const makeLabeledThumb = (imgEl, boxList, max = 760) =>
+    new Promise((resolve) => {
+      const draw = (el) => {
+        const iw = el.naturalWidth || el.width;
+        const ih = el.naturalHeight || el.height;
+        if (!iw || !ih) return resolve("");
+        const scale = Math.min(1, max / Math.max(iw, ih));
+        const W = Math.round(iw * scale);
+        const H = Math.round(ih * scale);
+        const c = document.createElement("canvas");
+        c.width = W;
+        c.height = H;
+        const ctx = c.getContext("2d");
+        try {
+          ctx.drawImage(el, 0, 0, W, H);
+          ctx.lineWidth = Math.max(2, Math.round(W / 280));
+          const fs = Math.max(12, Math.round(W / 38));
+          ctx.font = `700 ${fs}px sans-serif`;
+          ctx.textBaseline = "top";
+          boxList.forEach((b) => {
+            const x = (b.x / 100) * W;
+            const y = (b.y / 100) * H;
+            const w = (b.w / 100) * W;
+            const h = (b.h / 100) * H;
+            ctx.strokeStyle = "#ef4444";
+            ctx.strokeRect(x, y, w, h);
+            const label = b.label || "object";
+            const tw = ctx.measureText(label).width;
+            const ly = Math.max(0, y - (fs + 6));
+            ctx.fillStyle = "#ef4444";
+            ctx.fillRect(x, ly, tw + 10, fs + 6);
+            ctx.fillStyle = "#fff";
+            ctx.fillText(label, x + 5, ly + 3);
+          });
+          resolve(c.toDataURL("image/jpeg", 0.8));
+        } catch {
+          resolve("");
+        }
+      };
+      if (imgEl instanceof HTMLImageElement && imgEl.complete && imgEl.naturalWidth) {
+        draw(imgEl);
+      } else {
+        const e = new Image();
+        e.onload = () => draw(e);
+        e.onerror = () => resolve("");
+        e.src = imgEl instanceof HTMLImageElement ? imgEl.src : imgEl;
+      }
+    });
+
   // 라벨 데이터셋에 저장 — 박스를 영속(미리보기 유지) + 백엔드 저장.
   const saveLabels = async (button) => {
     persist(); // 미리보기에 박스 반영(닫아도 유지)
@@ -300,10 +350,10 @@ document.addEventListener("DOMContentLoaded", () => {
         label_count: boxes.length,
       });
       ABC.logActivity("라벨 저장", `${imageName} (${boxes.length}개)`);
-      // 보고서에 넣을 산출물로 저장(라벨한 이미지 + 라벨 결과).
+      // 보고서에 넣을 산출물로 저장(박스를 그려 넣은 라벨 이미지 + 라벨 결과).
       if (previewImg?.src && boxes.length) {
         const classes = [...new Set(boxes.map((b) => b.label))].filter(Boolean).join(", ");
-        const thumb = await ABC.toThumb(previewImg);
+        const thumb = await makeLabeledThumb(previewImg, boxes);
         if (thumb) {
           ABC.saveArtifact({
             kind: "image",
