@@ -292,7 +292,7 @@ h3 {
   height: 26px;
   place-items: center;
   border-radius: 6px;
-  background: #eef4ff;
+  background: rgba(70, 96, 191, 0.10);
   color: var(--blue);
   font-size: 17px;
   font-weight: 400;
