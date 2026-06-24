@@ -48,11 +48,17 @@ with sync_playwright() as p:
     check("dashboard: 통계 카드 4개", len(cards) == 4, f"{len(cards)}개")
     check("dashboard: 주간 차트 7개", len(bars) == 7, f"{len(bars)}개")
     check("dashboard: 모델 상태 4행", len(models) == 4, f"{len(models)}행")
+
+    # Gemini 모델 행 클릭 → 무료 한도(RPD/RPM/TPM/컨텍스트) 기준 사용 현황 상세 모달
+    page.click(".model-row-click")
+    page.wait_for_selector(".mm-body .mm-row")
+    mm = page.inner_text(".mm-body")
     check(
-        "dashboard: Gemini 실제 토큰 사용량 표시",
-        "토큰" in page.inner_text(".model-card"),
-        page.inner_text(".model-card").replace("\n", " ")[:40],
+        "dashboard: Gemini 사용 현황 상세(클릭)",
+        "일일 요청 한도(RPD)" in mm and "토큰" in mm and "컨텍스트" in mm,
+        mm.replace("\n", " ")[:24],
     )
+    page.click(".modal-overlay:not([hidden]) .modal-close")
     check("dashboard: 최근 활동 4건", len(acts) == 4, f"{len(acts)}건")
 
     # 활동 기록이 있으면 최근 활동·주간 처리량이 실데이터로 표시(통계 카드는 MOCK 유지)

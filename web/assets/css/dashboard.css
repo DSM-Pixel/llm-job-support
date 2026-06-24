@@ -194,6 +194,47 @@ h3 {
   color: var(--muted);
 }
 
+.model-row-click {
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 0.12s ease;
+}
+
+.model-row-click:hover {
+  background: #f5f8ff;
+}
+
+.model-more {
+  margin-top: 2px;
+  color: var(--blue) !important;
+  font-weight: 800;
+}
+
+/* 모델 사용 현황 상세 모달 */
+.mm-body {
+  display: grid;
+  gap: 10px;
+  padding: 18px 20px;
+}
+
+.mm-row {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.mm-row span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.mm-row b {
+  font-weight: 800;
+  line-height: 1.45;
+}
+
 .dot {
   width: 10px;
   height: 10px;

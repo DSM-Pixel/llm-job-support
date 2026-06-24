@@ -27,24 +27,32 @@ BACKEND = "MOCK"
 _GEMINI_POOL = ThreadPoolExecutor(max_workers=8)
 _GEMINI_TIMEOUT_S = 15
 
-# 이 서버 세션 동안 실제로 쓴 Gemini 토큰 누적(대시보드 부하 막대용).
-_gemini_usage = {"tokens": 0, "calls": 0}
+# 이 서버 세션 동안의 실제 Gemini 사용량(대시보드 사용률 막대·상세용).
+_gemini_usage = {"requests": 0, "success": 0, "tokens": 0, "rate_limited": False}
 
 
 def _gemini_generate(client, **kwargs):
     """client.models.generate_content 를 하드 타임아웃으로 감싼다.
 
     초과 시 TimeoutError 를 던져 호출부 except 가 MOCK 폴백을 타게 한다.
-    성공 시 응답의 usage_metadata 에서 실제 사용 토큰 수를 누적한다.
+    요청 수·성공 수·사용 토큰·한도소진(429) 여부를 실제로 추적한다.
     """
-    fut = _GEMINI_POOL.submit(lambda: client.models.generate_content(**kwargs))
-    resp = fut.result(timeout=_GEMINI_TIMEOUT_S)
+    _gemini_usage["requests"] += 1
+    try:
+        fut = _GEMINI_POOL.submit(lambda: client.models.generate_content(**kwargs))
+        resp = fut.result(timeout=_GEMINI_TIMEOUT_S)
+    except Exception as e:
+        msg = str(e).lower()
+        if any(k in msg for k in ("429", "resource_exhausted", "quota", "rate limit", "ratelimit")):
+            _gemini_usage["rate_limited"] = True  # 한도 소진 관측
+        raise
+    _gemini_usage["rate_limited"] = False  # 성공했으니 가용
+    _gemini_usage["success"] += 1
     try:
         um = getattr(resp, "usage_metadata", None)
         total = getattr(um, "total_token_count", None) if um else None
         if total:
             _gemini_usage["tokens"] += int(total)
-            _gemini_usage["calls"] += 1
     except Exception:
         pass
     return resp
@@ -147,9 +155,32 @@ def dashboard_stats() -> dict:
     }
 
 
+# gemini-2.5-flash 무료 한도(참고용 기준).
+_GEMINI_RPD = 250  # 일일 요청(Flash 250~1,000+)
+_GEMINI_RPM = 15  # 분당 요청(5~15)
+_GEMINI_TPM = 250_000  # 분당 토큰(입력 기준)
+_GEMINI_CTX = 1_000_000  # 컨텍스트 윈도우
+
+
 def real_model_status(yolo_ok: bool) -> list[dict]:
-    """모델 상태 — YOLO(best.pt)·Gemini 는 실제 가용성, 나머지는 데모값."""
+    """모델 상태 — YOLO(best.pt)·Gemini 는 실제 가용성/사용량, 나머지는 데모값."""
+    u = _gemini_usage
     gemini_ok = bool(_gemini_key())
+    fails = u["requests"] - u["success"]
+    if not gemini_ok:
+        g_state, g_tone = "키 없음", "gray"
+    elif u["requests"] == 0:
+        g_state, g_tone = "대기", "gray"  # 아직 호출 없음 → 확인 전
+    elif u["rate_limited"]:
+        g_state, g_tone = "한도 소진", "orange"  # 429 관측됨
+    else:
+        g_state, g_tone = "운영", "green"
+    # 막대 = 일일 요청 사용률(RPD 대비). 한도 소진이면 가득 채움.
+    g_load = (
+        100
+        if (gemini_ok and u["rate_limited"])
+        else min(100, round(u["requests"] / _GEMINI_RPD * 100))
+    )
     return [
         {
             "name": "YOLOe-L 도로파손",
@@ -160,11 +191,22 @@ def real_model_status(yolo_ok: bool) -> list[dict]:
         },
         {
             "name": "gemini-2.5-flash",
-            "kind": f"VLM·생성 · {_gemini_usage['tokens']:,} 토큰",
-            # 파란 막대 = 실제 사용 토큰 / 표시용 예산(50K) 비율.
-            "load": min(100, round(_gemini_usage["tokens"] / 50000 * 100)),
-            "state": "운영" if gemini_ok else "키 없음",
-            "tone": "green" if gemini_ok else "gray",
+            "kind": f"VLM·생성 · 요청 {u['requests']}/{_GEMINI_RPD}",
+            "load": g_load,
+            "state": g_state,
+            "tone": g_tone,
+            "detail": [
+                {"k": "현재 상태", "v": g_state},
+                {
+                    "k": "이번 세션 요청",
+                    "v": f"{u['requests']}회 (성공 {u['success']} · 실패 {fails})",
+                },
+                {"k": "이번 세션 사용 토큰", "v": f"{u['tokens']:,} 토큰"},
+                {"k": "일일 요청 한도(RPD)", "v": f"{_GEMINI_RPD}회 · Flash 250~1,000+"},
+                {"k": "분당 요청(RPM)", "v": f"5~{_GEMINI_RPM}회"},
+                {"k": "분당 토큰(TPM)", "v": f"약 {_GEMINI_TPM:,} 토큰(입력 기준)"},
+                {"k": "컨텍스트 윈도우", "v": f"최대 {_GEMINI_CTX:,} 토큰"},
+            ],
         },
         {"name": "SAM 분할", "kind": "세그멘테이션", "load": 56, "state": "대기", "tone": "gray"},
         {

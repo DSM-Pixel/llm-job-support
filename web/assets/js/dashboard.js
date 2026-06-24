@@ -21,6 +21,39 @@ document.addEventListener("DOMContentLoaded", async () => {
     tick();
   };
 
+  // 모델 사용 현황 상세 모달(Gemini 등).
+  let modelModal = null;
+  const openModelDetail = (m) => {
+    if (!modelModal) {
+      modelModal = document.createElement("div");
+      modelModal.className = "modal-overlay";
+      modelModal.hidden = true;
+      modelModal.innerHTML =
+        '<div class="modal"><header class="modal-head"><h3 class="mm-title"></h3>' +
+        '<button class="modal-close" type="button" aria-label="닫기">✕</button></header>' +
+        '<div class="modal-body"><div class="mm-body"></div></div></div>';
+      document.body.appendChild(modelModal);
+      const close = () => {
+        modelModal.hidden = true;
+      };
+      modelModal.querySelector(".modal-close").addEventListener("click", close);
+      modelModal.addEventListener("click", (e) => {
+        if (e.target === modelModal) close();
+      });
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && modelModal && !modelModal.hidden) close();
+      });
+    }
+    modelModal.querySelector(".mm-title").textContent = `${m.name} · 사용 현황`;
+    modelModal.querySelector(".mm-body").innerHTML = (m.detail || [])
+      .map(
+        (d) =>
+          `<div class="mm-row"><span>${ABC.escapeHtml(d.k)}</span><b>${ABC.escapeHtml(d.v)}</b></div>`,
+      )
+      .join("");
+    modelModal.hidden = false;
+  };
+
   // 대시보드 데이터를 서버에서 받아 렌더링. 실패 시 HTML 기본값 유지.
   try {
     const data = await ABC.api("/api/dashboard");
@@ -42,10 +75,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     const modelCard = document.querySelector(".model-card");
     if (modelCard && data.models) {
       const rows = data.models
-        .map((m) => `<div class="model-row"><span class="dot ${m.tone}"></span><div><b>${ABC.escapeHtml(m.name)}</b><small>${ABC.escapeHtml(m.kind)}</small></div><i${m.tone === "orange" ? ' class="orange"' : ""}><span style="width: ${m.load}%"></span></i><em class="status ${m.tone}">${ABC.escapeHtml(m.state)}</em></div>`)
+        .map((m, i) => {
+          const click = m.detail ? " model-row-click" : "";
+          const more = m.detail ? '<small class="model-more">탭하여 사용 현황 보기 ›</small>' : "";
+          return `<div class="model-row${click}" data-idx="${i}" ${m.detail ? 'title="클릭하면 사용 현황 상세"' : ""}><span class="dot ${m.tone}"></span><div><b>${ABC.escapeHtml(m.name)}</b><small>${ABC.escapeHtml(m.kind)}</small>${more}</div><i${m.tone === "orange" ? ' class="orange"' : ""}><span style="width: ${m.load}%"></span></i><em class="status ${m.tone}">${ABC.escapeHtml(m.state)}</em></div>`;
+        })
         .join("");
       modelCard.querySelectorAll(".model-row").forEach((row) => row.remove());
       modelCard.insertAdjacentHTML("beforeend", rows);
+      // 상세 있는 모델(Gemini) 행 클릭 → 사용 현황 모달.
+      modelCard.addEventListener("click", (e) => {
+        const row = e.target.closest(".model-row-click");
+        if (!row) return;
+        const m = data.models[Number(row.dataset.idx)];
+        if (m && m.detail) openModelDetail(m);
+      });
     }
 
     const activity = document.querySelector(".activity-card ul");
