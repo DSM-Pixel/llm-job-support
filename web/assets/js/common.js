@@ -151,6 +151,29 @@ const ABC = (() => {
     }
   };
 
+  // ts 목록에 해당하는 기록을 영구 삭제(기록 관리에서 사용).
+  const removeRecords = (key, tsSet) => {
+    try {
+      const list = JSON.parse(localStorage.getItem(key) || "[]").filter((x) => !tsSet.has(x.ts));
+      localStorage.setItem(key, JSON.stringify(list));
+    } catch {
+      /* 무시 */
+    }
+  };
+  const deleteActivities = (tsArr) => removeRecords(ACTIVITY_KEY, new Set(tsArr.map(Number)));
+  const deleteArtifacts = (tsArr) => removeRecords(ARTIFACT_KEY, new Set(tsArr.map(Number)));
+
+  // 상대 시간(방금/N분 전/N시간 전/N일 전).
+  const relTime = (ts) => {
+    const s = Math.floor((Date.now() - ts) / 1000);
+    if (s < 60) return "방금";
+    const mi = Math.floor(s / 60);
+    if (mi < 60) return `${mi}분 전`;
+    const h = Math.floor(mi / 60);
+    if (h < 24) return `${h}시간 전`;
+    return `${Math.floor(h / 24)}일 전`;
+  };
+
   const activateInGroup = (target, selector) => {
     const group = target.parentElement;
     if (!group) return;
@@ -637,8 +660,179 @@ const ABC = (() => {
     panel.querySelector(".ai-chat-input input").focus();
   };
 
+  // 되돌릴 수 없는 작업 확인 모달(영구 삭제 등) — 공용.
+  let confirmModal = null;
+  const confirmAction = (messageHtml, onConfirm) => {
+    if (!confirmModal) {
+      confirmModal = document.createElement("div");
+      confirmModal.className = "modal-overlay confirm-overlay";
+      confirmModal.hidden = true;
+      confirmModal.innerHTML =
+        '<div class="modal confirm-modal"><header class="modal-head"><h3>영구 삭제</h3>' +
+        '<button class="modal-close" type="button" aria-label="닫기">✕</button></header>' +
+        '<div class="modal-body"><p class="confirm-text"></p></div>' +
+        '<div class="modal-foot"><button class="btn modal-cancel" type="button">취소</button>' +
+        '<button class="btn danger confirm-ok" type="button">삭제</button></div></div>';
+      document.body.appendChild(confirmModal);
+      const close = () => {
+        confirmModal.hidden = true;
+      };
+      confirmModal.querySelector(".modal-close").addEventListener("click", close);
+      confirmModal.querySelector(".modal-cancel").addEventListener("click", close);
+      confirmModal.addEventListener("click", (e) => {
+        if (e.target === confirmModal) close();
+      });
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && confirmModal && !confirmModal.hidden) close();
+      });
+    }
+    confirmModal.querySelector(".confirm-text").innerHTML = messageHtml;
+    // 이전 클릭 핸들러 제거를 위해 버튼을 교체.
+    const old = confirmModal.querySelector(".confirm-ok");
+    const fresh = old.cloneNode(true);
+    old.replaceWith(fresh);
+    fresh.addEventListener("click", () => {
+      confirmModal.hidden = true;
+      onConfirm();
+    });
+    confirmModal.hidden = false;
+  };
+
+  // ── 기록 관리 모달 — 실제 활동·작업 기록(localStorage)을 나열·영구삭제 ──
+  const HIST_ICON = {
+    "자연어 질의": "▤",
+    "RAG 검색": "⌕",
+    "문서 색인": "▱",
+    "이미지 분석": "⌗",
+    "라벨 저장": "⌗",
+    "데이터 업로드": "▱",
+  };
+  let historyModal = null;
+
+  const buildHistoryModal = () => {
+    if (historyModal) return historyModal;
+    const m = document.createElement("div");
+    m.className = "modal-overlay history-overlay";
+    m.hidden = true;
+    m.innerHTML =
+      '<div class="modal history-modal"><header class="modal-head"><h3>기록 관리</h3>' +
+      '<button class="modal-close" type="button" aria-label="닫기">✕</button></header>' +
+      '<div class="history-toolbar"><label class="hist-all"><input type="checkbox" class="hist-select-all" /><span>전체 선택</span></label>' +
+      '<span class="hist-count">선택 0개</span>' +
+      '<button class="btn danger hist-delete" type="button" disabled>선택 삭제</button></div>' +
+      '<div class="modal-body"><ul class="history-list"></ul></div></div>';
+    document.body.appendChild(m);
+
+    const listEl = m.querySelector(".history-list");
+    const selAll = m.querySelector(".hist-select-all");
+    const delBtn = m.querySelector(".hist-delete");
+    const countEl = m.querySelector(".hist-count");
+    const refresh = () => {
+      const cbs = [...listEl.querySelectorAll(".hist-cb")];
+      const checked = cbs.filter((c) => c.checked);
+      countEl.textContent = `선택 ${checked.length}개`;
+      delBtn.disabled = checked.length === 0;
+      selAll.checked = cbs.length > 0 && checked.length === cbs.length;
+    };
+    const close = () => {
+      m.hidden = true;
+    };
+    m.querySelector(".modal-close").addEventListener("click", close);
+    m.addEventListener("click", (e) => {
+      if (e.target === m) close();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && historyModal && !historyModal.hidden) close();
+    });
+    listEl.addEventListener("change", refresh);
+    // 행 클릭(체크박스 외)도 토글되게.
+    listEl.addEventListener("click", (e) => {
+      if (e.target.closest("input")) return;
+      const cb = e.target.closest(".hist-row")?.querySelector(".hist-cb");
+      if (cb) {
+        cb.checked = !cb.checked;
+        refresh();
+      }
+    });
+    selAll.addEventListener("change", () => {
+      listEl.querySelectorAll(".hist-cb").forEach((c) => {
+        c.checked = selAll.checked;
+      });
+      refresh();
+    });
+    delBtn.addEventListener("click", () => {
+      const keys = [...listEl.querySelectorAll(".hist-cb:checked")].map((c) => c.dataset.key);
+      if (!keys.length) return;
+      confirmAction(
+        `선택한 기록 ${keys.length}개를 영구 삭제할까요?<br />이 작업은 되돌릴 수 없습니다.`,
+        () => {
+          const actTs = [];
+          const artTs = [];
+          keys.forEach((k) => {
+            const [kind, ts] = k.split(":");
+            (kind === "act" ? actTs : artTs).push(ts);
+          });
+          if (actTs.length) deleteActivities(actTs);
+          if (artTs.length) deleteArtifacts(artTs);
+          toast(`기록 ${keys.length}개를 삭제했습니다`);
+          renderHistory();
+        },
+      );
+    });
+    historyModal = m;
+    return m;
+  };
+
+  const renderHistory = () => {
+    const m = buildHistoryModal();
+    const listEl = m.querySelector(".history-list");
+    const acts = getActivity().map((a) => ({
+      kind: "act",
+      ts: a.ts,
+      page: a.page,
+      cat: a.type,
+      title: a.type + (a.label ? ` — ${a.label}` : ""),
+      image: "",
+    }));
+    const arts = getArtifacts().map((a) => ({
+      kind: "art",
+      ts: a.ts,
+      page: a.page,
+      cat: a.kind === "rag" ? "RAG 결과" : "이미지 작업",
+      title: a.title || a.question || a.caption || "작업 결과",
+      image: a.image || "",
+    }));
+    const all = [...acts, ...arts].sort((x, y) => y.ts - x.ts);
+    if (!all.length) {
+      listEl.innerHTML =
+        '<li class="hist-empty">아직 기록이 없습니다. 자연어 질의·RAG 검색·이미지 라벨링을 사용하면 여기에 쌓입니다.</li>';
+    } else {
+      listEl.innerHTML = all
+        .map((r) => {
+          const ic = HIST_ICON[r.cat] || (r.kind === "art" ? "▣" : "•");
+          const thumb = r.image ? `<img class="hist-thumb" src="${r.image}" alt="" />` : "";
+          return (
+            `<li class="hist-row"><label class="hist-check"><input type="checkbox" class="hist-cb" data-key="${r.kind}:${r.ts}" /></label>` +
+            `<span class="hist-ic">${ic}</span>` +
+            `<div class="hist-info"><b>${escapeHtml(r.title)}</b><small>${escapeHtml(r.cat)} · ${escapeHtml(r.page || "")} · ${relTime(r.ts)}</small></div>` +
+            thumb +
+            `</li>`
+          );
+        })
+        .join("");
+    }
+    m.querySelector(".hist-select-all").checked = false;
+    m.querySelector(".hist-count").textContent = "선택 0개";
+    m.querySelector(".hist-delete").disabled = true;
+  };
+
+  const openHistory = () => {
+    renderHistory();
+    buildHistoryModal().hidden = false;
+  };
+
   document.addEventListener("DOMContentLoaded", () => {
-    // 사이드바 하단에 'AI와 대화하기' 버튼 추가.
+    // 사이드바 하단에 'AI와 대화하기' 버튼 + 그 아래 '기록 관리' 링크 추가.
     const sidebar = document.querySelector(".sidebar");
     const userBox = sidebar?.querySelector(".user-box");
     if (sidebar && !sidebar.querySelector(".ai-open")) {
@@ -649,6 +843,16 @@ const ABC = (() => {
       btn.addEventListener("click", toggleAi);
       if (userBox) sidebar.insertBefore(btn, userBox);
       else sidebar.appendChild(btn);
+    }
+    if (sidebar && !sidebar.querySelector(".history-open")) {
+      const hbtn = document.createElement("button");
+      hbtn.type = "button";
+      hbtn.className = "history-open";
+      hbtn.textContent = "⌗ 기록 관리";
+      hbtn.title = "내 질의·검색·이미지 작업 기록을 보고 삭제";
+      hbtn.addEventListener("click", openHistory);
+      if (userBox) sidebar.insertBefore(hbtn, userBox);
+      else sidebar.appendChild(hbtn);
     }
   });
 
@@ -669,5 +873,9 @@ const ABC = (() => {
     toThumb,
     saveArtifact,
     getArtifacts,
+    deleteActivities,
+    deleteArtifacts,
+    openHistory,
+    confirmAction,
   };
 })();

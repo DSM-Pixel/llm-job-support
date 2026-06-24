@@ -701,6 +701,34 @@ with sync_playwright() as p:
     )
     check("data: ⋮ 메뉴 삭제(확인 후)", len(page.query_selector_all("tbody tr")) == now_rows - 1)
 
+    # 7) History ─ 기록 관리(실제 활동·작업 기록 나열 + 체크박스 영구 삭제, localStorage 연동)
+    page.goto(f"{BASE}/pages/dashboard.html")
+    page.evaluate(
+        "() => { const n=Date.now(); localStorage.setItem('gnsoft.activity', JSON.stringify(["
+        "{ts:n-1000,page:'query',type:'자연어 질의',label:'포트홀이 뭐야?'},"
+        "{ts:n-2000,page:'rag',type:'RAG 검색',label:'도로 파손 통계'}]));"
+        "localStorage.setItem('gnsoft.artifacts', JSON.stringify(["
+        "{ts:n-3000,page:'labeling',kind:'label',title:'라벨 결과'}])); }"
+    )
+    page.reload()
+    page.wait_for_selector(".sidebar .history-open")
+    page.click(".sidebar .history-open")
+    page.wait_for_selector(".history-modal:not([hidden]) .hist-row")
+    hist_rows = page.query_selector_all(".history-list .hist-row")
+    check("history: 실제 기록 나열(활동·작업)", len(hist_rows) == 3, f"{len(hist_rows)}건")
+
+    # 전체 선택 → 선택 삭제 → 확인 모달 → 영구 삭제(localStorage 반영)
+    page.check(".hist-select-all")
+    page.click(".hist-delete")
+    page.wait_for_selector(".confirm-overlay:not([hidden]) .confirm-ok")
+    page.click(".confirm-overlay .confirm-ok")
+    page.wait_for_selector(".history-list .hist-empty")
+    remain = page.evaluate(
+        "() => JSON.parse(localStorage.getItem('gnsoft.activity')||'[]').length "
+        "+ JSON.parse(localStorage.getItem('gnsoft.artifacts')||'[]').length"
+    )
+    check("history: 선택 항목 영구 삭제(연동)", remain == 0, f"남은 {remain}건")
+
     browser.close()
 
 print("\n=== 콘솔/페이지 에러 ===")

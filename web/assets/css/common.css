@@ -915,6 +915,126 @@ textarea {
   box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.5);
 }
 
+/* 'AI와 대화하기' 아래 작은 '기록 관리' 링크 */
+.history-open {
+  margin: 0 16px 8px;
+  padding: 4px 4px;
+  border: 0;
+  background: none;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 12px;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.history-open:hover {
+  color: #fff;
+  text-decoration: underline;
+}
+
+/* ── 기록 관리 모달 ─────────────────────────────────────────────── */
+.modal.history-modal {
+  max-width: 640px;
+}
+
+.history-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.history-toolbar .hist-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.history-toolbar .hist-count {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.history-list {
+  list-style: none;
+  margin: 0;
+  padding: 8px 12px 14px;
+}
+
+.hist-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.hist-row:hover {
+  background: rgba(70, 96, 191, 0.06);
+}
+
+.hist-check {
+  display: inline-flex;
+  cursor: pointer;
+}
+
+.hist-ic {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border-radius: 7px;
+  background: rgba(70, 96, 191, 0.1);
+  color: var(--blue);
+  font-size: 13px;
+}
+
+.hist-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.hist-info b {
+  display: block;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hist-info small {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.hist-thumb {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+}
+
+.hist-empty {
+  padding: 38px 18px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 .ai-panel {
   position: fixed;
   top: 0;
