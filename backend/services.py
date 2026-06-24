@@ -16,10 +16,12 @@
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import time
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
 
 BACKEND = "MOCK"
 
@@ -30,11 +32,43 @@ _GEMINI_TIMEOUT_S = 15
 
 # 이 서버 세션 동안의 실제 Gemini 사용량(대시보드 사용률 막대·상세용).
 # retry_at: 429일 때 재시도 가능 추정 시각(epoch). 응답의 retryDelay 를 파싱.
-_gemini_usage = {"requests": 0, "success": 0, "tokens": 0, "rate_limited": False, "retry_at": 0.0}
+# last_success_at: 마지막으로 호출이 '성공'한 시각(epoch). 서버 재시작에도 남도록 파일에 보존.
+_gemini_usage = {
+    "requests": 0,
+    "success": 0,
+    "tokens": 0,
+    "rate_limited": False,
+    "retry_at": 0.0,
+    "last_success_at": 0.0,
+}
 
 # 분당(RPM)·일일(RPD) 사용률을 퍼센트로 보여주기 위한 호출 로그.
 # 각 항목 {"ts": 요청시각, "tok": 사용토큰}. 24시간 지난 항목은 상태조회 때 정리.
 _gemini_calls: list[dict] = []
+
+# 마지막 성공 시각은 서버를 다시 켜도 유지되도록 작은 파일에 보존한다.
+_GEMINI_STATE_FILE = os.path.join(os.path.dirname(__file__), ".gemini_state.json")
+
+
+def _load_gemini_state() -> None:
+    try:
+        with open(_GEMINI_STATE_FILE, encoding="utf-8") as f:
+            ts = float(json.load(f).get("last_success_at") or 0)
+        if ts > 0:
+            _gemini_usage["last_success_at"] = ts
+    except Exception:
+        pass
+
+
+def _save_gemini_state() -> None:
+    try:
+        with open(_GEMINI_STATE_FILE, "w", encoding="utf-8") as f:
+            json.dump({"last_success_at": _gemini_usage["last_success_at"]}, f)
+    except Exception:
+        pass
+
+
+_load_gemini_state()
 
 
 def _gemini_generate(client, **kwargs):
@@ -61,6 +95,8 @@ def _gemini_generate(client, **kwargs):
     _gemini_usage["rate_limited"] = False  # 성공했으니 가용
     _gemini_usage["retry_at"] = 0.0
     _gemini_usage["success"] += 1
+    _gemini_usage["last_success_at"] = time.time()  # 마지막 성공 시각 기록(영속)
+    _save_gemini_state()
     try:
         um = getattr(resp, "usage_metadata", None)
         total = getattr(um, "total_token_count", None) if um else None
@@ -209,6 +245,17 @@ def real_model_status(yolo_ok: bool) -> list[dict]:
     else:
         status_v = "사용 가능"
     g_detail = [{"k": "상태", "v": status_v}]
+    # 마지막으로 호출이 성공한 시각(한도에 막히기 전 마지막 정상 응답).
+    if gemini_ok:
+        last_ok = u.get("last_success_at", 0)
+        g_detail.append(
+            {
+                "k": "마지막 성공",
+                "v": datetime.fromtimestamp(last_ok).strftime("%Y-%m-%d %H:%M")
+                if last_ok
+                else "성공 기록 없음",
+            }
+        )
     if gemini_ok:
         # 막대가 '남은 양'이 아니라 '사용량'임을 분명히 한다(이 서버 기준).
         g_detail.append(

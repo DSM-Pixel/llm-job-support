@@ -94,3 +94,6 @@ desktop.ini
 
 # 통합 서버 로컬 로그
 _web_server.log
+
+# Gemini 런타임 상태(마지막 성공 시각 등) — 커밋 제외
+backend/.gemini_state.json
