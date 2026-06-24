@@ -78,7 +78,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         .map((m, i) => {
           const click = m.detail ? " model-row-click" : "";
           const more = m.detail ? '<small class="model-more">탭하여 사용 현황 보기 ›</small>' : "";
-          return `<div class="model-row${click}" data-idx="${i}" ${m.detail ? 'title="클릭하면 사용 현황 상세"' : ""}><span class="dot ${m.tone}"></span><div><b>${ABC.escapeHtml(m.name)}</b><small>${ABC.escapeHtml(m.kind)}</small>${more}</div><i${m.tone === "orange" ? ' class="orange"' : ""}><span style="width: ${m.load}%"></span></i><em class="status ${m.tone}">${ABC.escapeHtml(m.state)}</em></div>`;
+          return `<div class="model-row${click}" data-idx="${i}" ${m.detail ? 'title="클릭하면 사용 현황 상세"' : ""}><span class="dot ${m.tone}"></span><div><b>${ABC.escapeHtml(m.name)}</b>${more}</div><i${m.tone === "orange" ? ' class="orange"' : ""}><span style="width: ${m.load}%"></span></i><em class="status ${m.tone}">${ABC.escapeHtml(m.state)}</em></div>`;
         })
         .join("");
       modelCard.querySelectorAll(".model-row").forEach((row) => row.remove());

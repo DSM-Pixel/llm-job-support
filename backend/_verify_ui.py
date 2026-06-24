@@ -400,6 +400,7 @@ with sync_playwright() as p:
     check("settings: 모달 열림", page.is_visible("#settings-modal"))
     page.fill("#settings-modal [name=name]", "테스트유저")
     page.fill("#settings-modal [name=team]", "QA팀")
+    page.select_option("#settings-modal [name=theme]", "dark")  # 다크 모드 선택
     page.click(".modal-save-settings")
     page.wait_for_selector("#settings-modal", state="hidden")
     saved = page.evaluate("() => JSON.parse(localStorage.getItem('gnsoft.settings')).name")
@@ -408,6 +409,20 @@ with sync_playwright() as p:
         saved == "테스트유저" and page.inner_text(".user-name") == "테스트유저",
         f"{saved} / {page.inner_text('.user-name')}",
     )
+    # 다크 모드 저장 → <html data-theme=dark> 즉시 적용 + 영속(설정 다시 열면 dark)
+    theme_applied = page.get_attribute("html", "data-theme")
+    page.click(".gear")
+    page.wait_for_selector("#settings-modal:not([hidden])")
+    theme_val = page.input_value("#settings-modal [name=theme]")
+    check(
+        "settings: 다크 모드 적용·영속",
+        theme_applied == "dark" and theme_val == "dark",
+        f"applied={theme_applied} saved={theme_val}",
+    )
+    # 다시 라이트로 되돌려 이후 단계 영향 없게
+    page.select_option("#settings-modal [name=theme]", "light")
+    page.click(".modal-save-settings")
+    page.wait_for_selector("#settings-modal", state="hidden")
 
     # 설정한 이름이 대시보드 인사말에도 반영되는지
     page.goto(f"{BASE}/pages/dashboard.html")

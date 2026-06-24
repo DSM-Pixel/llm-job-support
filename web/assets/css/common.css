@@ -15,6 +15,103 @@
   --red: #ef4444;
 }
 
+/* ── 다크 모드 (설정 → 화면 테마) ──────────────────────────────── */
+:root[data-theme="dark"] {
+  --bg: #0e131b;
+  --line: #29333f;
+  --text: #e7ecf3;
+  --muted: #95a3b6;
+}
+
+/* 어두운 표면(카드·패널·모달 등). 보고서 문서(.report-page)는 흰 종이로 유지. */
+[data-theme="dark"] .card:not(.report-page),
+[data-theme="dark"] .topbar,
+[data-theme="dark"] .modal,
+[data-theme="dark"] .ai-panel,
+[data-theme="dark"] .knowledge,
+[data-theme="dark"] .label-panel,
+[data-theme="dark"] .report-form,
+[data-theme="dark"] .chat-dock,
+[data-theme="dark"] .preview-toolbar {
+  background: #151c26;
+  color: var(--text);
+  box-shadow: none;
+}
+
+[data-theme="dark"] .modal-head,
+[data-theme="dark"] .modal-foot,
+[data-theme="dark"] .topbar,
+[data-theme="dark"] .chat-dock {
+  border-color: var(--line);
+}
+
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+  background: #0f1620;
+  color: var(--text);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] input::placeholder,
+[data-theme="dark"] textarea::placeholder {
+  color: #6b7890;
+}
+
+[data-theme="dark"] .btn {
+  background: #1c2533;
+  color: #d8dfeb;
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .btn.primary {
+  background: var(--blue);
+  color: #fff;
+  border-color: var(--blue);
+}
+
+/* AI 대화 패널 */
+[data-theme="dark"] .ai-chat-log {
+  background: #0e131b;
+}
+
+[data-theme="dark"] .ai-msg.assistant .ai-bubble,
+[data-theme="dark"] .ai-chat-input {
+  background: #151c26;
+  color: var(--text);
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .ai-panel-scope {
+  background: #131a24;
+  color: #aab6c8;
+}
+
+[data-theme="dark"] .toast {
+  background: #1c2533;
+  color: #e7ecf3;
+}
+
+/* 페이지 보정 — 어두운 패널 위의 진한 텍스트/흰 버튼/안내 박스 */
+[data-theme="dark"] .source-toggle,
+[data-theme="dark"] .source-toggle b {
+  color: var(--text);
+}
+
+[data-theme="dark"] .select-list button,
+[data-theme="dark"] .chips .pill {
+  background: #1c2533;
+  color: #d8dfeb;
+  border-color: var(--line);
+}
+
+[data-theme="dark"] .report-hint,
+[data-theme="dark"] .artifact-empty,
+[data-theme="dark"] .report-finding {
+  background: #131a24;
+  color: #aab6c8;
+}
+
 body {
   margin: 0;
   min-height: 100vh;

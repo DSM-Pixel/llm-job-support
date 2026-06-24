@@ -6,6 +6,7 @@ const ABC = (() => {
     name: "김연우",
     team: "R&D · 청년 1팀",
     notify: true,
+    theme: "light",
   };
 
   const loadSettings = () => {
@@ -17,6 +18,12 @@ const ABC = (() => {
   };
 
   let settings = loadSettings();
+
+  // 화면 테마(라이트/다크)를 <html data-theme>에 반영. 깜빡임 줄이려 즉시 적용.
+  const applyTheme = () => {
+    document.documentElement.setAttribute("data-theme", settings.theme === "dark" ? "dark" : "light");
+  };
+  applyTheme();
   const getSettings = () => ({ ...settings });
   const saveSettings = (next) => {
     settings = { ...settings, ...next };
@@ -203,6 +210,12 @@ const ABC = (() => {
             <label class="field">직함 · 소속
               <input type="text" name="team" placeholder="예: R&D · 청년 1팀" />
             </label>
+            <label class="field">화면 테마
+              <select name="theme">
+                <option value="light">라이트 모드</option>
+                <option value="dark">다크 모드</option>
+              </select>
+            </label>
           </div>
         </div>
         <div class="modal-foot">
@@ -219,6 +232,7 @@ const ABC = (() => {
       overlay.querySelector("[name=engine]").value = settings.engine;
       overlay.querySelector("[name=name]").value = settings.name || "";
       overlay.querySelector("[name=team]").value = settings.team || "";
+      overlay.querySelector("[name=theme]").value = settings.theme || "light";
     };
 
     overlay.querySelector(".modal-close").addEventListener("click", close);
@@ -231,8 +245,10 @@ const ABC = (() => {
         engine: overlay.querySelector("[name=engine]").value,
         name: overlay.querySelector("[name=name]").value.trim() || "사용자",
         team: overlay.querySelector("[name=team]").value.trim(),
+        theme: overlay.querySelector("[name=theme]").value,
       });
       applyProfile();
+      applyTheme(); // 테마 즉시 반영
       close();
       toast("설정을 저장했습니다");
     });
