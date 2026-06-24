@@ -78,6 +78,11 @@
   border-color: var(--line);
 }
 
+/* 입력칸이 일반 다크 input(#0f1620, 거의 검정)으로 튀어서 패널 톤에 맞춤 */
+[data-theme="dark"] .ai-chat-input input {
+  background: #1c2533;
+}
+
 [data-theme="dark"] .ai-panel-scope {
   background: #131a24;
   color: #aab6c8;
