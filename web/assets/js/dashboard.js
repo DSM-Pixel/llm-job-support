@@ -47,6 +47,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     modelModal.querySelector(".mm-title").textContent = `${m.name} · 사용 현황`;
     modelModal.querySelector(".mm-body").innerHTML = (m.detail || [])
       .map((d) => {
+        // 안내 문구(note)는 전체 폭 캡션으로.
+        if (d.note) return `<p class="mm-note">${ABC.escapeHtml(d.note)}</p>`;
         const k = ABC.escapeHtml(d.k);
         const v = ABC.escapeHtml(d.v);
         // 퍼센트(pct)가 있으면 막대로 — 한도 사용률을 시각화.

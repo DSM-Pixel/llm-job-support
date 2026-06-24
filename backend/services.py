@@ -212,6 +212,10 @@ def real_model_status(yolo_ok: bool) -> list[dict]:
         status_v = "사용 가능"
     g_detail = [{"k": "상태", "v": status_v}]
     if gemini_ok:
+        # 막대가 '남은 양'이 아니라 '사용량'임을 분명히 한다(이 서버 기준).
+        g_detail.append(
+            {"note": "아래는 한도 대비 ‘사용량’이에요 (이 서버가 보낸 요청 기준 · 남은 양 아님)."}
+        )
         # 분당·일일 한도를 각각 퍼센트 막대로(수치 + 비율).
         g_detail.append(
             {"k": "분당 요청", "v": f"{min_reqs} / {_GEMINI_RPM}회  ({rpm_pct}%)", "pct": rpm_pct}
@@ -239,6 +243,13 @@ def real_model_status(yolo_ok: bool) -> list[dict]:
             {
                 "k": "한도 초기화",
                 "v": "분당 한도는 약 1분 뒤 자동 복구 · 하루 한도는 자정(태평양 시간)에 초기화",
+            }
+        )
+        # 사용량이 낮은데도 소진으로 뜨는 이유를 설명(서버 재시작/계정 단위 집계).
+        g_detail.append(
+            {
+                "note": "위 사용량이 낮은데도 소진이면, 이 막대는 현재 서버가 보낸 양만 세기 때문이에요. "
+                "구글 계정의 하루 한도는 서버를 다시 켜도 그대로라서, 측정값이 0이어도 소진으로 보일 수 있어요."
             }
         )
     return [
