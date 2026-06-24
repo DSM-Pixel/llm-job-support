@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import os
 import re
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 BACKEND = "MOCK"
@@ -28,7 +29,8 @@ _GEMINI_POOL = ThreadPoolExecutor(max_workers=8)
 _GEMINI_TIMEOUT_S = 15
 
 # 이 서버 세션 동안의 실제 Gemini 사용량(대시보드 사용률 막대·상세용).
-_gemini_usage = {"requests": 0, "success": 0, "tokens": 0, "rate_limited": False}
+# retry_at: 429일 때 재시도 가능 추정 시각(epoch). 응답의 retryDelay 를 파싱.
+_gemini_usage = {"requests": 0, "success": 0, "tokens": 0, "rate_limited": False, "retry_at": 0.0}
 
 
 def _gemini_generate(client, **kwargs):
@@ -45,8 +47,13 @@ def _gemini_generate(client, **kwargs):
         msg = str(e).lower()
         if any(k in msg for k in ("429", "resource_exhausted", "quota", "rate limit", "ratelimit")):
             _gemini_usage["rate_limited"] = True  # 한도 소진 관측
+            # 응답에 retryDelay(예: "retryDelay":"30s")가 있으면 재시도 시각 추정.
+            m = re.search(r"retrydelay['\"\s:]+(\d+(?:\.\d+)?)s", msg)
+            delay = float(m.group(1)) if m else 60.0  # 없으면 분당 한도(60s) 가정
+            _gemini_usage["retry_at"] = time.time() + delay
         raise
     _gemini_usage["rate_limited"] = False  # 성공했으니 가용
+    _gemini_usage["retry_at"] = 0.0
     _gemini_usage["success"] += 1
     try:
         um = getattr(resp, "usage_metadata", None)
@@ -181,6 +188,28 @@ def real_model_status(yolo_ok: bool) -> list[dict]:
         if (gemini_ok and u["rate_limited"])
         else min(100, round(u["requests"] / _GEMINI_RPD * 100))
     )
+    g_detail = [
+        {"k": "현재 상태", "v": g_state},
+        {"k": "이번 세션 요청", "v": f"{u['requests']}회 (성공 {u['success']} · 실패 {fails})"},
+        {"k": "이번 세션 사용 토큰", "v": f"{u['tokens']:,} 토큰"},
+        {"k": "일일 요청 한도(RPD)", "v": f"{_GEMINI_RPD}회 · Flash 250~1,000+"},
+        {"k": "분당 요청(RPM)", "v": f"5~{_GEMINI_RPM}회"},
+        {"k": "분당 토큰(TPM)", "v": f"약 {_GEMINI_TPM:,} 토큰(입력 기준)"},
+        {"k": "컨텍스트 윈도우", "v": f"최대 {_GEMINI_CTX:,} 토큰"},
+    ]
+    # 한도 소진이면 언제 다시 쓸 수 있는지(재시도 추정 + 리셋 안내) 표시.
+    if gemini_ok and u["rate_limited"]:
+        remain = int(max(0, u.get("retry_at", 0) - time.time()))
+        if remain <= 0:
+            when = "지금 재시도 가능"
+        elif remain < 60:
+            when = f"약 {remain}초 후"
+        else:
+            when = f"약 {remain // 60}분 {remain % 60}초 후"
+        g_detail.insert(1, {"k": "재사용 가능", "v": when})
+        g_detail.append(
+            {"k": "한도 리셋", "v": "분당 한도는 약 1분 후 · 일일 한도는 자정(태평양 시간) 리셋"}
+        )
     return [
         {
             "name": "YOLOe-L 도로파손",
@@ -195,18 +224,7 @@ def real_model_status(yolo_ok: bool) -> list[dict]:
             "load": g_load,
             "state": g_state,
             "tone": g_tone,
-            "detail": [
-                {"k": "현재 상태", "v": g_state},
-                {
-                    "k": "이번 세션 요청",
-                    "v": f"{u['requests']}회 (성공 {u['success']} · 실패 {fails})",
-                },
-                {"k": "이번 세션 사용 토큰", "v": f"{u['tokens']:,} 토큰"},
-                {"k": "일일 요청 한도(RPD)", "v": f"{_GEMINI_RPD}회 · Flash 250~1,000+"},
-                {"k": "분당 요청(RPM)", "v": f"5~{_GEMINI_RPM}회"},
-                {"k": "분당 토큰(TPM)", "v": f"약 {_GEMINI_TPM:,} 토큰(입력 기준)"},
-                {"k": "컨텍스트 윈도우", "v": f"최대 {_GEMINI_CTX:,} 토큰"},
-            ],
+            "detail": g_detail,
         },
         {"name": "SAM 분할", "kind": "세그멘테이션", "load": 56, "state": "대기", "tone": "gray"},
         {

@@ -54,6 +54,30 @@ document.addEventListener("DOMContentLoaded", async () => {
     modelModal.hidden = false;
   };
 
+  // 모델 상태 렌더(폴링으로 실시간 갱신). dashModels 는 클릭 상세에서 사용.
+  let dashModels = [];
+  const renderModels = (models) => {
+    const card = document.querySelector(".model-card");
+    if (!card || !models) return;
+    dashModels = models;
+    const rows = models
+      .map((m, i) => {
+        const click = m.detail ? " model-row-click" : "";
+        const more = m.detail ? '<small class="model-more">탭하여 사용 현황 보기 ›</small>' : "";
+        return `<div class="model-row${click}" data-idx="${i}" ${m.detail ? 'title="클릭하면 사용 현황 상세"' : ""}><span class="dot ${m.tone}"></span><div><b>${ABC.escapeHtml(m.name)}</b>${more}</div><i${m.tone === "orange" ? ' class="orange"' : ""}><span style="width: ${m.load}%"></span></i><em class="status ${m.tone}">${ABC.escapeHtml(m.state)}</em></div>`;
+      })
+      .join("");
+    card.querySelectorAll(".model-row").forEach((row) => row.remove());
+    card.insertAdjacentHTML("beforeend", rows);
+  };
+  // 모델 행 클릭(델리게이션, 한 번만 등록) → 사용 현황 상세.
+  document.querySelector(".model-card")?.addEventListener("click", (e) => {
+    const row = e.target.closest(".model-row-click");
+    if (!row) return;
+    const m = dashModels[Number(row.dataset.idx)];
+    if (m && m.detail) openModelDetail(m);
+  });
+
   // 대시보드 데이터를 서버에서 받아 렌더링. 실패 시 HTML 기본값 유지.
   try {
     const data = await ABC.api("/api/dashboard");
@@ -72,25 +96,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         .join("");
     }
 
-    const modelCard = document.querySelector(".model-card");
-    if (modelCard && data.models) {
-      const rows = data.models
-        .map((m, i) => {
-          const click = m.detail ? " model-row-click" : "";
-          const more = m.detail ? '<small class="model-more">탭하여 사용 현황 보기 ›</small>' : "";
-          return `<div class="model-row${click}" data-idx="${i}" ${m.detail ? 'title="클릭하면 사용 현황 상세"' : ""}><span class="dot ${m.tone}"></span><div><b>${ABC.escapeHtml(m.name)}</b>${more}</div><i${m.tone === "orange" ? ' class="orange"' : ""}><span style="width: ${m.load}%"></span></i><em class="status ${m.tone}">${ABC.escapeHtml(m.state)}</em></div>`;
-        })
-        .join("");
-      modelCard.querySelectorAll(".model-row").forEach((row) => row.remove());
-      modelCard.insertAdjacentHTML("beforeend", rows);
-      // 상세 있는 모델(Gemini) 행 클릭 → 사용 현황 모달.
-      modelCard.addEventListener("click", (e) => {
-        const row = e.target.closest(".model-row-click");
-        if (!row) return;
-        const m = data.models[Number(row.dataset.idx)];
-        if (m && m.detail) openModelDetail(m);
-      });
-    }
+    renderModels(data.models);
 
     const activity = document.querySelector(".activity-card ul");
     if (activity && data.activity) {
@@ -101,6 +107,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   } catch {
     /* 서버 미연결 시 HTML 기본값 그대로 사용 */
   }
+
+  // 모델 상태(특히 Gemini 토큰·한도)를 12초마다 실시간 갱신.
+  setInterval(async () => {
+    try {
+      const d = await ABC.api("/api/dashboard");
+      renderModels(d.models);
+    } catch {
+      /* 일시적 실패는 무시 */
+    }
+  }, 12000);
 
   // ── 주간 처리량·최근 활동은 실제 사용 기록(localStorage)으로 ──────
   // 통계 카드 수치(색인·라벨 등)는 MOCK 유지, 활동 기반 부분만 실데이터로 교체.
