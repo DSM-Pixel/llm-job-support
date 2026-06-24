@@ -177,6 +177,10 @@ input[type="checkbox"] {
   height: 16px;
 }
 
+tbody tr {
+  cursor: pointer;
+}
+
 tbody tr:hover {
   background: rgba(70, 96, 191, 0.1);
 }

@@ -50,6 +50,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   });
 
+  // 행 아무 곳이나 클릭해도 체크 토글(체크박스·⋮메뉴·이름 편집 중은 제외).
+  tbody.addEventListener("click", (e) => {
+    if (
+      e.target.closest("input[type='checkbox']") ||
+      e.target.closest(".row-menu") ||
+      e.target.closest("[contenteditable='true']")
+    ) {
+      return;
+    }
+    const cb = e.target.closest("tr")?.querySelector("input[type='checkbox']");
+    if (cb) cb.checked = !cb.checked;
+  });
+
   // ── 업로드: 파일 선택 → 표에 새 행 추가(업로드 대기) ──────────────
   const guessKind = (name) => {
     const ext = name.split(".").pop().toLowerCase();

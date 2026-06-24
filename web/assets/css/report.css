@@ -374,6 +374,9 @@
   .report-page,
   .report-page * {
     visibility: visible !important;
+    /* 화면에 보이는 색(파란 헤더 등)을 PDF에도 그대로 인쇄 */
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
   .report-page {

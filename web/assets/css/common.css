@@ -1089,11 +1089,23 @@ textarea {
   filter: brightness(1.08);
 }
 
+/* 다크모드에선 파란 원이 너무 튀어 — 은은한 중립 버튼으로 */
+[data-theme="dark"] .top-actions .help-trigger {
+  background: rgba(255, 255, 255, 0.08);
+  color: #c2ccde;
+  filter: none;
+}
+
+[data-theme="dark"] .top-actions .help-trigger:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+
 .help-slide {
   display: grid;
   grid-template-columns: 1.25fr 1fr;
-  gap: 22px;
-  padding: 4px 2px;
+  gap: 24px;
+  padding: 24px 28px;
 }
 
 /* 실제 화면 캡쳐 미리보기 */

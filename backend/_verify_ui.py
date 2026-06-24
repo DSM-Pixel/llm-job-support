@@ -657,6 +657,13 @@ with sync_playwright() as p:
     check("data: 검색 필터 동작", len(visible) == 1, f"{len(visible)}행 표시")
     page.fill(".search-upload input", "")
 
+    # 행의 이름 부분을 클릭해도 체크 토글(체크박스 직접 안 눌러도)
+    page.click("tbody tr:first-child .name-cell")
+    checked1 = page.is_checked("tbody tr:first-child input[type='checkbox']")
+    page.click("tbody tr:first-child .name-cell")
+    checked2 = page.is_checked("tbody tr:first-child input[type='checkbox']")
+    check("data: 행 클릭으로 체크 토글", checked1 and not checked2, f"{checked1}→{checked2}")
+
     # 업로드: 파일 선택 → 표에 행 추가
     before_rows = len(page.query_selector_all("tbody tr"))
     page.set_input_files(
