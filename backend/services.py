@@ -173,7 +173,6 @@ def real_model_status(yolo_ok: bool) -> list[dict]:
     """모델 상태 — YOLO(best.pt)·Gemini 는 실제 가용성/사용량, 나머지는 데모값."""
     u = _gemini_usage
     gemini_ok = bool(_gemini_key())
-    fails = u["requests"] - u["success"]
     if not gemini_ok:
         g_state, g_tone = "키 없음", "gray"
     elif u["requests"] == 0:
@@ -188,27 +187,34 @@ def real_model_status(yolo_ok: bool) -> list[dict]:
         if (gemini_ok and u["rate_limited"])
         else min(100, round(u["requests"] / _GEMINI_RPD * 100))
     )
-    g_detail = [
-        {"k": "현재 상태", "v": g_state},
-        {"k": "이번 세션 요청", "v": f"{u['requests']}회 (성공 {u['success']} · 실패 {fails})"},
-        {"k": "이번 세션 사용 토큰", "v": f"{u['tokens']:,} 토큰"},
-        {"k": "일일 요청 한도(RPD)", "v": f"{_GEMINI_RPD}회 · Flash 250~1,000+"},
-        {"k": "분당 요청(RPM)", "v": f"5~{_GEMINI_RPM}회"},
-        {"k": "분당 토큰(TPM)", "v": f"약 {_GEMINI_TPM:,} 토큰(입력 기준)"},
-        {"k": "컨텍스트 윈도우", "v": f"최대 {_GEMINI_CTX:,} 토큰"},
-    ]
-    # 한도 소진이면 언제 다시 쓸 수 있는지(재시도 추정 + 리셋 안내) 표시.
+    # 사용자 관점 — 지금 쓸 수 있는지 / 언제 다시 쓸 수 있는지에 집중(기술 스펙은 생략).
+    if not gemini_ok:
+        status_v = "API 키 없음"
+    elif u["requests"] == 0:
+        status_v = "대기 — 아직 사용 전"
+    elif u["rate_limited"]:
+        status_v = "한도 소진 — 지금은 사용할 수 없어요"
+    else:
+        status_v = "사용 가능"
+    g_detail = [{"k": "상태", "v": status_v}]
     if gemini_ok and u["rate_limited"]:
         remain = int(max(0, u.get("retry_at", 0) - time.time()))
         if remain <= 0:
-            when = "지금 재시도 가능"
+            when = "지금 다시 시도하면 될 수 있어요"
         elif remain < 60:
             when = f"약 {remain}초 후"
         else:
             when = f"약 {remain // 60}분 {remain % 60}초 후"
-        g_detail.insert(1, {"k": "재사용 가능", "v": when})
+        g_detail.append({"k": "다시 사용 가능", "v": when})
         g_detail.append(
-            {"k": "한도 리셋", "v": "분당 한도는 약 1분 후 · 일일 한도는 자정(태평양 시간) 리셋"}
+            {
+                "k": "한도 초기화",
+                "v": "짧은(분당) 한도는 약 1분 뒤 자동 복구 · 하루 한도는 자정(태평양 시간)에 초기화",
+            }
+        )
+    elif gemini_ok and u["success"]:
+        g_detail.append(
+            {"k": "지금까지 사용", "v": f"{u['tokens']:,} 토큰 · 응답 {u['success']}회"}
         )
     return [
         {
