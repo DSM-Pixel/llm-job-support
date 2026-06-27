@@ -50,8 +50,10 @@ claude
 ├── CLAUDE.md           # 프로젝트 컨텍스트 (반드시 먼저 읽기)
 ├── pyproject.toml      # uv 기반
 ├── .claude/            # 하네스: settings/agents/skills/hooks
-├── docs/               # 기획 보고서, 설계안, 발표자료
-├── prototypes/         # 기능별 데모
+├── backend/            # 통합 FastAPI 서버 (web/ 서빙 + /api/*)
+├── web/                # 통합 웹 UI (대시보드/라벨링/질의/RAG/보고서)
+├── docs/               # 기획 보고서, 설계안, 발표자료, 작업노트
+├── prototypes/         # 기능별 데모 (Gradio 원형)
 ├── teams/              # 팀별 작업 공간
 └── data/               # 샘플 데이터 (대용량 제외)
 ```
