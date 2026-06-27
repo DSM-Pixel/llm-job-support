@@ -24,6 +24,18 @@ claude
 
 세션이 시작되면 `SessionStart` 훅이 현재 브랜치/팀/프로토타입 현황을 알려줍니다.
 
+## 통합 웹 플랫폼 실행
+
+프로토타입(라벨링·RAG·질의·보고서)을 한 화면에 묶은 FastAPI 서버입니다.
+
+```bash
+uv sync --extra web
+./run_web.sh        # macOS/Linux/Git Bash  (PORT=9000 ./run_web.sh 로 포트 변경)
+./run_web.ps1       # Windows PowerShell
+```
+
+→ http://127.0.0.1:8000  (API·구조는 [backend/README.md](./backend/README.md) 참고)
+
 ## 자주 쓰는 Claude Code 명령
 
 | 명령 | 용도 |
@@ -32,6 +44,8 @@ claude
 | `/prototype-scaffold` | Gradio/FastAPI 데모 1파일 생성 |
 | `/planning-report` | 기획 보고서/기능 정의서/발표자료 초안 |
 | `/run` | 만든 앱을 띄워 동작 확인 |
+
+> 통합 서버를 빠르게 띄우려면 루트의 `run_web.sh` / `run_web.ps1` 사용.
 
 ## 자주 호출하는 subagent
 
