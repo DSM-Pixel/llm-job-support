@@ -35,12 +35,13 @@ def build(keyword: str) -> dict:
     primary = domain_sets[0]
 
     s = store.series(primary["id"])
+    primary_live = store.source_mode(primary["id"]) == "LIVE"
     stats = {
         "title": primary["chart_title"],
         "unit": s["unit"] or primary["unit"],
         "labels": s["labels"],
         "values": s["values"],
-        "sample": not adapters.has_key(),  # 키 없으면 시드(샘플)임을 표기
+        "sample": not primary_live,  # 시드면 True(샘플), 실데이터면 False
         "dataset": primary["name"],
     }
     insights = [d["insight"] for d in domain_sets if d.get("insight")][:3]
@@ -51,7 +52,8 @@ def build(keyword: str) -> dict:
         "stats": stats,
         "insights": insights,
         "portal_url": _portal_url(kw),
-        "live": adapters.has_key(),
+        "live": primary_live,  # 이 도메인 대표 데이터셋이 실데이터인지
+        "key_registered": adapters.has_key(),  # 서비스키 등록 여부(참고)
         "dataset_total": len(registry.DATASETS),  # 등록된 전체 데이터셋 수
         "dataset_matched": len(domain_sets),
     }
@@ -72,6 +74,7 @@ def catalog() -> dict:
                 "provider": d["provider"],
                 "dim": d["dim"],
                 "live_ready": bool(d.get("live") and d["live"].get("endpoint")),
+                "loaded": store.source_mode(d["id"]),  # 'LIVE' | 'SEED'
             }
             for d in registry.DATASETS
         ],

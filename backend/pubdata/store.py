@@ -41,10 +41,15 @@ def init() -> None:
             """
         )
         conn.execute("CREATE INDEX IF NOT EXISTS idx_obs_dataset ON observations(dataset_id)")
+        # 데이터셋별 적재 출처('LIVE'=실데이터 / 'SEED'=시드) — stats.sample 판정용.
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS dataset_source "
+            "(dataset_id TEXT PRIMARY KEY, mode TEXT NOT NULL)"
+        )
 
 
-def replace_dataset(dataset_id: str, rows: list[dict]) -> int:
-    """한 데이터셋의 관측치를 통째로 교체(재수집 시 중복 방지). rows: 스키마 dict 목록."""
+def replace_dataset(dataset_id: str, rows: list[dict], mode: str = "SEED") -> int:
+    """한 데이터셋의 관측치를 통째로 교체(재수집 시 중복 방지) + 적재 출처 기록."""
     with _lock, _connect() as conn:
         conn.execute("DELETE FROM observations WHERE dataset_id = ?", (dataset_id,))
         conn.executemany(
@@ -53,7 +58,20 @@ def replace_dataset(dataset_id: str, rows: list[dict]) -> int:
                VALUES (:dataset_id, :domain, :dim_type, :dim_key, :ordinal, :value, :unit, :source)""",
             rows,
         )
+        conn.execute(
+            "INSERT INTO dataset_source(dataset_id, mode) VALUES (?, ?) "
+            "ON CONFLICT(dataset_id) DO UPDATE SET mode = excluded.mode",
+            (dataset_id, mode),
+        )
         return len(rows)
+
+
+def source_mode(dataset_id: str) -> str:
+    """데이터셋 적재 출처('LIVE'|'SEED'). 없으면 'SEED'."""
+    with _lock, _connect() as conn:
+        cur = conn.execute("SELECT mode FROM dataset_source WHERE dataset_id = ?", (dataset_id,))
+        row = cur.fetchone()
+    return row["mode"] if row else "SEED"
 
 
 def series(dataset_id: str) -> dict:

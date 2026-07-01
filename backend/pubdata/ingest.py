@@ -16,7 +16,7 @@ def ingest_one(dataset: dict) -> dict:
     if not rows:  # 키 없음/실패/빈 응답 → 시드
         rows = adapters.from_seed(dataset)
         source = "SEED"
-    store.replace_dataset(dataset["id"], rows)
+    store.replace_dataset(dataset["id"], rows, source)
     return {"id": dataset["id"], "rows": len(rows), "source": source}
 
 

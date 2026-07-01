@@ -102,7 +102,17 @@ DATASETS: list[dict] = [
             ("광주", 25),
         ],
         "insight": "경기·서울에 설치 집중. 관제 인력 대비 카메라가 많아 이상행동 자동탐지 수요가 큼.",
-        "live": None,
+        # CSV 파일데이터 배선. 주소(시군구)별 카메라대수 합산.
+        # 참고: https://www.data.go.kr/data/15013094/standard.do
+        "live": {
+            "type": "csv",
+            "endpoint": "https://file.localdata.go.kr/file/cctv_info/info",
+            "encoding": "cp949",
+            "mapping": {"dim": "소재지지번주소", "value": "카메라대수", "dim_transform": "sigungu"},
+            "aggregate": "sum",
+            "note": "현재 직링크가 403(리퍼러/세션 필요)일 수 있음. 컬럼명은 실제 CSV로 확인 후 조정. "
+            "접근 불가 시 자동으로 시드 폴백.",
+        },
     },
     {
         "id": "facility_grade",
@@ -183,7 +193,26 @@ DATASETS: list[dict] = [
             ("12", 25),
         ],
         "insight": "여름(7~8월) 강수 집중 — 침수·노면 손상 위험기. 겨울 저강수+저온은 결빙 위험.",
-        "live": None,
+        # ASOS 일자료 배선. 일강수(sumRn)를 관측일(tm)에서 월 추출해 합산 → 월별 강수량.
+        # 참고: https://www.data.go.kr/data/15059093/openapi.do (기상청, 1360000)
+        "live": {
+            "endpoint": "http://apis.data.go.kr/1360000/AsosDalyInfoService/getWthrDataList",
+            "params": {
+                "dataType": "JSON",
+                "dataCd": "ASOS",
+                "dateCd": "DAY",
+                "startDt": "20250101",
+                "endDt": "20251231",
+                "stnIds": "108",  # 서울 지점
+                "numOfRows": "400",
+                "pageNo": "1",
+            },
+            "rows_path": "response.body.items.item",
+            "mapping": {"dim": "tm", "value": "sumRn", "dim_transform": "month"},
+            "aggregate": "sum",
+            "note": "서비스키 필요. tm(관측일)에서 월 추출 후 sumRn(일강수) 합산. "
+            "빈 강수일(공백)은 자동 제외. stnIds 로 지점 변경 가능.",
+        },
     },
 ]
 

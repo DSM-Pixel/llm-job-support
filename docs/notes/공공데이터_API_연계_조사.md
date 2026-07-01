@@ -28,22 +28,25 @@
 - 형식: JSON/XML 선택
 - 주의: 응답이 **지점 단위** → registry 에서 `aggregate:"sum"` 으로 지역 합산. 여러 지역 비교는 siDo/guGun 코드별 반복 호출로 확장 필요.
 
-## 2. 기상(ASOS) — △ 부분 확인
+## 2. 기상(ASOS) — ✅ 배선 완료(일자료→월 집계)
 
-- 데이터셋: 기상청_지상(종관, ASOS)기상관측자료 조회서비스
-- 페이지: https://www.data.go.kr/data/15059218/openapi.do
-- 확인된 오퍼레이션: 적설 `http://apis.data.go.kr/1360000/SfcInfoService/getSnowCover`
-  (params: ServiceKey, pageNo, numOfRows, dataType, stnId, time=YYYYMMDD)
-- 월별 강수/기온 통계 오퍼레이션·필드명은 **불확실** — 활용가이드 docx 확인 필요.
-- 대안: 지상(ASOS) 일자료 조회서비스(15059093)로 일자료를 받아 월 합산.
+- 데이터셋: 기상청_지상(종관, ASOS) 일자료 조회서비스
+- 페이지: https://www.data.go.kr/data/15059093/openapi.do
+- endpoint: `http://apis.data.go.kr/1360000/AsosDalyInfoService/getWthrDataList`
+- 필수 params: `dataCd=ASOS`, `dateCd=DAY`, `startDt`, `endDt`, `stnIds`(지점, 서울=108), `numOfRows`, `pageNo`, `dataType=JSON`
+- rows_path: `response.body.items.item`
+- mapping: dim=`tm`(관측일) + `dim_transform:"month"`(월 추출), value=`sumRn`(일강수) → `aggregate:"sum"` 로 월별 합산
+- 주의: 서비스키 필요. 강수 없는 날 `sumRn` 공백은 자동 제외.
 
-## 3. 전국 CCTV 표준데이터 — △ CSV 방식
+## 3. 전국 CCTV 표준데이터 — ✅ 배선 완료(CSV)
 
 - 데이터셋: 전국CCTV표준데이터
 - 페이지: https://www.data.go.kr/data/15013094/standard.do
-- 제공: **CSV 파일 다운로드** (오픈API 아님) — `https://file.localdata.go.kr/file/cctv_info/info`
-- 필드: 관리기관명, 설치위치, 설치목적, 카메라대수, 위·경도, 화소수, 촬영방면, 설치연월 등
-- 주의: 현재 어댑터는 JSON REST 전용 → **CSV 어댑터 추가** 필요(pandas 로 시군구별 카메라대수 집계).
+- 제공: **CSV 파일 다운로드** — `https://file.localdata.go.kr/file/cctv_info/info`
+- 필드: 관리기관명, 소재지지번주소, 설치목적, 카메라대수, 위·경도 등
+- mapping: dim=`소재지지번주소` + `dim_transform:"sigungu"`(주소→시군구), value=`카메라대수` → `aggregate:"sum"`
+- 어댑터: `live.type:"csv"` → `_fetch_csv`(csv.DictReader, cp949)
+- 주의: 직링크가 **403(리퍼러/세션 필요)** 일 수 있음 — 접근 실패 시 자동 시드 폴백. 실제 컬럼명은 내려받은 CSV 헤더로 확인 후 조정.
 
 ## 4. 도로 파손/포트홀 — ✗ 표준 오픈API 불명확
 
@@ -60,4 +63,5 @@
   - [지자체별 교통사고 다발지역](https://www.data.go.kr/data/15057467/openapi.do)
   - [ASOS 기상관측자료 조회서비스](https://www.data.go.kr/data/15059218/openapi.do)
   - [전국CCTV표준데이터](https://www.data.go.kr/data/15013094/standard.do)
-- 어댑터 확장 여지: CSV 파일데이터 어댑터, 응답 페이지네이션 누적, 지역 코드 반복 호출.
+- 구현 완료(어댑터): JSON REST + **CSV 파일데이터**, `dim_transform`(month/sigungu), `aggregate:sum`.
+- 남은 확장 여지: 응답 페이지네이션 누적, 지역 코드(siDo/guGun) 반복 호출로 전국 비교, 도로 파손 실 데이터원 확보.
