@@ -7,14 +7,18 @@
   flex-direction: column;
   background: var(--bg);
 }
+/* 상단 바 = 작업 화면 사이드바와 같은 인디고→슬레이트 그라데이션 */
 .pj-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 60px;
-  padding: 0 28px;
-  border-bottom: 1px solid var(--line);
-  background: var(--surface);
+  height: 64px;
+  padding: 0 24px;
+  background: linear-gradient(90deg, #34487f 0%, #29314a 55%, var(--nav) 100%);
+  color: #eef2fb;
+}
+[data-theme="dark"] .pj-top {
+  background: linear-gradient(90deg, #1b2338 0%, #141a27 70%);
 }
 .pj-logo {
   display: flex;
@@ -22,14 +26,71 @@
   gap: 10px;
   font-weight: 700;
   font-size: 18px;
-  color: var(--text);
+  color: #fff;
 }
 .pj-logo .logo-img {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
+}
+.pj-top-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+/* AI 질문하기 — 작업 화면의 ai-open 과 같은 톤 */
+.pj-top .ai-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-weight: 700;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.pj-top .ai-open:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+/* 사용자 정보 */
+.pj-top .user-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.pj-top .user-meta {
+  line-height: 1.25;
+}
+.pj-top .user-name {
+  color: #fff;
+  font-weight: 700;
+  font-size: 13.5px;
+}
+.pj-top .user-team {
+  color: #b9c3d8;
+  font-size: 11.5px;
+}
+.pj-top .avatar {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #e8efff;
+  color: #174ce6;
+  font-size: 12px;
+  font-weight: 800;
 }
 .pj-top .gear {
-  color: var(--muted);
+  color: #cdd6e8;
+  cursor: pointer;
+  font-size: 19px;
+}
+.pj-top .gear:hover {
+  color: #fff;
 }
 .pj-main {
   flex: 1;
