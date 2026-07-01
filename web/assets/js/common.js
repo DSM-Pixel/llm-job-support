@@ -968,42 +968,64 @@ const ABC = (() => {
     const sidebar = document.querySelector(".sidebar");
     const userBox = sidebar?.querySelector(".user-box");
 
-    // 사이드바 상단(로고 아래)에 현재 프로젝트 칩 — 클릭 시 프로젝트 전환.
+    // 사이드바 요소(프로젝트 칩·AI대화·기록)는 각 페이지 HTML에 정적으로 넣어
+    // 로드 후 밀림(reflow)이 없게 한다. 여기서는 '있으면 연결, 없으면 생성'만 한다.
     const proj = getProject();
-    if (sidebar && proj && _needsProject() && !sidebar.querySelector(".project-switch")) {
-      const chip = document.createElement("button");
-      chip.type = "button";
-      chip.className = "project-switch";
-      chip.title = "프로젝트 전환";
-      chip.innerHTML =
-        `<span class="ps-emoji">${escapeHtml(proj.emoji || "📁")}</span>` +
-        `<span class="ps-name">${escapeHtml(proj.name || "프로젝트")}</span>` +
-        `<span class="ps-swap">전환 ⇄</span>`;
-      chip.addEventListener("click", () => (location.href = "projects.html"));
-      const logo = sidebar.querySelector(".logo");
-      if (logo) logo.insertAdjacentElement("afterend", chip);
-      else sidebar.prepend(chip);
-    }
-    // 사이드바 하단에 'AI와 대화하기' 버튼 + 그 아래 '기록 관리' 링크 추가.
-    // (프로젝트에 종속된 기능이므로 작업 화면에서만 — 프로젝트 선택 화면엔 없음)
-    if (sidebar && _needsProject() && !sidebar.querySelector(".ai-open")) {
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "ai-open";
-      btn.innerHTML = "✦ AI와 대화하기";
-      btn.addEventListener("click", toggleAi);
-      if (userBox) sidebar.insertBefore(btn, userBox);
-      else sidebar.appendChild(btn);
-    }
-    if (sidebar && _needsProject() && !sidebar.querySelector(".history-open")) {
-      const hbtn = document.createElement("button");
-      hbtn.type = "button";
-      hbtn.className = "history-open";
-      hbtn.textContent = "기록 관리";
-      hbtn.title = "내 질의·검색·이미지 작업 기록을 보고 삭제";
-      hbtn.addEventListener("click", openHistory);
-      if (userBox) sidebar.insertBefore(hbtn, userBox);
-      else sidebar.appendChild(hbtn);
+    if (sidebar && _needsProject()) {
+      // 프로젝트 칩(로고 아래) — 내용 채우고 클릭 시 전환.
+      let chip = sidebar.querySelector(".project-switch");
+      if (!chip && proj) {
+        chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "project-switch";
+        const logo = sidebar.querySelector(".logo");
+        if (logo) logo.insertAdjacentElement("afterend", chip);
+        else sidebar.prepend(chip);
+      }
+      if (chip && proj) {
+        chip.title = "프로젝트 전환";
+        chip.innerHTML =
+          `<span class="ps-emoji">${escapeHtml(proj.emoji || "📁")}</span>` +
+          `<span class="ps-name">${escapeHtml(proj.name || "프로젝트")}</span>` +
+          `<span class="ps-swap">전환 ⇄</span>`;
+        if (!chip._wired) {
+          chip._wired = true;
+          chip.addEventListener("click", () => (location.href = "projects.html"));
+        }
+      } else if (chip && !proj) {
+        chip.remove();
+      }
+
+      // 'AI와 대화하기' 버튼(하단, user-box 위).
+      let ai = sidebar.querySelector(".ai-open");
+      if (!ai) {
+        ai = document.createElement("button");
+        ai.type = "button";
+        ai.className = "ai-open";
+        ai.innerHTML = "✦ AI와 대화하기";
+        if (userBox) sidebar.insertBefore(ai, userBox);
+        else sidebar.appendChild(ai);
+      }
+      if (!ai._wired) {
+        ai._wired = true;
+        ai.addEventListener("click", toggleAi);
+      }
+
+      // '기록 관리' 링크.
+      let hist = sidebar.querySelector(".history-open");
+      if (!hist) {
+        hist = document.createElement("button");
+        hist.type = "button";
+        hist.className = "history-open";
+        hist.textContent = "기록 관리";
+        hist.title = "내 질의·검색·이미지 작업 기록을 보고 삭제";
+        if (userBox) sidebar.insertBefore(hist, userBox);
+        else sidebar.appendChild(hist);
+      }
+      if (!hist._wired) {
+        hist._wired = true;
+        hist.addEventListener("click", openHistory);
+      }
     }
   });
 
