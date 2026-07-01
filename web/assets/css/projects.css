@@ -37,24 +37,6 @@
   align-items: center;
   gap: 16px;
 }
-/* AI 질문하기 — 작업 화면의 ai-open 과 같은 톤 */
-.pj-top .ai-open {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  border-radius: 9px;
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
-  font-weight: 700;
-  font-size: 13.5px;
-  cursor: pointer;
-  transition: background 0.15s;
-}
-.pj-top .ai-open:hover {
-  background: rgba(255, 255, 255, 0.18);
-}
 /* 사용자 정보 */
 .pj-top .user-box {
   display: flex;

@@ -143,9 +143,6 @@
 
   // ── 이벤트 위임 ──
   document.addEventListener("DOMContentLoaded", () => {
-    // 상단 바 'AI 질문하기' — 프로젝트 선택 화면에서도 일반 질의로 대화.
-    document.querySelector(".pj-top .ai-open")?.addEventListener("click", ABC.openAi);
-
     $('[data-role="back"]').addEventListener("click", showGallery);
     $('[data-role="enter"]').addEventListener("click", () => currentPid && enterProject(currentPid));
 
