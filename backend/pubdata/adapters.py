@@ -54,14 +54,17 @@ def to_common(dataset: dict, raw_rows: list[dict]) -> list[dict]:
     """실 API 원시 행 목록 → 공통 스키마 관측치 목록.
 
     live.mapping = {"dim": "<응답 dim 컬럼>", "value": "<응답 값 컬럼>"} 를 사용.
+    live.aggregate == "sum" 이면 같은 dim_key 를 합산한다(지점 단위 응답을 지역별로).
     """
-    mapping = (dataset.get("live") or {}).get("mapping") or {}
+    live = dataset.get("live") or {}
+    mapping = live.get("mapping") or {}
     dim_col = mapping.get("dim")
     val_col = mapping.get("value")
-    out: list[dict] = []
     if not (dim_col and val_col):
-        return out
-    for i, row in enumerate(raw_rows):
+        return []
+
+    pairs: list[tuple[str, float]] = []
+    for row in raw_rows:
         dim_key = _dig(row, dim_col)
         value = _dig(row, val_col)
         if dim_key is None or value is None:
@@ -70,19 +73,30 @@ def to_common(dataset: dict, raw_rows: list[dict]) -> list[dict]:
             value = float(value)
         except (TypeError, ValueError):
             continue
-        out.append(
-            {
-                "dataset_id": dataset["id"],
-                "domain": dataset["domain"],
-                "dim_type": dataset["dim"],
-                "dim_key": str(dim_key),
-                "ordinal": i,
-                "value": value,
-                "unit": dataset["unit"],
-                "source": dataset["name"],
-            }
-        )
-    return out
+        pairs.append((str(dim_key), value))
+
+    if live.get("aggregate") == "sum":  # 같은 지역/기간 키끼리 합산(첫 등장 순서 유지)
+        agg: dict[str, float] = {}
+        order: list[str] = []
+        for key, value in pairs:
+            if key not in agg:
+                order.append(key)
+            agg[key] = agg.get(key, 0.0) + value
+        pairs = [(key, agg[key]) for key in order]
+
+    return [
+        {
+            "dataset_id": dataset["id"],
+            "domain": dataset["domain"],
+            "dim_type": dataset["dim"],
+            "dim_key": key,
+            "ordinal": i,
+            "value": value,
+            "unit": dataset["unit"],
+            "source": dataset["name"],
+        }
+        for i, (key, value) in enumerate(pairs)
+    ]
 
 
 def fetch_live(dataset: dict, timeout: int = 8) -> list[dict] | None:
