@@ -1968,3 +1968,152 @@ def pubdata_catalog() -> dict:
     from . import pubdata
 
     return pubdata.service.catalog()
+
+
+# ────────────────────────────────────────────────────────────────────
+# 10. AI 에이전트 업무 자동화 — "업무 절차를 자동으로 추천해줘"
+#    자연어 목표 → 단계별 업무 절차(각 단계를 플랫폼 기능에 매핑) 설계.
+#    Gemini(tool 카탈로그 기반) 우선, 무키/429 시 규칙 기반 폴백.
+# ────────────────────────────────────────────────────────────────────
+# 에이전트가 각 단계에 배정할 수 있는 플랫폼 기능(도구).
+_AGENT_TOOLS = {
+    "query": {"label": "자연어 질의", "icon": "☰", "page": "query.html"},
+    "rag": {"label": "RAG 문서 검색", "icon": "⌕", "page": "rag.html"},
+    "pubdata": {"label": "공공데이터 통계", "icon": "◫", "page": "pubdata.html"},
+    "labeling": {"label": "이미지 분석·라벨링", "icon": "⌗", "page": "labeling.html"},
+    "report": {"label": "요약·보고서 생성", "icon": "⇱", "page": "report.html"},
+}
+
+
+def _agent_route(tool: str, q: str = "") -> str:
+    """단계의 도구 → 딥링크 URL(검색어가 있으면 ?q= 로 프리필)."""
+    page = _AGENT_TOOLS.get(tool, _AGENT_TOOLS["query"])["page"]
+    if q and tool in ("query", "rag", "pubdata"):  # ?q= 자동검색 지원 페이지
+        from urllib.parse import quote
+
+        return f"{page}?q={quote(q)}"
+    return page
+
+
+def _agent_step(raw: dict, n: int) -> dict:
+    """LLM/폴백 단계(dict) → 프론트 계약(번호·도구라벨·아이콘·라우트) 정규화."""
+    tool = raw.get("tool") if raw.get("tool") in _AGENT_TOOLS else "query"
+    meta = _AGENT_TOOLS[tool]
+    q = (raw.get("q") or "").strip()
+    return {
+        "n": n,
+        "title": (raw.get("title") or "").strip() or f"{meta['label']} 단계",
+        "tool": tool,
+        "tool_label": meta["label"],
+        "icon": meta["icon"],
+        "why": (raw.get("why") or "").strip(),
+        "q": q,
+        "route": _agent_route(tool, q),
+    }
+
+
+def _agent_plan_fallback(goal: str) -> dict:
+    """규칙 기반 절차 설계(무키/실패 시). 목표 키워드로 관련 단계를 조립."""
+    low = goal.lower()
+    steps: list[dict] = []
+    # 상황 이해는 공통 첫 단계.
+    steps.append(
+        {
+            "title": "상황·용어 파악하기",
+            "tool": "query",
+            "why": "목표와 관련한 개념·기준을 먼저 확인",
+            "q": goal,
+        }
+    )
+    if any(k in low for k in ("포트홀", "파손", "균열", "이미지", "사진", "현장", "탐지")):
+        steps.append(
+            {
+                "title": "현장 이미지 라벨링",
+                "tool": "labeling",
+                "why": "도로 파손/포트홀을 탐지해 근거 이미지 확보",
+            }
+        )
+    steps.append(
+        {
+            "title": "관련 규정·기준 검색",
+            "tool": "rag",
+            "why": "보수 기한·점검 주기 등 근거 문서 확인",
+            "q": goal,
+        }
+    )
+    if any(k in low for k in ("통계", "현황", "건수", "지역", "추이", "데이터")):
+        steps.append(
+            {
+                "title": "공공데이터 통계 확인",
+                "tool": "pubdata",
+                "why": "지역·기간별 통계로 규모 파악",
+                "q": goal,
+            }
+        )
+    steps.append(
+        {"title": "결과 보고서 생성", "tool": "report", "why": "처리 결과를 문서로 정리·공유"}
+    )
+    return {
+        "summary": f"‘{goal}’ 목표를 {len(steps)}단계로 처리합니다. 각 단계에서 해당 화면으로 이동해 실행하세요.",
+        "steps": steps,
+    }
+
+
+def _agent_plan_gemini(goal: str, key: str) -> dict | None:
+    """Gemini로 절차 설계(JSON). 실패 시 None → 폴백."""
+    try:
+        from google import genai
+
+        client = genai.Client(api_key=key, http_options={"timeout": 20000})
+        tools_desc = "\n".join(f"- {t}: {m['label']}" for t, m in _AGENT_TOOLS.items())
+        prompt = (
+            "너는 도로 유지보수·시설점검 업무지원 플랫폼의 '업무 자동화 에이전트'다. "
+            "사용자 목표를 달성할 업무 절차를 3~5단계로 설계하라. 각 단계는 아래 기능(tool) "
+            "중 하나에 매핑한다:\n" + tools_desc + "\n\n"
+            "반드시 아래 JSON만 출력(코드펜스·설명 금지):\n"
+            '{"summary":"한줄요약","steps":[{"title":"단계명","tool":"rag",'
+            '"why":"이 단계가 필요한 이유","q":"검색어(query/rag/pubdata일 때만, 없으면 빈칸)"}]}\n\n'
+            f"목표: {goal}"
+        )
+        resp = _gemini_generate(client, model="gemini-2.5-flash", contents=prompt)
+        data = _extract_json(resp.text or "")
+        if data and isinstance(data.get("steps"), list) and data["steps"]:
+            return data
+    except Exception:
+        pass
+    return None
+
+
+def agent_plan(goal: str) -> dict:
+    """자연어 목표 → 단계별 업무 절차(플랫폼 기능 매핑). Gemini 우선, 폴백 보장."""
+    g = (goal or "").strip()
+    if not g:
+        return {"backend": BACKEND, "goal": "", "summary": "목표를 입력해주세요.", "steps": []}
+    key = _gemini_key()
+    plan = _agent_plan_gemini(g, key) if key else None
+    backend = "GEMINI"
+    if not plan:
+        plan = _agent_plan_fallback(g)
+        backend = "MOCK"
+    steps = [_agent_step(s, i + 1) for i, s in enumerate(plan["steps"][:6])]
+    return {
+        "backend": backend,
+        "goal": g,
+        "summary": (plan.get("summary") or "").strip() or f"‘{g}’ 처리 절차입니다.",
+        "steps": steps,
+    }
+
+
+def _extract_json(text: str) -> dict | None:
+    """LLM 응답에서 첫 JSON 객체를 관대하게 추출(코드펜스·잡텍스트 허용)."""
+    s = (text or "").strip()
+    if not s:
+        return None
+    start = s.find("{")
+    end = s.rfind("}")
+    if start < 0 or end <= start:
+        return None
+    try:
+        return json.loads(s[start : end + 1])
+    except (json.JSONDecodeError, ValueError):
+        return None

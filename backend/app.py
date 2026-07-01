@@ -134,6 +134,10 @@ class PubDataIn(BaseModel):
     keyword: str = ""
 
 
+class AgentPlanIn(BaseModel):
+    goal: str = ""
+
+
 # ── API 라우트 ───────────────────────────────────────────────────────
 @app.get("/api/health")
 def health() -> dict:
@@ -292,6 +296,12 @@ def pubdata_search(body: PubDataIn) -> dict:
 def pubdata_catalog() -> dict:
     """등록된 전체 공공데이터셋 카탈로그(현황·확장 가능 데이터셋 목록)."""
     return services.pubdata_catalog()
+
+
+@app.post("/api/agent/plan")
+def agent_plan(body: AgentPlanIn) -> dict:
+    """AI 에이전트 — 자연어 목표를 단계별 업무 절차(기능 매핑)로 설계."""
+    return services.agent_plan(body.goal)
 
 
 @app.get("/api/datasets")
