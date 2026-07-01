@@ -208,6 +208,20 @@ textarea {
 
 .nav-group {
   padding: 0 16px;
+  /* 메뉴가 많아 사이드바 높이를 넘겨도 하단 버튼/프로필이 밀려 깨지지 않도록
+     내부 스크롤. 스크롤바는 은은하게. */
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+.nav-group::-webkit-scrollbar {
+  width: 6px;
+}
+.nav-group::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 3px;
 }
 
 .nav-label {

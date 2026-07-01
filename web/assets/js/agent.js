@@ -73,7 +73,9 @@
       "업무 목표를 적으면 절차를 설계해 드려요",
     );
 
+    // 자동 설계 금지 — 버튼을 눌러야 설계한다. 단, 다른 화면에서 ?q= 로
+    // 넘어온 경우(명시적 의도)에만 자동 실행.
     const q = new URLSearchParams(location.search).get("q");
-    plan(q || input.value);
+    if (q) plan(q);
   });
 })();
