@@ -412,10 +412,10 @@ def route_query(question: str) -> dict:
 
 # ────────────────────────────────────────────────────────────────────
 # 3. RAG 검색
-#    검색(retrieval): 키워드 기반 질의-연관도(0~100) — 질문에 따라 근거가 달라진다.
+#    검색(retrieval): 하이브리드 — BM25(어휘) + dense(Gemini 임베딩, 무키 시 어휘)
+#                     를 RRF 로 융합. 구현은 backend/rag_engine.py.
 #    답변(generation): GEMINI_API_KEY 가 있으면 실제 Gemini로 근거 기반 답변,
 #                      없으면 질문/근거 기반 템플릿(MOCK)으로 폴백.
-#    실제 고도화: prototypes/rag-search 의 임베딩+BM25 하이브리드로 retrieval 교체.
 # ────────────────────────────────────────────────────────────────────
 
 # 샘플 코퍼스(여러 주제) — 질문에 따라 다른 문서가 검색되도록 다양화.
@@ -626,14 +626,19 @@ def rag_search(query: str, top_k: int = 4) -> dict:
     연관도가 임계값(_MIN_RELEVANCE) 미만이면 비슷한 문서로 답을 만들어내지 않고
     '참고 문서에 관련 정보가 없다'고 명확히 응답한다.
     """
+    from . import rag_engine
+
     q = (query or "").strip()
     corpus = _active_corpus()
-    scored = sorted(((_relevance(q, d), d) for d in corpus), key=lambda x: -x[0])
-    relevant = [(s, d) for s, d in scored if s >= _MIN_RELEVANCE]
+    result, elapsed = rag_engine.timed_search(corpus, q, top_k)
+    hits = result["hits"]
+    # 근거 있음 판정은 엔진(상대 gap/커버리지)에 맡기고, 표시 근거는 유효 점수만.
+    relevant = [h for h in hits if h["score"] >= _MIN_RELEVANCE] or hits[:1]
+    if not result["found"]:
+        relevant = []
 
     # 관련 근거 없음 → 억지 답변 대신 명확히 "없음".
     if not relevant:
-        best = scored[0][0] if scored else 0
         return {
             "backend": BACKEND,
             "query": q,
@@ -644,28 +649,29 @@ def rag_search(query: str, top_k: int = 4) -> dict:
             ),
             "confidence": 0,
             "method": "근거 없음",
-            "elapsed": "0.1s",
+            "elapsed": f"{elapsed}s",
             "top_k": 0,
-            "chunks": len(corpus),
+            "chunks": result["chunk_count"],
             "matched": 0,
-            "best": best,
+            "best": hits[0]["score"] if hits else 0,
             "sources": [],
         }
 
-    chosen = relevant[:top_k]
-    sources = [{"source": d["source"], "text": d["text"], "score": s} for s, d in chosen]
+    sources = [{"source": h["source"], "text": h["text"], "score": h["score"]} for h in relevant]
     answer, backend = _generate_answer(q, sources)
     confidence = round(sum(s["score"] for s in sources) / len(sources))
+    # method 는 엔진이 알려주는 실제 검색 방식(BM25+dense·RRF) + 답변 생성 주체.
+    answer_by = "Gemini" if backend == "GEMINI" else "템플릿"
     return {
         "backend": backend,
         "query": q,
         "found": True,
         "answer": answer,
         "confidence": confidence,  # 0~100 (질의 연관도 평균)
-        "method": "하이브리드 RAG · Gemini" if backend == "GEMINI" else "키워드 검색(MOCK)",
-        "elapsed": "0.4s",
+        "method": f"{result['method']} · {answer_by}",
+        "elapsed": f"{elapsed}s",
         "top_k": len(sources),
-        "chunks": len(corpus),
+        "chunks": result["chunk_count"],
         "matched": len(relevant),
         "sources": sources,
     }
@@ -1805,14 +1811,16 @@ def _suggest_for(source: str) -> str:
 
 
 def rag_list_files() -> dict:
-    """현재 색인된 참고 파일 목록 + 실제 청크 수 + 파일 기반 추천 질문."""
-    counts: dict[str, int] = {}
+    """현재 색인된 참고 파일 목록 + 실제 청크 수(하이브리드 엔진 기준) + 추천 질문."""
+    from . import rag_engine
+
+    corpus = _active_corpus()
     order: list[str] = []
-    for d in _active_corpus():
-        if d["source"] not in counts:
+    for d in corpus:
+        if d["source"] not in order:
             order.append(d["source"])
-        counts[d["source"]] = counts.get(d["source"], 0) + 1
-    files = [{"source": s, "chunks": counts[s]} for s in order]
+    counts = rag_engine.chunk_counts(corpus)  # 실제 청킹된 청크 수
+    files = [{"source": s, "chunks": counts.get(s, 1)} for s in order]
     # 참고 파일에 따라 달라지는 추천 질문(중복 제거, 최대 4개).
     suggestions: list[str] = []
     for s in order:
