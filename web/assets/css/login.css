@@ -89,10 +89,29 @@
   display: none;
 }
 
+/* 회원가입 필드 — 한 줄에 하나씩(가독성) */
 .lg-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px 14px;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+/* 폼 안 인라인 알림(오류=빨강 / 성공=초록) */
+.lg-alert {
+  padding: 11px 14px;
+  border-radius: 9px;
+  border: 1px solid color-mix(in srgb, var(--red) 35%, transparent);
+  background: color-mix(in srgb, var(--red) 10%, transparent);
+  color: var(--red);
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.lg-alert.ok {
+  border-color: color-mix(in srgb, var(--green) 35%, transparent);
+  background: color-mix(in srgb, var(--green) 10%, transparent);
+  color: var(--green);
 }
 
 .lg-form .field {

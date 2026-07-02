@@ -72,18 +72,18 @@
     },
   };
 
-  // ── 간단 토스트(이 페이지는 common.js 미포함) ──
-  const toast = (msg) => {
-    let el = $(".toast");
-    if (!el) {
-      el = document.createElement("div");
-      el.className = "toast";
-      document.body.appendChild(el);
-    }
+  // ── 폼 안 인라인 알림 — 화면 구석 토스트 대신 카드 안에 크게 표시 ──
+  const alertIn = (form, msg, ok = false) => {
+    const el = form.querySelector(".lg-alert");
+    if (!el) return;
     el.textContent = msg;
-    el.classList.add("show");
-    clearTimeout(el.timer);
-    el.timer = setTimeout(() => el.classList.remove("show"), 2200);
+    el.classList.toggle("ok", ok);
+    el.hidden = false;
+  };
+  const clearAlerts = () => {
+    document.querySelectorAll(".lg-alert").forEach((el) => {
+      el.hidden = true;
+    });
   };
 
   const api = async (path, body) => {
@@ -118,6 +118,7 @@
   const showTab = (tab) => {
     document.querySelectorAll(".lg-tab").forEach((t) => t.classList.toggle("active", t.dataset.tab === tab));
     document.querySelectorAll(".lg-form").forEach((f) => (f.hidden = f.dataset.form !== tab));
+    clearAlerts(); // 탭을 바꾸면 이전 알림은 지운다
   };
   document.querySelectorAll(".lg-tab").forEach((t) => t.addEventListener("click", () => showTab(t.dataset.tab)));
   document.querySelectorAll(".lg-switch").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.to)));
@@ -162,15 +163,16 @@
   $('[data-form="login"]').addEventListener("submit", async (e) => {
     e.preventDefault();
     const f = e.currentTarget;
+    clearAlerts();
     try {
       const r = await api("/api/auth/login", {
         email: f.email.value.trim(),
         password: f.password.value,
       });
-      if (!r.ok) return toast(r.error || "로그인에 실패했습니다");
+      if (!r.ok) return alertIn(f, r.error || "로그인에 실패했습니다");
       enter(r);
     } catch {
-      toast("서버 연결에 실패했습니다");
+      alertIn(f, "서버 연결에 실패했습니다");
     }
   });
 
@@ -178,10 +180,11 @@
   $('[data-form="signup"]').addEventListener("submit", async (e) => {
     e.preventDefault();
     const f = e.currentTarget;
-    if (f.password.value !== f.password2.value) return toast("비밀번호가 서로 다릅니다");
+    clearAlerts();
+    if (f.password.value !== f.password2.value) return alertIn(f, "비밀번호가 서로 다릅니다");
     const agree = (k) => document.querySelector(`[data-consent="${k}"]`).checked;
     if (!agree("terms") || !agree("privacy")) {
-      return toast("필수 약관(이용약관·개인정보 수집이용)에 동의해주세요");
+      return alertIn(f, "필수 약관(이용약관·개인정보 수집이용)에 동의해주세요");
     }
     try {
       const r = await api("/api/auth/signup", {
@@ -194,11 +197,11 @@
         agree_privacy: agree("privacy"),
         agree_marketing: agree("marketing"),
       });
-      if (!r.ok) return toast(r.error || "가입에 실패했습니다");
-      toast("가입 완료! 프로젝트 선택으로 이동합니다");
-      setTimeout(() => enter(r), 400);
+      if (!r.ok) return alertIn(f, r.error || "가입에 실패했습니다");
+      alertIn(f, "가입 완료! 프로젝트 선택으로 이동합니다", true);
+      setTimeout(() => enter(r), 600);
     } catch {
-      toast("서버 연결에 실패했습니다");
+      alertIn(f, "서버 연결에 실패했습니다");
     }
   });
 })();

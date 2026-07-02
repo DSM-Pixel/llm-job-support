@@ -151,8 +151,15 @@ def login(email: str, password: str) -> dict:
     with _lock, _connect() as conn:
         _init(conn)
         row = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
-        if not row or not _verify_pw(password or "", row["pw"]):
-            return {"ok": False, "error": "이메일 또는 비밀번호가 올바르지 않습니다."}
+        # 데모 플랫폼 — 미가입/비밀번호 오류를 구분해 안내한다.
+        if not row:
+            return {
+                "ok": False,
+                "code": "not_registered",
+                "error": "가입되지 않은 이메일입니다. 회원가입 후 이용해주세요.",
+            }
+        if not _verify_pw(password or "", row["pw"]):
+            return {"ok": False, "error": "비밀번호가 올바르지 않습니다."}
         token = _issue_session(conn, row["id"])
     return {"ok": True, "token": token, "user": _user_payload(row)}
 
