@@ -383,18 +383,23 @@ document.addEventListener("DOMContentLoaded", () => {
   const chipsEl = modal.querySelector(".filter-chips");
   let pendingBoxes = []; // 적용 대기 중인 탐지 결과
 
-  const renderFilterChips = () => {
+  const renderFilterChips = (isMock) => {
     const counts = {};
     pendingBoxes.forEach((b) => {
       counts[b.label] = (counts[b.label] || 0) + 1;
     });
-    chipsEl.innerHTML = Object.entries(counts)
-      .sort((a, b) => b[1] - a[1])
-      .map(
-        ([label, n]) =>
-          `<label class="filter-chip"><input type="checkbox" value="${ABC.escapeHtml(label)}" checked /><span>${ABC.escapeHtml(label)} <b>${n}</b></span></label>`,
-      )
-      .join("");
+    const note = isMock
+      ? '<p class="filter-note">⚠ 지금은 예시 데이터입니다(탐지 모델·AI 한도 없음) — 실제 사진 위치와 무관합니다.</p>'
+      : "";
+    chipsEl.innerHTML =
+      note +
+      Object.entries(counts)
+        .sort((a, b) => b[1] - a[1])
+        .map(
+          ([label, n]) =>
+            `<label class="filter-chip"><input type="checkbox" value="${ABC.escapeHtml(label)}" checked /><span>${ABC.escapeHtml(label)} <b>${n}</b></span></label>`,
+        )
+        .join("");
   };
 
   modal.querySelector(".modal-detect-all").addEventListener("click", async (event) => {
@@ -416,13 +421,11 @@ document.addEventListener("DOMContentLoaded", () => {
         filterPanel.hidden = true;
         return ABC.toast("탐지된 객체가 없습니다");
       }
-      renderFilterChips();
+      const isMock = result.backend === "MOCK";
+      renderFilterChips(isMock);
       filterPanel.hidden = false;
-      ABC.toast(
-        result.backend === "GEMINI"
-          ? `객체 ${pendingBoxes.length}개 탐지 — 추가할 클래스를 고르세요`
-          : `예시 객체 ${pendingBoxes.length}개(MOCK) — 추가할 클래스를 고르세요`,
-      );
+      const engine = result.backend === "YOLO" ? "YOLO 로컬" : result.backend === "GEMINI" ? "Gemini" : "예시(MOCK)";
+      ABC.toast(`${engine} 탐지 ${pendingBoxes.length}개 — 추가할 클래스를 고르세요`);
     } catch {
       ABC.toast("전체 객체 탐지에 실패했습니다");
     } finally {

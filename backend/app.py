@@ -257,12 +257,17 @@ async def labeling_analyze_image(
 
 @app.post("/api/labeling/detect-objects")
 async def labeling_detect_objects(image: UploadFile | None = File(None)) -> dict:
-    """이미지 속 모든 객체 탐지(Gemini Vision) — 클래스 필터 라벨링용.
+    """이미지 속 모든 객체 탐지 — 클래스 필터 라벨링용.
 
-    이미지가 없으면(샘플) 다중 클래스 MOCK 을 돌려줘 필터 UI를 시연할 수 있다.
+    1순위: 로컬 이중 YOLO(best.pt 파손 + yolov8n 일반객체) — 좌표 정확·한도 없음.
+    2순위: Gemini Vision(모델 없을 때). 이미지가 없으면(샘플) 다중 클래스 MOCK.
     """
     data = await image.read() if image else b""
     mime = (image.content_type if image else None) or "image/png"
+    if data:
+        local = yolo_service.detect_all_boxes(data)
+        if local is not None:
+            return local
     return services.detect_objects_vision(data, mime)
 
 
