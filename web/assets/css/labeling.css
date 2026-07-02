@@ -47,6 +47,14 @@
   overflow: hidden;
   border-radius: 9px;
   background: linear-gradient(#1f2b42, #0c111c);
+  /* 클릭 = 큰 캔버스 열기(사진 없으면 추가) — 커서·호버로 어포던스 표시 */
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: border-color 0.15s;
+}
+
+.road-preview:hover {
+  border-color: var(--blue);
 }
 
 .preview-img {

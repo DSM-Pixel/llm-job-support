@@ -202,6 +202,7 @@ document.addEventListener("DOMContentLoaded", () => {
     );
     setActive(images.length - 1);
     ABC.toast(`사진 ${imgs.length}장을 추가했습니다`);
+    openModal(); // 사진을 추가하면 바로 큰 캔버스에서 라벨링 시작(단계 축소)
   };
 
   // 이미지 제거. 모두 비면 샘플 placeholder로 복귀.
@@ -704,6 +705,11 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   document.querySelector(".open-label-modal")?.addEventListener("click", openModal);
+  // 미리보기 클릭 = 큰 캔버스 열기(사진 없으면 추가부터) — 흐름 단순화.
+  preview?.addEventListener("click", () => {
+    if (!imageURL) return fileInput?.click();
+    openModal();
+  });
   modal.querySelector(".modal-close").addEventListener("click", closeModal);
   modal.addEventListener("click", (event) => {
     if (event.target === modal) closeModal();
