@@ -765,8 +765,11 @@ textarea {
   box-shadow: 0 24px 60px rgba(8, 12, 22, 0.4);
 }
 
+/* 라벨링 모달은 사진 작업 공간 — 화면을 거의 꽉 채워 여백을 최소화한다. */
 .modal.label-modal {
-  max-width: 1080px;
+  max-width: min(96vw, 1600px);
+  height: 92vh;
+  max-height: 92vh;
 }
 
 .modal.help-modal {
@@ -1163,8 +1166,8 @@ textarea {
 }
 
 .lightbox-img {
-  max-width: 92vw;
-  max-height: 88vh;
+  max-width: 96vw;
+  max-height: 92vh;
   border-radius: 10px;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
 }

@@ -243,6 +243,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
   gap: 0;
+  flex: 1; /* 모달(92vh)에서 헤더를 뺀 나머지를 전부 차지 */
   min-height: 0;
 }
 
@@ -250,7 +251,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 18px;
+  padding: 10px;
   background: #0c111c;
   overflow: auto;
 }
@@ -267,7 +268,8 @@
 .canvas-img {
   display: block;
   max-width: 100%;
-  max-height: 72vh;
+  /* 모달(92vh) - 헤더(~56px) - 캔버스 패딩(20px) 을 꽉 채워 여백 최소화 */
+  max-height: calc(92vh - 80px);
   width: auto;
   height: auto;
   border-radius: 6px;
