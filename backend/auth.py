@@ -24,6 +24,7 @@ _DB_PATH = Path(__file__).resolve().parent / "storage" / "users.db"
 _lock = threading.Lock()
 
 _SESSION_TTL = 7 * 86400  # 7일
+_RESET_TTL = 30 * 60  # 비밀번호 재설정 링크 유효시간(30분)
 _PBKDF2_ITERS = 200_000
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
@@ -44,6 +45,10 @@ def _init(conn: sqlite3.Connection) -> None:
     )
     conn.execute(
         "CREATE TABLE IF NOT EXISTS sessions ("
+        "token TEXT PRIMARY KEY, user_id TEXT NOT NULL, expires REAL NOT NULL)"
+    )
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS reset_tokens ("
         "token TEXT PRIMARY KEY, user_id TEXT NOT NULL, expires REAL NOT NULL)"
     )
 
@@ -184,3 +189,55 @@ def logout(token: str) -> dict:
         _init(conn)
         conn.execute("DELETE FROM sessions WHERE token = ?", (token or "",))
     return {"ok": True, "message": "로그아웃되었습니다."}
+
+
+# ── 비밀번호 재설정 ──────────────────────────────────────────────────
+def request_reset(email: str) -> dict:
+    """재설정 링크 요청. 계정 열거(enumeration) 방지를 위해 가입 여부와 관계없이
+    동일한 안내를 돌려준다. 실제 서비스라면 이메일로 링크를 발송한다."""
+    email = (email or "").strip().lower()
+    generic = {
+        "ok": True,
+        "message": "가입된 이메일이라면 비밀번호 재설정 링크를 보냈습니다. 메일함을 확인해주세요.",
+    }
+    if not _EMAIL_RE.match(email):
+        return generic
+
+    with _lock, _connect() as conn:
+        _init(conn)
+        row = conn.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()
+        if not row:
+            return generic  # 미가입 — 동일 응답으로 존재 여부를 숨긴다
+        token = secrets.token_hex(24)
+        conn.execute("DELETE FROM reset_tokens WHERE user_id = ?", (row["id"],))  # 기존 요청 무효화
+        conn.execute(
+            "INSERT INTO reset_tokens(token, user_id, expires) VALUES (?,?,?)",
+            (token, row["id"], time.time() + _RESET_TTL),
+        )
+        conn.execute("DELETE FROM reset_tokens WHERE expires < ?", (time.time(),))  # 만료 정리
+
+    link = f"/pages/reset.html?token={token}"
+    # 데모에는 메일러가 없어 콘솔에 출력하고 dev_link 로 함께 돌려준다.
+    # ⚠ 운영 배포 시 dev_link 는 제거할 것 — 응답에 담으면 계정 존재가 노출된다.
+    # 로그는 Windows 콘솔(cp1252)에서도 안전하도록 ASCII 로만 남긴다.
+    print(f"[password-reset] {email} -> {link}")
+    return {**generic, "dev_link": link}
+
+
+def reset_password(token: str, new_password: str) -> dict:
+    """재설정 토큰(1회용)으로 새 비밀번호를 설정한다. 성공 시 기존 세션은 모두 무효화."""
+    if len(new_password or "") < 8:
+        return {"ok": False, "error": "비밀번호는 8자 이상이어야 합니다."}
+    now = time.time()
+    with _lock, _connect() as conn:
+        _init(conn)
+        row = conn.execute(
+            "SELECT user_id, expires FROM reset_tokens WHERE token = ?", (token or "",)
+        ).fetchone()
+        if not row or row["expires"] < now:
+            return {"ok": False, "error": "재설정 링크가 만료되었거나 올바르지 않습니다. 다시 요청해주세요."}
+        uid = row["user_id"]
+        conn.execute("UPDATE users SET pw = ? WHERE id = ?", (_hash_pw(new_password), uid))
+        conn.execute("DELETE FROM reset_tokens WHERE token = ?", (token,))  # 1회용
+        conn.execute("DELETE FROM sessions WHERE user_id = ?", (uid,))  # 보안: 기존 세션 무효화
+    return {"ok": True, "message": "비밀번호가 변경되었습니다. 새 비밀번호로 로그인해주세요."}

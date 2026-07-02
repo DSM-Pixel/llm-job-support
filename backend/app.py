@@ -178,6 +178,15 @@ class TokenIn(BaseModel):
     token: str = ""
 
 
+class ResetRequestIn(BaseModel):
+    email: str = ""
+
+
+class ResetPasswordIn(BaseModel):
+    token: str = ""
+    password: str = ""
+
+
 # ── API 라우트 ───────────────────────────────────────────────────────
 @app.get("/api/health")
 def health() -> dict:
@@ -214,6 +223,18 @@ def auth_me(body: TokenIn) -> dict:
 @app.post("/api/auth/logout")
 def auth_logout(body: TokenIn) -> dict:
     return auth.logout(body.token)
+
+
+@app.post("/api/auth/reset-request")
+def auth_reset_request(body: ResetRequestIn) -> dict:
+    """비밀번호 재설정 링크 요청 — 계정 열거 방지를 위해 존재 여부와 무관하게 동일 응답."""
+    return auth.request_reset(body.email)
+
+
+@app.post("/api/auth/reset")
+def auth_reset(body: ResetPasswordIn) -> dict:
+    """재설정 토큰(1회용)으로 새 비밀번호를 설정."""
+    return auth.reset_password(body.token, body.password)
 
 
 @app.get("/api/dashboard")

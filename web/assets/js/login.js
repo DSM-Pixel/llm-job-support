@@ -114,14 +114,32 @@
     location.replace("projects.html");
   };
 
-  // ── 탭 전환 ──
-  const showTab = (tab) => {
-    document.querySelectorAll(".lg-tab").forEach((t) => t.classList.toggle("active", t.dataset.tab === tab));
-    document.querySelectorAll(".lg-form").forEach((f) => (f.hidden = f.dataset.form !== tab));
-    clearAlerts(); // 탭을 바꾸면 이전 알림은 지운다
+  // ── 회원가입 모달 열기/닫기 ──
+  const modalOf = { signup: $("#signup-modal") };
+  const openModal = (key) => {
+    clearAlerts(); // 열 때 이전 알림은 지운다
+    if (modalOf[key]) modalOf[key].hidden = false;
   };
-  document.querySelectorAll(".lg-tab").forEach((t) => t.addEventListener("click", () => showTab(t.dataset.tab)));
-  document.querySelectorAll(".lg-switch").forEach((b) => b.addEventListener("click", () => showTab(b.dataset.to)));
+  const closeModal = (key) => {
+    if (modalOf[key]) modalOf[key].hidden = true;
+  };
+  document.querySelectorAll("[data-open]").forEach((b) => b.addEventListener("click", () => openModal(b.dataset.open)));
+  document.querySelectorAll("[data-close]").forEach((b) => b.addEventListener("click", () => closeModal(b.dataset.close)));
+  // 모달의 ✕ 버튼 · 바깥 배경 클릭으로 닫기
+  Object.entries(modalOf).forEach(([key, overlay]) => {
+    overlay.querySelector(".modal-close").addEventListener("click", () => closeModal(key));
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) closeModal(key);
+    });
+  });
+
+  // ── 로그인 ↔ 비밀번호 찾기 — 모달 없이 카드 안에서 전환 ──
+  const cardForms = { login: $('[data-form="login"]'), reset: $('[data-form="reset"]') };
+  const showView = (name) => {
+    clearAlerts();
+    Object.entries(cardForms).forEach(([k, f]) => (f.hidden = k !== name));
+  };
+  document.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", () => showView(b.dataset.view)));
 
   // ── 동의 체크(전체 동의 연동) ──
   const consents = () => [...document.querySelectorAll('[data-consent]:not([data-consent="all"])')];
@@ -200,6 +218,25 @@
       if (!r.ok) return alertIn(f, r.error || "가입에 실패했습니다");
       alertIn(f, "가입 완료! 프로젝트 선택으로 이동합니다", true);
       setTimeout(() => enter(r), 600);
+    } catch {
+      alertIn(f, "서버 연결에 실패했습니다");
+    }
+  });
+
+  // ── 비밀번호 찾기 — 이메일로 재설정 링크 요청 ──
+  $('[data-form="reset"]').addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const f = e.currentTarget;
+    clearAlerts();
+    try {
+      const r = await api("/api/auth/reset-request", { email: f.email.value.trim() });
+      if (!r.ok) return alertIn(f, r.error || "요청에 실패했습니다");
+      // 데모: 메일러가 없어 백엔드가 재설정 링크(dev_link)를 함께 준다 → 화면에 노출.
+      const msg = r.dev_link
+        ? `재설정 링크(데모): ${location.origin}${r.dev_link}`
+        : r.message || "재설정 링크를 이메일로 보냈습니다. 메일함을 확인해주세요.";
+      alertIn(f, msg, true);
+      f.reset();
     } catch {
       alertIn(f, "서버 연결에 실패했습니다");
     }

@@ -51,31 +51,32 @@
   box-shadow: 0 18px 50px rgba(8, 12, 22, 0.12);
 }
 
-.lg-tabs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  margin-bottom: 20px;
-  padding: 4px;
-  border-radius: 11px;
-  background: color-mix(in srgb, var(--muted) 12%, transparent);
+/* 카드 상단 브랜드 — 로고 + 서비스명 */
+.lg-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+  margin-bottom: 22px;
 }
 
-.lg-tab {
-  padding: 9px 0;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--muted);
-  font-weight: 700;
-  font-size: 14px;
-  cursor: pointer;
+.lg-brand-mark {
+  width: 48px;
+  height: 48px;
 }
 
-.lg-tab.active {
-  background: var(--surface);
+.lg-brand-name {
+  margin: 4px 0 0;
+  font-size: 20px;
+  font-weight: 800;
   color: var(--text);
-  box-shadow: 0 2px 8px rgba(8, 12, 22, 0.1);
+}
+
+.lg-brand-sub {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
 }
 
 .lg-form {
@@ -209,6 +210,11 @@
   font-size: 13px;
 }
 
+.lg-dot {
+  color: var(--muted);
+  margin: 0 8px;
+}
+
 .lg-switch {
   border: none;
   background: transparent;
@@ -224,7 +230,28 @@
   font-size: 12px;
 }
 
-/* 약관 전문 모달 */
+/* 회원가입 모달 — 본문에 폼 여백 부여 */
+.lg-signup-modal {
+  max-width: 560px;
+}
+
+.lg-signup-modal .modal-body {
+  padding: 18px;
+}
+
+/* 비밀번호 찾기 안내문(카드 안 인라인 전환) */
+.lg-reset-desc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+/* 약관 전문 모달 — 회원가입 모달 위에 겹쳐 뜨도록 */
+#doc-modal {
+  z-index: 110;
+}
+
 .lg-doc-modal {
   max-width: 640px;
 }
