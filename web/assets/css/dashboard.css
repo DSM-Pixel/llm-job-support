@@ -22,6 +22,35 @@
   font-size: 22px;
 }
 
+/* ── 히어로 질문창(허브) — 모든 기능의 입구 ── */
+.hero-ask {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.hero-ask-input {
+  flex: 1;
+  min-width: 0;
+  padding: 13px 16px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14.5px;
+  box-shadow: 0 3px 14px rgba(8, 12, 22, 0.05);
+}
+
+.hero-ask-input:focus {
+  outline: none;
+  border-color: var(--blue);
+}
+
+.hero-ask-go {
+  white-space: nowrap;
+  padding: 0 18px;
+}
+
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

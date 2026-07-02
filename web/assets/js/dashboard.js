@@ -199,7 +199,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   });
 
-  document.querySelector(".hero-row .primary")?.addEventListener("click", () => {
-    window.location.href = "query.html";
+  // ── 히어로 질문창(허브) — 질문을 자연어 질의로 보내면 거기서 자동 분류·연계 ──
+  // (route_query 가 일반답변/문서검색/이미지분석/통계로 알아서 라우팅한다)
+  const heroInput = document.querySelector(".hero-ask-input");
+  const heroGo = document.querySelector(".hero-ask-go");
+  const heroAsk = () => {
+    const q = heroInput.value.trim();
+    if (!q) return ABC.toast("질문을 입력해주세요");
+    window.location.href = `query.html?q=${encodeURIComponent(q)}`;
+  };
+  heroGo?.addEventListener("click", heroAsk);
+  heroInput?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") heroAsk();
   });
 });
