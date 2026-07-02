@@ -273,11 +273,16 @@ textarea {
 }
 
 .nav-label {
-  margin: 0 0 10px 10px;
+  margin: 0 0 8px 10px;
   color: #56627a;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: .08em;
+}
+
+/* 두 번째 그룹부터는 위 그룹과 시각적으로 분리 */
+.nav-label:not(:first-child) {
+  margin-top: 16px;
 }
 
 .nav-item {

@@ -154,7 +154,7 @@ with sync_playwright() as p:
     ans_txt = page.inner_text(".message.assistant:last-child .message-body")
     check(
         "query: 데이터 질문 → RAG 연계 안내",
-        rag_href.startswith("rag.html?q=") and "RAG 공공데이터 검색" in ans_txt,
+        rag_href.startswith("rag.html?q=") and "문서 지식 검색" in ans_txt,
         rag_href[:40],
     )
 

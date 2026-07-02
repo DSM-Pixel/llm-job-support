@@ -372,13 +372,13 @@ def route_query(question: str) -> dict:
             "intent": "rag",
             "answer": (
                 "이 질문은 색인된 공공데이터에서 특정 기록을 직접 찾아야 정확히 답할 수 있습니다. "
-                "데이터가 방대하므로 제가 바로 답하기보다 ‘RAG 공공데이터 검색’에서 찾는 것이 좋습니다. "
+                "데이터가 방대하므로 제가 바로 답하기보다 ‘문서 지식 검색’에서 찾는 것이 좋습니다. "
                 "아래 버튼을 누르면 질문이 그대로 전달되어 색인된 데이터 안에서 검색합니다."
             ),
             "sources": [],
             "actions": [
                 {
-                    "label": "RAG 공공데이터 검색으로 이동",
+                    "label": "문서 지식 검색으로 이동",
                     "href": f"rag.html?q={quote(text)}",
                     "primary": True,
                 },
@@ -2090,7 +2090,7 @@ def pubdata_catalog() -> dict:
 # 에이전트가 각 단계에 배정할 수 있는 플랫폼 기능(도구).
 _AGENT_TOOLS = {
     "query": {"label": "자연어 질의", "icon": "☰", "page": "query.html"},
-    "rag": {"label": "RAG 문서 검색", "icon": "⌕", "page": "rag.html"},
+    "rag": {"label": "문서 지식 검색", "icon": "⌕", "page": "rag.html"},
     "pubdata": {"label": "공공데이터 통계", "icon": "◫", "page": "pubdata.html"},
     "labeling": {"label": "이미지 분석·라벨링", "icon": "⌗", "page": "labeling.html"},
     "report": {"label": "요약·보고서 생성", "icon": "⇱", "page": "report.html"},
