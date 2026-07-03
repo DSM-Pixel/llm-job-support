@@ -261,6 +261,7 @@
   line-height: 1.7;
   font-size: 13.5px;
   color: var(--text);
+  padding: 20px 24px 24px;
 }
 
 /* ── 회사 선택 콤보박스 · 관리자 신청 ── */
