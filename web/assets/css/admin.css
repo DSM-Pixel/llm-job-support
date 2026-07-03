@@ -377,3 +377,11 @@
   color: var(--muted);
   font-size: 13px;
 }
+
+/* 배지·태그·헤더·숫자열이 좁은 열에서 세로로 깨지지 않도록 */
+.ad-badge,
+.ad-tag,
+.ad-table thead th,
+.ad-table .ad-num {
+  white-space: nowrap;
+}

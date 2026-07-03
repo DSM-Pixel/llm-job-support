@@ -89,9 +89,11 @@
     // 슈퍼는 서비스(프로젝트)를 쓰지 않으므로 '프로젝트 목록' 링크를 숨긴다.
     const back = document.querySelector(".ad-back-link");
     if (back) back.hidden = isSuper;
-    $('[data-role="company"]').textContent = d.is_super
-      ? "전체 회사"
-      : d.company || "(회사 미지정)";
+    // 제목·부제는 역할에 맞게: 슈퍼=전체 회원, 회사 어드민=자기 회사.
+    $('[data-role="title"]').textContent = isSuper ? "회원 관리" : "회사 멤버 관리";
+    $('[data-role="subtitle"]').textContent = isSuper
+      ? "전체 회원의 활동·기록·상태를 관리하고, 관리자 신청을 승인합니다."
+      : `${d.company || "우리 회사"} 멤버의 활동·기록·상태를 관리합니다.`;
     renderSummary(d.members);
     renderRows(d.members);
     if (d.is_super) loadRequests();
