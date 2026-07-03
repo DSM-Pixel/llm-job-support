@@ -240,3 +240,11 @@ tbody tr:hover {
     flex-direction: column;
   }
 }
+
+/* 데이터 없음 빈 상태 */
+.data-empty td {
+  text-align: center;
+  color: var(--muted);
+  padding: 26px 12px;
+  font-size: 13px;
+}

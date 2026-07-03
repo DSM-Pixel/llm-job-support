@@ -8,8 +8,8 @@
     <script>try{var t=(JSON.parse(localStorage.getItem("gnsoft.settings")||"{}")||{}).theme;document.documentElement.setAttribute("data-theme",t==="dark"?"dark":"light");}catch(e){}</script>
     <script>try{var _a=localStorage.getItem("gnsoft.auth");if(!_a||_a==="null"){location.replace("login.html");}}catch(e){}</script>
     <script>try{var _p=localStorage.getItem("gnsoft.currentProject");if(!_p||_p==="null"){location.replace("projects.html");}}catch(e){}</script>
-    <link rel="stylesheet" href="../assets/css/common.css?v=20260703d" />
-    <link rel="stylesheet" href="../assets/css/dashboard.css?v=20260703d" />
+    <link rel="stylesheet" href="../assets/css/common.css?v=20260703e" />
+    <link rel="stylesheet" href="../assets/css/dashboard.css?v=20260703e" />
   </head>
   <body>
     <div class="app">
@@ -33,10 +33,10 @@
         <button class="ai-open" type="button">✦ AI와 대화하기</button>
         <button class="history-open" type="button" title="내 질의·검색·이미지 작업 기록을 보고 삭제">기록 관리</button>
         <div class="user-box">
-          <span class="avatar">도현</span>
+          <span class="avatar"></span>
           <div>
-            <div class="user-name">박도현</div>
-            <div class="user-team">도로관리처 · 점검분석팀</div>
+            <div class="user-name"></div>
+            <div class="user-team"></div>
           </div>
           <span class="gear">⚙</span>
         </div>
@@ -53,7 +53,7 @@
           <div class="hero-row">
             <div>
               <p class="date">2026.6.22 · 월요일</p>
-              <h2>안녕하세요, <span class="user-greet">박도현</span>님 — 무엇을 도와드릴까요?</h2>
+              <h2>안녕하세요, <span class="user-greet"></span>님 — 무엇을 도와드릴까요?</h2>
             </div>
           </div>
           <div class="hero-ask">
@@ -124,30 +124,8 @@
               <div class="card-head">
                 <h3>모델 상태</h3>
               </div>
-              <div class="model-row">
-                <span class="dot green"></span>
-                <div><b>YOLOe-L 도로파손</b><small>탐지</small></div>
-                <i><span style="width: 74%"></span></i
-                ><em class="status green">운영</em>
-              </div>
-              <div class="model-row">
-                <span class="dot green"></span>
-                <div><b>SAM 분할</b><small>세그멘테이션</small></div>
-                <i><span style="width: 56%"></span></i
-                ><em class="status green">운영</em>
-              </div>
-              <div class="model-row">
-                <span class="dot green"></span>
-                <div><b>gemini-2.5-flash</b><small>VLM·생성</small></div>
-                <i><span style="width: 40%"></span></i
-                ><em class="status green">운영</em>
-              </div>
-              <div class="model-row">
-                <span class="dot orange"></span>
-                <div><b>도로파손 v3 파인튜닝</b><small>학습</small></div>
-                <i class="orange"><span style="width: 88%"></span></i
-                ><em class="status orange">학습 중</em>
-              </div>
+              <!-- 모델 행은 dashboard.js renderModels()가 실제 가용성으로 채운다. -->
+              <p class="model-loading">불러오는 중…</p>
             </article>
 
             <article class="card activity-card">
@@ -155,34 +133,16 @@
                 <h3>최근 활동</h3>
                 <button class="card-link history-link" type="button" title="이 프로젝트의 전체 기록 보기·삭제">전체 기록 →</button>
               </div>
+              <!-- dashboard.js가 실제 활동(localStorage)으로 채운다. 없으면 아래 빈 상태 유지. -->
               <ul>
-                <li>
-                  <span class="activity-icon">⌗</span
-                  ><b>pothole_set_2025Q2 라벨링 검수 완료</b
-                  ><small>박도현 · 12분 전</small>
-                </li>
-                <li>
-                  <span class="activity-icon activity-search">⌕</span
-                  ><b>공공데이터포털 ‘도로 파손 신고 현황’ 연계 동기화</b
-                  ><small>시스템 · 34분 전</small>
-                </li>
-                <li>
-                  <span class="activity-icon">⇱</span
-                  ><b>‘도로 파손 현황 분석 보고서’ 생성</b
-                  ><small>박서준 · 1시간 전</small>
-                </li>
-                <li>
-                  <span class="activity-icon">▱</span
-                  ><b>CCTV 이상행동 데이터셋 304건 업로드 완료</b
-                  ><small>이지은 · 3시간 전</small>
-                </li>
+                <li class="activity-empty"><small>아직 활동 기록이 없습니다. 질의·검색·라벨링을 시작하면 여기에 표시됩니다.</small></li>
               </ul>
             </article>
           </section>
         </section>
       </main>
     </div>
-    <script src="../assets/js/common.js?v=20260703d"></script>
-    <script src="../assets/js/dashboard.js?v=20260703d"></script>
+    <script src="../assets/js/common.js?v=20260703e"></script>
+    <script src="../assets/js/dashboard.js?v=20260703e"></script>
   </body>
 </html>

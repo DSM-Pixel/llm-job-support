@@ -106,6 +106,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       })
       .join("");
     card.querySelectorAll(".model-row").forEach((row) => row.remove());
+    card.querySelector(".model-loading")?.remove(); // 로딩 placeholder 제거
     card.insertAdjacentHTML("beforeend", rows);
   };
   // 모델 행 클릭(델리게이션, 한 번만 등록) → 사용 현황 상세.
@@ -124,7 +125,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderModels(data.models);
 
     const activity = document.querySelector(".activity-card ul");
-    if (activity && data.activity) {
+    // 서버 활동이 실제로 있을 때만 렌더(빈 배열이면 HTML 빈 상태를 유지).
+    if (activity && data.activity && data.activity.length) {
       activity.innerHTML = data.activity
         .map((a) => `<li><span class="activity-icon">${a.icon}</span><b>${ABC.escapeHtml(a.text)}</b><small>${ABC.escapeHtml(a.meta)}</small></li>`)
         .join("");

@@ -432,3 +432,16 @@ h3 {
     grid-row: auto;
   }
 }
+
+/* 빈 상태 / 로딩 placeholder */
+.model-loading {
+  margin: 0;
+  padding: 18px 2px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.activity-empty small {
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.5;
+}

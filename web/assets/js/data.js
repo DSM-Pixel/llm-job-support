@@ -39,14 +39,31 @@ document.addEventListener("DOMContentLoaded", async () => {
       img: a.image,
     }));
 
-  // 서버에서 데모 시드 데이터셋 목록을 받아, 내 실제 작업물과 합쳐 표를 채운다.
+  // 상단 통계 카드를 실제 표 내용(유형별 개수)으로 채운다.
+  const EMPTY_ROW =
+    '<tr class="data-empty"><td colspan="8"><small>아직 데이터가 없습니다. 이미지를 분석·라벨하거나 파일을 업로드하면 여기에 표시됩니다.</small></td></tr>';
+  const updateStats = (rows) => {
+    const set = (name, n) => {
+      const el = document.querySelector(`[data-stat="${name}"]`);
+      if (el) el.textContent = String(n);
+    };
+    set("원본", rows.filter((r) => r.kind === "원본").length);
+    set("라벨", rows.filter((r) => r.kind === "라벨").length);
+    set("문서", rows.filter((r) => r.kind === "문서").length);
+    set("공공데이터", rows.filter((r) => r.kind === "공공데이터").length);
+  };
+  const renderTable = (rows) => {
+    if (!tbody) return;
+    tbody.innerHTML = rows.length ? rows.map(rowHtml).join("") : EMPTY_ROW;
+    updateStats(rows);
+  };
+
+  // 실제 작업물(localStorage) + 서버 데이터셋(현재 빈 목록)으로 표를 채운다.
   try {
     const data = await ABC.api("/api/datasets");
-    if (tbody && data.datasets) {
-      tbody.innerHTML = [...myRealRows, ...data.datasets].map(rowHtml).join("");
-    }
+    renderTable([...myRealRows, ...(data.datasets || [])]);
   } catch {
-    if (tbody && myRealRows.length) tbody.innerHTML = myRealRows.map(rowHtml).join("");
+    renderTable(myRealRows);
   }
 
   const filterRows = () => {
@@ -113,6 +130,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     try {
       await ABC.api("/api/datasets/upload", { name: files.map((f) => f.name).join(", ") });
       ABC.logActivity("데이터 업로드", files.map((f) => f.name).join(", "));
+      tbody.querySelector(".data-empty")?.remove(); // 빈 상태 행 제거
       files.forEach((f) => {
         tbody.insertAdjacentHTML(
           "afterbegin",

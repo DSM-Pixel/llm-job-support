@@ -3,8 +3,8 @@ const ABC = (() => {
   const SETTINGS_KEY = "gnsoft.settings";
   const DEFAULT_SETTINGS = {
     engine: "Gemini",
-    name: "박도현",
-    team: "도로관리처 · 점검분석팀",
+    name: "사용자",
+    team: "",
     notify: true,
     theme: "light",
   };

@@ -45,49 +45,11 @@ def _new_id() -> str:
     return uuid.uuid4().hex[:10]
 
 
-# ── 시드(데모) ───────────────────────────────────────────────────────
-_SEED = [
-    (
-        "🛣️",
-        "도로 파손 라벨링",
-        [
-            ("road_2026Q2 이미지셋 (18,706장)", "이미지셋", "승인"),
-            ("포트홀_보수_기준.md", "문서", "승인"),
-            ("도로파손_탐지로그_2026Q2.csv", "공공데이터", "대기"),
-        ],
-    ),
-    (
-        "🏗️",
-        "시설물 안전점검",
-        [
-            ("시설물_점검_주기.md", "문서", "승인"),
-            ("교량 점검 이미지셋 (2,140장)", "이미지셋", "반려"),
-            ("시설물 안전등급 현황", "공공데이터", "대기"),
-        ],
-    ),
-]
-
-
+# 데모 시드 제거 — 프로젝트·소스·검수는 전부 사용자가 직접 만든 실데이터만 사용한다.
+# (예전엔 하드코딩된 데모 프로젝트 2개와 고정 검수자 "박도현"을 심었으나 폐기.)
 def ensure_seeded() -> None:
     with _lock, _connect() as conn:
         _init(conn)
-        if conn.execute("SELECT 1 FROM projects LIMIT 1").fetchone():
-            return
-        now = time.time()
-        for i, (emoji, name, sources) in enumerate(_SEED):
-            pid = _new_id()
-            conn.execute(
-                "INSERT INTO projects(id, name, emoji, created) VALUES (?,?,?,?)",
-                (pid, name, emoji, now - i * 86400),
-            )
-            for sname, kind, review in sources:
-                reviewer = "박도현" if review != "대기" else None
-                rat = now - i * 3600 if review != "대기" else None
-                conn.execute(
-                    "INSERT INTO sources(id, project_id, name, kind, review, reviewer, reviewed_at) "
-                    "VALUES (?,?,?,?,?,?,?)",
-                    (_new_id(), pid, sname, kind, review, reviewer, rat),
-                )
 
 
 # ── 조회/변경 ────────────────────────────────────────────────────────

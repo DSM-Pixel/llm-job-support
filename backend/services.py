@@ -112,95 +112,14 @@ def _gemini_generate(client, **kwargs):
 # 1. 메인 대시보드 통계
 # ────────────────────────────────────────────────────────────────────
 def dashboard_stats() -> dict:
-    """대시보드 상단 지표·주간 처리량·모델 상태·최근 활동. (MOCK)"""
-    return {
-        "backend": BACKEND,
-        "stats": [
-            {
-                "icon": "▱",
-                "delta": "↗ +124",
-                "value": "2,748",
-                "label": "색인 문서·소스",
-                "sub": "청크 12,840",
-            },
-            {
-                "icon": "⬡",
-                "delta": "↗ +3.9K",
-                "value": "12,840",
-                "label": "라벨 데이터셋",
-                "sub": "검수 100%",
-            },
-            {
-                "icon": "◉",
-                "delta": "↗ +0.04",
-                "value": "0.871",
-                "label": "도로 파손 mAP@0.5",
-                "sub": "YOLOe-L + SAM",
-            },
-            {
-                "icon": "⌁",
-                "delta": "↗ +18%",
-                "value": "1,206",
-                "label": "오늘 처리 작업",
-                "sub": "질의·탐지·생성",
-            },
-        ],
-        "weekly": [
-            {"day": "월", "count": 18},
-            {"day": "화", "count": 27},
-            {"day": "수", "count": 21},
-            {"day": "목", "count": 32},
-            {"day": "금", "count": 24},
-        ],
-        "models": [
-            {
-                "name": "YOLOe-L 도로파손",
-                "kind": "탐지",
-                "load": 74,
-                "state": "운영",
-                "tone": "green",
-            },
-            {
-                "name": "SAM 분할",
-                "kind": "세그멘테이션",
-                "load": 56,
-                "state": "운영",
-                "tone": "green",
-            },
-            {
-                "name": "gemini-2.5-flash",
-                "kind": "VLM·생성",
-                "load": 40,
-                "state": "운영",
-                "tone": "green",
-            },
-            {
-                "name": "도로파손 v3 파인튜닝",
-                "kind": "학습",
-                "load": 88,
-                "state": "학습 중",
-                "tone": "orange",
-            },
-        ],
-        "activity": [
-            {
-                "icon": "⌗",
-                "text": "pothole_set_2025Q2 라벨링 검수 완료",
-                "meta": "김연우 · 12분 전",
-            },
-            {
-                "icon": "⌕",
-                "text": "공공데이터포털 ‘도로 파손 신고 현황’ 연계 동기화",
-                "meta": "시스템 · 34분 전",
-            },
-            {"icon": "⇱", "text": "‘도로 파손 현황 분석 보고서’ 생성", "meta": "박서준 · 1시간 전"},
-            {
-                "icon": "▱",
-                "text": "CCTV 이상행동 데이터셋 304건 업로드 완료",
-                "meta": "이지은 · 3시간 전",
-            },
-        ],
-    }
+    """대시보드 기본 응답. 통계 카드·모델 상태·최근 활동은 프론트/실데이터가 채운다.
+
+    - 상단 통계 카드: 프론트 renderRealStats()가 /api/dashboard/stats(실집계)로 채움.
+    - 모델 상태: 호출부(app.dashboard)가 real_model_status()로 덮어씀.
+    - 최근 활동: 프론트가 localStorage의 실제 활동으로 채움(없으면 빈 상태).
+    (예전엔 여기에 하드코딩된 데모 지표·주간처리량·가짜 활동을 넣었으나 폐기.)
+    """
+    return {"backend": BACKEND, "activity": []}
 
 
 # gemini-2.5-flash 무료 한도(참고용 기준).
@@ -297,11 +216,12 @@ def real_model_status(yolo_ok: bool) -> list[dict]:
                 "구글 계정의 하루 한도는 서버를 다시 켜도 그대로라서, 측정값이 0이어도 소진으로 보일 수 있어요."
             }
         )
+    # 실제 존재하는 모델만 노출한다(하드코딩된 가짜 모델 SAM·파인튜닝 제거).
     return [
         {
-            "name": "YOLOe-L 도로파손",
-            "kind": "탐지",
-            "load": 74 if yolo_ok else 0,
+            "name": "도로파손 탐지(YOLO)",
+            "kind": "탐지 · best.pt",
+            "load": 100 if yolo_ok else 0,
             "state": "운영" if yolo_ok else "모델 없음",
             "tone": "green" if yolo_ok else "gray",
         },
@@ -312,14 +232,6 @@ def real_model_status(yolo_ok: bool) -> list[dict]:
             "state": g_state,
             "tone": g_tone,
             "detail": g_detail,
-        },
-        {"name": "SAM 분할", "kind": "세그멘테이션", "load": 56, "state": "대기", "tone": "gray"},
-        {
-            "name": "도로파손 v3 파인튜닝",
-            "kind": "학습",
-            "load": 88,
-            "state": "학습 중",
-            "tone": "orange",
         },
     ]
 
@@ -1794,62 +1706,13 @@ def generate_report_activity(
 # 6. 데이터 관리 (MOCK)
 # ────────────────────────────────────────────────────────────────────
 def list_datasets() -> dict:
-    """데이터셋 목록. (MOCK)"""
-    return {
-        "backend": BACKEND,
-        "datasets": [
-            {
-                "name": "pothole_set_2025Q2",
-                "kind": "라벨",
-                "count": "4,210",
-                "fmt": "COCO JSON",
-                "state": "검수 완료",
-                "tone": "green",
-                "date": "2026. 6. 16.",
-                "owner": "김연우",
-            },
-            {
-                "name": "road_raw_2026Q1",
-                "kind": "원본",
-                "count": "18,402",
-                "fmt": "JPG",
-                "state": "정제 중",
-                "tone": "orange",
-                "date": "2026. 6. 14.",
-                "owner": "이지은",
-            },
-            {
-                "name": "도로 파손 신고 현황",
-                "kind": "공공데이터",
-                "count": "38,402",
-                "fmt": "OpenAPI",
-                "state": "연계됨",
-                "tone": "blue",
-                "date": "2026. 5. 28.",
-                "owner": "시스템",
-            },
-            {
-                "name": "포트홀_보수_기준.md",
-                "kind": "문서",
-                "count": "5 청크",
-                "fmt": "Markdown",
-                "state": "색인됨",
-                "tone": "green",
-                "date": "2026. 5. 20.",
-                "owner": "박서준",
-            },
-            {
-                "name": "cctv_anomaly_2026",
-                "kind": "원본",
-                "count": "304",
-                "fmt": "MP4 프레임",
-                "state": "검수 대기",
-                "tone": "gray",
-                "date": "2026. 6. 10.",
-                "owner": "이지은",
-            },
-        ],
-    }
+    """데이터셋 목록. 실제 저장소가 아직 없어 빈 목록을 준다.
+
+    데이터 관리 화면은 사용자가 실제로 분석·라벨한 작업물(localStorage)과
+    직접 업로드한 파일만 표시한다. (예전엔 하드코딩된 가짜 데이터셋 카탈로그를
+    반환했으나 폐기.)
+    """
+    return {"backend": BACKEND, "datasets": []}
 
 
 def upload_dataset(name: str = "") -> dict:
