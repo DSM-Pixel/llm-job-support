@@ -1,7 +1,13 @@
 /* 어드민 — 회사 멤버 관리 화면 */
 .ad-wrap {
-  width: min(1120px, 100%);
+  width: min(1160px, 100%);
   margin: 0 auto;
+  padding: 28px;
+}
+@media (max-width: 640px) {
+  .ad-wrap {
+    padding: 18px 16px;
+  }
 }
 
 .ad-back-link {
@@ -202,7 +208,7 @@
   width: min(560px, 94vw);
 }
 .ad-modal .modal-body {
-  padding: 18px 20px 20px;
+  padding: 22px 24px 24px;
 }
 .ad-detail-grid {
   display: grid;

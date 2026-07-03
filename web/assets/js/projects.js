@@ -235,7 +235,6 @@
     // (로그인 이후 부여/회수된 권한, 비활성화 처리를 반영)
     (async () => {
       const link = document.querySelector(".pj-admin-link");
-      if (!link) return;
       let auth;
       try {
         auth = JSON.parse(localStorage.getItem("gnsoft.auth") || "null");
@@ -254,11 +253,12 @@
         if (me.ok && me.user) {
           localStorage.setItem("gnsoft.auth", JSON.stringify({ ...auth, ...me.user }));
           // 슈퍼 어드민(순수 운영자)은 서비스를 쓰지 않는다 → 관리 콘솔로.
+          // (어드민 버튼 존재 여부와 무관하게 항상 검사)
           if (me.user.is_super) {
             location.replace("admin.html");
             return;
           }
-          link.hidden = !me.user.is_admin;
+          if (link) link.hidden = !me.user.is_admin;
         }
       } catch {
         /* 서버 미연결 시 버튼 숨김 유지 */
