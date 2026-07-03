@@ -201,6 +201,9 @@
 .ad-modal {
   width: min(560px, 94vw);
 }
+.ad-modal .modal-body {
+  padding: 18px 20px 20px;
+}
 .ad-detail-grid {
   display: grid;
   gap: 10px;
