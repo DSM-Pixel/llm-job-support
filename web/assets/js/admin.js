@@ -23,6 +23,7 @@
   const num = (n) => Number(n || 0).toLocaleString("ko-KR");
 
   let meId = "";
+  let isSuper = false;
 
   const statusBadge = (active) =>
     active
@@ -79,11 +80,15 @@
       return;
     }
     meId = d.me || "";
+    isSuper = !!d.is_super;
     wrap.hidden = false;
     denied.hidden = true;
     // 슈퍼 어드민: 전체 회사 뷰(회사 컬럼 노출) + 승인 대기 패널.
     const table = document.querySelector(".ad-table");
-    table.classList.toggle("is-super", !!d.is_super);
+    table.classList.toggle("is-super", isSuper);
+    // 슈퍼는 서비스(프로젝트)를 쓰지 않으므로 '프로젝트 목록' 링크를 숨긴다.
+    const back = document.querySelector(".ad-back-link");
+    if (back) back.hidden = isSuper;
     $('[data-role="company"]').textContent = d.is_super
       ? "전체 회사"
       : d.company || "(회사 미지정)";
@@ -207,8 +212,10 @@
   };
 
   document.addEventListener("DOMContentLoaded", () => {
-    // 로고·뒤로가기 → 프로젝트 목록.
-    $(".pj-logo")?.addEventListener("click", () => (location.href = "projects.html"));
+    // 로고 → 회사 어드민은 프로젝트 목록, 슈퍼(운영자)는 콘솔 유지.
+    $(".pj-logo")?.addEventListener("click", () => {
+      location.href = isSuper ? "admin.html" : "projects.html";
+    });
     const avatar = $(".pj-top .avatar");
     avatar?.addEventListener("click", ABC.openSettings);
     avatar?.addEventListener("keydown", (e) => {

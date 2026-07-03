@@ -253,6 +253,11 @@
         }
         if (me.ok && me.user) {
           localStorage.setItem("gnsoft.auth", JSON.stringify({ ...auth, ...me.user }));
+          // 슈퍼 어드민(순수 운영자)은 서비스를 쓰지 않는다 → 관리 콘솔로.
+          if (me.user.is_super) {
+            location.replace("admin.html");
+            return;
+          }
           link.hidden = !me.user.is_admin;
         }
       } catch {

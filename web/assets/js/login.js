@@ -111,7 +111,8 @@
     } catch {
       /* 무시 */
     }
-    location.replace("projects.html");
+    // 슈퍼 어드민(순수 운영자)은 관리 전용 콘솔로, 그 외에는 프로젝트 선택으로.
+    location.replace(data.user && data.user.is_super ? "admin.html" : "projects.html");
   };
 
   // ── 회원가입 모달 열기/닫기 ──
