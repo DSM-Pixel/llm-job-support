@@ -122,6 +122,8 @@
   const modalOf = { signup: $("#signup-modal") };
   const openModal = (key) => {
     clearAlerts(); // 열 때 이전 알림은 지운다
+    // 회원가입은 항상 입력 폼부터(이전에 인증 단계로 넘어갔던 상태 초기화).
+    if (key === "signup" && typeof showSignupForm === "function") showSignupForm();
     if (modalOf[key]) modalOf[key].hidden = false;
   };
   const closeModal = (key) => {
@@ -290,12 +292,76 @@
         ...companyPayload,
       });
       if (!r.ok) return alertIn(f, r.error || "가입에 실패했습니다");
-      alertIn(f, r.message || "가입 완료! 프로젝트 선택으로 이동합니다", true);
-      setTimeout(() => enter(r), 900);
+      // 계정은 아직 안 만들어졌다 — 이메일 인증(코드 입력) 단계로 전환.
+      pendingEmail = f.email.value.trim();
+      showVerify(pendingEmail, r.dev_code);
     } catch {
       alertIn(f, "서버 연결에 실패했습니다");
     }
   });
+
+  // ── 이메일 인증(코드 입력) ──
+  let pendingEmail = "";
+  const signupModal = $("#signup-modal");
+  const verifyPanel = signupModal.querySelector('[data-role="verify"]');
+  const verifyAlertEl = signupModal.querySelector('[data-role="verify-alert"]');
+  const devcodeEl = signupModal.querySelector('[data-role="devcode"]');
+  const codeInput = signupModal.querySelector('[name="verify_code"]');
+
+  const vAlert = (msg, ok = false) => {
+    verifyAlertEl.textContent = msg;
+    verifyAlertEl.classList.toggle("ok", ok);
+    verifyAlertEl.hidden = false;
+  };
+  const showDevCode = (code) => {
+    if (code) {
+      devcodeEl.textContent = `데모용 코드(메일 미설정): ${code}`;
+      devcodeEl.hidden = false;
+    } else {
+      devcodeEl.hidden = true;
+    }
+  };
+  const showVerify = (email, devCode) => {
+    signupForm.hidden = true;
+    verifyPanel.hidden = false;
+    verifyAlertEl.hidden = true;
+    signupModal.querySelector('[data-role="verify-email"]').textContent = email;
+    codeInput.value = "";
+    showDevCode(devCode);
+    codeInput.focus();
+  };
+  const showSignupForm = () => {
+    verifyPanel.hidden = true;
+    signupForm.hidden = false;
+  };
+
+  const submitVerify = async () => {
+    const code = codeInput.value.trim();
+    if (code.length !== 6) return vAlert("6자리 인증 코드를 입력해주세요");
+    try {
+      const r = await api("/api/auth/verify-signup", { email: pendingEmail, code });
+      if (!r.ok) return vAlert(r.error || "인증에 실패했습니다");
+      vAlert(r.message || "인증 완료!", true);
+      setTimeout(() => enter(r), 700);
+    } catch {
+      vAlert("서버 연결에 실패했습니다");
+    }
+  };
+  signupModal.querySelector('[data-role="verify-btn"]').addEventListener("click", submitVerify);
+  codeInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") submitVerify();
+  });
+  signupModal.querySelector('[data-role="resend"]').addEventListener("click", async () => {
+    try {
+      const r = await api("/api/auth/resend-code", { email: pendingEmail });
+      if (!r.ok) return vAlert(r.error || "재전송에 실패했습니다");
+      vAlert("인증 코드를 다시 보냈습니다. 메일함을 확인해주세요.", true);
+      showDevCode(r.dev_code);
+    } catch {
+      vAlert("서버 연결에 실패했습니다");
+    }
+  });
+  signupModal.querySelector('[data-role="verify-back"]').addEventListener("click", showSignupForm);
 
   // ── 비밀번호 찾기 — 이메일로 재설정 링크 요청 ──
   $('[data-form="reset"]').addEventListener("submit", async (e) => {

@@ -6,8 +6,8 @@
   <title>GNSoft — 로그인</title>
     <link rel="icon" type="image/png" href="../assets/img/logomark-dark.png" />
     <script>try{var t=(JSON.parse(localStorage.getItem("gnsoft.settings")||"{}")||{}).theme;document.documentElement.setAttribute("data-theme",t==="dark"?"dark":"light");}catch(e){}</script>
-  <link rel="stylesheet" href="../assets/css/common.css?v=20260703c">
-  <link rel="stylesheet" href="../assets/css/login.css?v=20260703c">
+  <link rel="stylesheet" href="../assets/css/common.css?v=20260703d">
+  <link rel="stylesheet" href="../assets/css/login.css?v=20260703d">
 </head>
 <body>
   <div class="lg-page">
@@ -124,6 +124,22 @@
           <button class="btn primary lg-submit" type="submit">동의하고 가입하기</button>
           <p class="lg-hint">이미 계정이 있으신가요? <button class="lg-switch" data-close="signup" type="button">로그인</button></p>
         </form>
+
+        <!-- 이메일 인증 단계(코드 입력) -->
+        <div class="lg-verify" data-role="verify" hidden>
+          <div class="lg-alert" data-role="verify-alert" hidden></div>
+          <p class="lg-verify-desc">입력하신 이메일 <b data-role="verify-email"></b> 로 6자리 인증 코드를 보냈습니다.<br />메일함(스팸함 포함)을 확인해 코드를 입력해주세요.</p>
+          <div class="lg-alert ok lg-devcode" data-role="devcode" hidden></div>
+          <label class="field"><span class="field-cap">인증 코드</span>
+            <input type="text" name="verify_code" inputmode="numeric" maxlength="6" placeholder="6자리 숫자" autocomplete="one-time-code" />
+          </label>
+          <button class="btn primary lg-submit" type="button" data-role="verify-btn">인증하고 가입 완료</button>
+          <p class="lg-hint">
+            <button class="lg-switch" type="button" data-role="resend">코드 재전송</button>
+            <span class="lg-dot">·</span>
+            <button class="lg-switch" type="button" data-role="verify-back">이메일 다시 입력</button>
+          </p>
+        </div>
       </div>
     </div>
   </div>
@@ -140,6 +156,6 @@
     </div>
   </div>
 
-  <script src="../assets/js/login.js?v=20260703c"></script>
+  <script src="../assets/js/login.js?v=20260703d"></script>
 </body>
 </html>

@@ -171,6 +171,15 @@ class SignupIn(BaseModel):
     admin_request: bool = False
 
 
+class VerifyIn(BaseModel):
+    email: str = ""
+    code: str = ""
+
+
+class ResendIn(BaseModel):
+    email: str = ""
+
+
 class LoginIn(BaseModel):
     email: str = ""
     password: str = ""
@@ -250,8 +259,8 @@ def health() -> dict:
 # ── 인증(로그인·회원가입) ────────────────────────────────────────────
 @app.post("/api/auth/signup")
 def auth_signup(body: SignupIn) -> dict:
-    """회원가입 — 필수 동의(이용약관·개인정보 수집이용) 없으면 거부, 동의 일시 기록."""
-    return auth.signup(
+    """회원가입 1단계 — 검증 후 이메일 인증 코드 발송(계정은 인증 후 생성)."""
+    return auth.start_signup(
         body.email,
         body.password,
         body.name,
@@ -263,6 +272,18 @@ def auth_signup(body: SignupIn) -> dict:
         body.company_id,
         body.admin_request,
     )
+
+
+@app.post("/api/auth/verify-signup")
+def auth_verify_signup(body: VerifyIn) -> dict:
+    """회원가입 2단계 — 이메일 인증 코드 확인 후 계정 생성 + 자동 로그인."""
+    return auth.verify_signup(body.email, body.code)
+
+
+@app.post("/api/auth/resend-code")
+def auth_resend_code(body: ResendIn) -> dict:
+    """이메일 인증 코드 재발송."""
+    return auth.resend_code(body.email)
 
 
 @app.get("/api/companies")

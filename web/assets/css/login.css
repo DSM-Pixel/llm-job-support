@@ -321,3 +321,18 @@
   font-size: 12.5px;
   text-align: center;
 }
+
+/* ── 이메일 인증(코드 입력) 단계 ── */
+.lg-verify-desc {
+  margin: 4px 0 14px;
+  color: var(--text);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+.lg-verify-desc b {
+  color: var(--blue);
+}
+.lg-devcode {
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  letter-spacing: 0.02em;
+}
