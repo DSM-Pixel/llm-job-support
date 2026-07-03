@@ -54,6 +54,7 @@
           `<tr data-uid="${m.id}"${m.active ? "" : ' class="ad-row-off"'}>` +
           `<td><div class="ad-member"><span class="ad-avatar">${ABC.escapeHtml((m.name || "?").slice(-2))}</span>` +
           `<div class="ad-member-txt"><b>${ABC.escapeHtml(m.name)} ${adminTag}${meTag}</b><small>${ABC.escapeHtml(m.email)}</small></div></div></td>` +
+          `<td class="ad-col-company">${ABC.escapeHtml(m.company || "—")}</td>` +
           `<td>${ABC.escapeHtml(m.team || "—")}<br /><small class="ad-muted">가입 ${fmtDate(m.created)}</small></td>` +
           `<td class="ad-num">${num(m.today)}</td>` +
           `<td class="ad-num">${num(m.week)}</td>` +
@@ -80,9 +81,56 @@
     meId = d.me || "";
     wrap.hidden = false;
     denied.hidden = true;
-    $('[data-role="company"]').textContent = d.company || "(회사 미지정)";
+    // 슈퍼 어드민: 전체 회사 뷰(회사 컬럼 노출) + 승인 대기 패널.
+    const table = document.querySelector(".ad-table");
+    table.classList.toggle("is-super", !!d.is_super);
+    $('[data-role="company"]').textContent = d.is_super
+      ? "전체 회사"
+      : d.company || "(회사 미지정)";
     renderSummary(d.members);
     renderRows(d.members);
+    if (d.is_super) loadRequests();
+    else $('[data-role="requests"]').hidden = true;
+  };
+
+  // ── 관리자 승인 대기(슈퍼 어드민) ──
+  const loadRequests = async () => {
+    const sec = $('[data-role="requests"]');
+    const d = await ABC.api("/api/admin/requests", { token: token() });
+    if (!d.ok) {
+      sec.hidden = true;
+      return;
+    }
+    const reqs = d.requests || [];
+    $('[data-role="req-count"]').textContent = reqs.length;
+    if (!reqs.length) {
+      $('[data-role="req-list"]').innerHTML =
+        '<p class="ad-req-empty">대기 중인 관리자 신청이 없습니다.</p>';
+      sec.hidden = false;
+      return;
+    }
+    $('[data-role="req-list"]').innerHTML = reqs
+      .map(
+        (r) =>
+          `<div class="ad-req-card"><div class="ad-req-info"><b>${ABC.escapeHtml(r.name)}</b>` +
+          `<small>${ABC.escapeHtml(r.email)} · ${ABC.escapeHtml(r.company || "회사 미지정")}${r.team ? " · " + ABC.escapeHtml(r.team) : ""}</small></div>` +
+          `<div class="ad-req-btns"><button class="ad-btn ok" data-approve="${r.id}">승인</button>` +
+          `<button class="ad-btn danger" data-reject="${r.id}">반려</button></div></div>`,
+      )
+      .join("");
+    sec.hidden = false;
+  };
+
+  const resolveRequest = async (uid, approve) => {
+    const r = await ABC.api("/api/admin/request/resolve", {
+      token: token(),
+      user_id: uid,
+      approve,
+    });
+    if (!r.ok) return ABC.toast(r.error || "처리에 실패했습니다");
+    ABC.toast(approve ? "관리자 신청을 승인했습니다" : "관리자 신청을 반려했습니다");
+    loadRequests();
+    load();
   };
 
   // ── 상세 모달 ──
@@ -175,6 +223,13 @@
       if (det) return openDetail(det.dataset.detail);
       const tog = e.target.closest("[data-toggle]");
       if (tog) return toggleActive(tog.dataset.toggle, tog.dataset.active === "1");
+    });
+
+    $('[data-role="req-list"]')?.addEventListener("click", (e) => {
+      const ap = e.target.closest("[data-approve]");
+      if (ap) return resolveRequest(ap.dataset.approve, true);
+      const rj = e.target.closest("[data-reject]");
+      if (rj) return resolveRequest(rj.dataset.reject, false);
     });
 
     load().catch(() => {

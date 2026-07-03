@@ -262,3 +262,62 @@
   font-size: 13.5px;
   color: var(--text);
 }
+
+/* ── 회사 선택 콤보박스 · 관리자 신청 ── */
+.lg-span2 {
+  grid-column: 1 / -1;
+}
+.lg-admin-req {
+  padding: 10px 12px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+}
+.lg-admin-note {
+  color: var(--muted);
+  font-weight: 400;
+}
+.lg-combo {
+  position: relative;
+}
+.lg-combo input[type="text"] {
+  width: 100%;
+}
+.lg-combo-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgba(8, 12, 22, 0.14);
+}
+.lg-combo-item {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+.lg-combo-item:last-child {
+  border-bottom: none;
+}
+.lg-combo-item:hover {
+  background: rgba(70, 96, 191, 0.1);
+  color: var(--blue);
+}
+.lg-combo-empty {
+  padding: 12px;
+  color: var(--muted);
+  font-size: 12.5px;
+  text-align: center;
+}

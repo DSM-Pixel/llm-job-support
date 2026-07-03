@@ -33,11 +33,18 @@
           <div class="ad-summary" data-role="summary"></div>
         </div>
 
+        <!-- 관리자 승인 대기(슈퍼 어드민 전용) -->
+        <section class="ad-requests" data-role="requests" hidden>
+          <h3 class="ad-req-title">관리자 승인 대기 <span class="ad-req-count" data-role="req-count">0</span></h3>
+          <div class="ad-req-list" data-role="req-list"></div>
+        </section>
+
         <div class="ad-table-wrap">
           <table class="ad-table">
             <thead>
               <tr>
                 <th>멤버</th>
+                <th class="ad-col-company">회사</th>
                 <th>소속</th>
                 <th class="ad-num">오늘</th>
                 <th class="ad-num">최근 7일</th>

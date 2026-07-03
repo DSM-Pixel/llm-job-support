@@ -303,3 +303,71 @@
     grid-template-columns: repeat(3, 1fr);
   }
 }
+
+/* 회사 컬럼 — 슈퍼 어드민(전체 회사 뷰)에서만 노출 */
+.ad-col-company {
+  display: none;
+}
+.ad-table.is-super .ad-col-company {
+  display: table-cell;
+}
+
+/* ── 관리자 승인 대기(슈퍼 어드민) ── */
+.ad-requests {
+  margin: 4px 0 18px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.ad-req-title {
+  margin: 0 0 12px;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ad-req-count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: var(--orange);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+}
+.ad-req-list {
+  display: grid;
+  gap: 8px;
+}
+.ad-req-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+}
+.ad-req-info b {
+  display: block;
+  font-size: 14px;
+}
+.ad-req-info small {
+  color: var(--muted);
+  font-size: 12px;
+}
+.ad-req-btns {
+  display: flex;
+  gap: 6px;
+  flex: none;
+}
+.ad-req-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}

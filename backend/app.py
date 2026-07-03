@@ -167,6 +167,8 @@ class SignupIn(BaseModel):
     agree_terms: bool = False
     agree_privacy: bool = False
     agree_marketing: bool = False
+    company_id: str = ""
+    admin_request: bool = False
 
 
 class LoginIn(BaseModel):
@@ -233,6 +235,12 @@ class AdminStatusIn(BaseModel):
     active: bool = True
 
 
+class AdminRequestIn(BaseModel):
+    token: str = ""
+    user_id: str = ""
+    approve: bool = True
+
+
 # ── API 라우트 ───────────────────────────────────────────────────────
 @app.get("/api/health")
 def health() -> dict:
@@ -252,7 +260,15 @@ def auth_signup(body: SignupIn) -> dict:
         body.agree_terms,
         body.agree_privacy,
         body.agree_marketing,
+        body.company_id,
+        body.admin_request,
     )
+
+
+@app.get("/api/companies")
+def companies(q: str = "") -> dict:
+    """등록된 회사 검색 — 직원 회원가입 시 선택 목록(오타 방지)."""
+    return {"companies": auth.search_companies(q)}
 
 
 @app.post("/api/auth/login")
@@ -388,6 +404,18 @@ def admin_member(body: AdminMemberIn) -> dict:
 def admin_member_status(body: AdminStatusIn) -> dict:
     """멤버 계정 활성/비활성 전환(어드민·동일 회사만, 본인 비활성 불가)."""
     return admin.set_member_active(body.token, body.user_id, body.active)
+
+
+@app.post("/api/admin/requests")
+def admin_requests(body: AdminTokenIn) -> dict:
+    """관리자 승인 대기 목록(슈퍼 어드민 전용)."""
+    return admin.list_requests(body.token)
+
+
+@app.post("/api/admin/request/resolve")
+def admin_request_resolve(body: AdminRequestIn) -> dict:
+    """관리자 신청 승인(is_admin 부여)/반려(슈퍼 어드민 전용)."""
+    return admin.resolve_request(body.token, body.user_id, body.approve)
 
 
 @app.post("/api/query")

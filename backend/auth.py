@@ -51,18 +51,53 @@ def _init(conn: sqlite3.Connection) -> None:
         "CREATE TABLE IF NOT EXISTS reset_tokens ("
         "token TEXT PRIMARY KEY, user_id TEXT NOT NULL, expires REAL NOT NULL)"
     )
-    # 권한·상태 컬럼(기존 DB 마이그레이션 겸용) — 없을 때만 추가.
+    # 회사 레지스트리 — name_norm(공백제거·소문자)으로 오타·띄어쓰기 흡수.
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS companies ("
+        "id TEXT PRIMARY KEY, name TEXT NOT NULL, name_norm TEXT UNIQUE NOT NULL, "
+        "created REAL NOT NULL)"
+    )
+    # 권한·상태·소속 컬럼(기존 DB 마이그레이션 겸용) — 없을 때만 추가.
     cols = {r[1] for r in conn.execute("PRAGMA table_info(users)")}
-    if "is_admin" not in cols:
-        conn.execute("ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0")
-    if "active" not in cols:
-        conn.execute("ALTER TABLE users ADD COLUMN active INTEGER DEFAULT 1")
-    # 어드민 부트스트랩: 어드민이 하나도 없으면 최초 가입 계정(dsmadmin)을 어드민으로.
-    has_user = conn.execute("SELECT 1 FROM users LIMIT 1").fetchone()
-    has_admin = conn.execute("SELECT 1 FROM users WHERE is_admin = 1 LIMIT 1").fetchone()
-    if has_user and not has_admin:
+    for col, ddl in (
+        ("is_admin", "INTEGER DEFAULT 0"),
+        ("active", "INTEGER DEFAULT 1"),
+        ("is_super", "INTEGER DEFAULT 0"),
+        ("admin_requested", "INTEGER DEFAULT 0"),
+        ("company_id", "TEXT"),
+    ):
+        if col not in cols:
+            conn.execute(f"ALTER TABLE users ADD COLUMN {col} {ddl}")
+
+    # 기존 자유 텍스트 company → companies 레지스트리로 백필(회사별 company_id 부여).
+    raw_companies = conn.execute(
+        "SELECT DISTINCT company FROM users "
+        "WHERE company IS NOT NULL AND LENGTH(TRIM(company)) > 0 "
+        "AND (company_id IS NULL OR company_id = '')"
+    ).fetchall()
+    for (raw,) in raw_companies:
+        norm = _norm_company(raw)
+        if not norm:
+            continue
+        found = conn.execute("SELECT id FROM companies WHERE name_norm = ?", (norm,)).fetchone()
+        cid = found["id"] if found else secrets.token_hex(6)
+        if not found:
+            conn.execute(
+                "INSERT INTO companies(id, name, name_norm, created) VALUES (?,?,?,?)",
+                (cid, raw.strip(), norm, time.time()),
+            )
         conn.execute(
-            "UPDATE users SET is_admin = 1 "
+            "UPDATE users SET company_id = ? "
+            "WHERE company = ? AND (company_id IS NULL OR company_id = '')",
+            (cid, raw),
+        )
+
+    # 슈퍼 어드민 부트스트랩: 슈퍼가 없으면 최초 가입 계정(dsmadmin)을 슈퍼+어드민으로.
+    has_user = conn.execute("SELECT 1 FROM users LIMIT 1").fetchone()
+    has_super = conn.execute("SELECT 1 FROM users WHERE is_super = 1 LIMIT 1").fetchone()
+    if has_user and not has_super:
+        conn.execute(
+            "UPDATE users SET is_super = 1, is_admin = 1 "
             "WHERE id = (SELECT id FROM users ORDER BY created LIMIT 1)"
         )
 
@@ -82,6 +117,55 @@ def _verify_pw(password: str, stored: str) -> bool:
     except ValueError:
         return False
     return secrets.compare_digest(_hash_pw(password, salt), stored)
+
+
+# ── 회사 레지스트리 ──────────────────────────────────────────────────
+def _norm_company(name: str) -> str:
+    """회사명 정규화 — 모든 공백 제거 + 소문자. '지엔 소프트'·'ZN Soft' 오타를 흡수."""
+    return "".join((name or "").split()).casefold()
+
+
+def _find_or_create_company(conn: sqlite3.Connection, name: str) -> str | None:
+    """정규화 기준으로 회사를 찾고 없으면 생성. company_id 반환(빈 이름이면 None)."""
+    name = (name or "").strip()
+    norm = _norm_company(name)
+    if not norm:
+        return None
+    found = conn.execute("SELECT id FROM companies WHERE name_norm = ?", (norm,)).fetchone()
+    if found:
+        return found["id"]
+    cid = secrets.token_hex(6)
+    conn.execute(
+        "INSERT INTO companies(id, name, name_norm, created) VALUES (?,?,?,?)",
+        (cid, name, norm, time.time()),
+    )
+    return cid
+
+
+def search_companies(query: str = "", limit: int = 20) -> list[dict]:
+    """등록된 회사 검색(직원 가입 시 선택용). 정규화 부분일치, 이름순."""
+    norm = _norm_company(query)
+    with _lock, _connect() as conn:
+        _init(conn)
+        if norm:
+            rows = conn.execute(
+                "SELECT id, name FROM companies WHERE name_norm LIKE ? ORDER BY name LIMIT ?",
+                (f"%{norm}%", limit),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT id, name FROM companies ORDER BY name LIMIT ?", (limit,)
+            ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_company(company_id: str) -> dict | None:
+    with _lock, _connect() as conn:
+        _init(conn)
+        row = conn.execute(
+            "SELECT id, name FROM companies WHERE id = ?", (company_id or "",)
+        ).fetchone()
+    return dict(row) if row else None
 
 
 # ── 세션 ─────────────────────────────────────────────────────────────
@@ -105,7 +189,10 @@ def _user_payload(row: sqlite3.Row) -> dict:
         "team": row["team"] or "",
         "marketing": bool(row["marketing"]),
         "is_admin": bool(row["is_admin"]),
+        "is_super": bool(row["is_super"]),
         "active": bool(row["active"]),
+        "company_id": row["company_id"] or "",
+        "admin_requested": bool(row["admin_requested"]),
     }
 
 
@@ -119,8 +206,16 @@ def signup(
     agree_terms: bool = False,
     agree_privacy: bool = False,
     agree_marketing: bool = False,
+    company_id: str = "",
+    admin_request: bool = False,
 ) -> dict:
-    """회원가입. 필수 동의(약관·개인정보) 없으면 거부. 성공 시 자동 로그인(토큰)."""
+    """회원가입. 필수 동의 없으면 거부. 성공 시 자동 로그인(토큰).
+
+    소속(회사) 처리:
+      - 관리자 신청(admin_request): company(자유 입력)로 회사를 찾거나 새로 등록하고
+        admin_requested=1(대기). 슈퍼 어드민 승인 시 is_admin 부여.
+      - 직원(기본): company_id(등록된 회사 목록에서 선택)로만 소속을 지정한다.
+    """
     email = (email or "").strip().lower()
     name = (name or "").strip()
     if not _EMAIL_RE.match(email):
@@ -135,16 +230,37 @@ def signup(
             "ok": False,
             "error": "필수 약관(이용약관·개인정보 수집이용)에 동의해야 가입할 수 있습니다.",
         }
+    if admin_request and not _norm_company(company):
+        return {"ok": False, "error": "관리자 신청 시 회사·기관명을 입력해주세요."}
 
     now = time.time()
     with _lock, _connect() as conn:
         _init(conn)
         if conn.execute("SELECT 1 FROM users WHERE email = ?", (email,)).fetchone():
             return {"ok": False, "error": "이미 가입된 이메일입니다. 로그인해주세요."}
+
+        # 소속 회사 결정.
+        if admin_request:
+            cid = _find_or_create_company(conn, company)
+        elif company_id:
+            found = conn.execute(
+                "SELECT id, name FROM companies WHERE id = ?", (company_id,)
+            ).fetchone()
+            if not found:
+                return {
+                    "ok": False,
+                    "error": "선택한 회사를 찾을 수 없습니다. 목록에서 다시 선택해주세요.",
+                }
+            cid = found["id"]
+            company = found["name"]  # 표시용 이름은 레지스트리 기준으로 통일
+        else:
+            cid = None  # 소속 미지정(직원이 회사를 고르지 않음)
+
         uid = secrets.token_hex(8)
         conn.execute(
             "INSERT INTO users(id, email, pw, name, company, team, marketing, "
-            "terms_at, privacy_at, created) VALUES (?,?,?,?,?,?,?,?,?,?)",
+            "terms_at, privacy_at, created, company_id, admin_requested) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
             (
                 uid,
                 email,
@@ -156,16 +272,18 @@ def signup(
                 now,  # 동의 일시 기록(철회·분쟁 대비)
                 now,
                 now,
+                cid,
+                1 if admin_request else 0,
             ),
         )
         token = _issue_session(conn, uid)
         row = conn.execute("SELECT * FROM users WHERE id = ?", (uid,)).fetchone()
-    return {
-        "ok": True,
-        "token": token,
-        "user": _user_payload(row),
-        "message": "가입이 완료되었습니다.",
-    }
+    msg = (
+        "가입이 완료되었습니다. 관리자 신청은 슈퍼 관리자 승인 후 활성화됩니다."
+        if admin_request
+        else "가입이 완료되었습니다."
+    )
+    return {"ok": True, "token": token, "user": _user_payload(row), "message": msg}
 
 
 def login(email: str, password: str) -> dict:
@@ -234,14 +352,39 @@ def session_user(token: str) -> dict | None:
     return _user_payload(row) if row else None
 
 
-def members_by_company(company: str) -> list[dict]:
-    """같은 회사(company) 소속 사용자 목록(가입순). 비밀번호 해시는 제외."""
+# 멤버 조회 공통 컬럼(비밀번호 해시 제외).
+_MEMBER_COLS = (
+    "id, email, name, company, company_id, team, marketing, terms_at, privacy_at, "
+    "created, is_admin, is_super, active, admin_requested"
+)
+
+
+def members_by_company_id(company_id: str) -> list[dict]:
+    """같은 회사(company_id) 소속 사용자 목록(가입순). 비밀번호 해시는 제외."""
     with _lock, _connect() as conn:
         _init(conn)
         rows = conn.execute(
-            "SELECT id, email, name, company, team, marketing, terms_at, privacy_at, "
-            "created, is_admin, active FROM users WHERE company = ? ORDER BY created",
-            (company or "",),
+            f"SELECT {_MEMBER_COLS} FROM users WHERE company_id = ? ORDER BY created",
+            (company_id or "",),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def all_members() -> list[dict]:
+    """전체 사용자 목록(슈퍼 어드민용). 비밀번호 해시는 제외."""
+    with _lock, _connect() as conn:
+        _init(conn)
+        rows = conn.execute(f"SELECT {_MEMBER_COLS} FROM users ORDER BY created").fetchall()
+    return [dict(r) for r in rows]
+
+
+def list_admin_requests() -> list[dict]:
+    """관리자 승인 대기 중인 사용자 목록(슈퍼 어드민용)."""
+    with _lock, _connect() as conn:
+        _init(conn)
+        rows = conn.execute(
+            f"SELECT {_MEMBER_COLS} FROM users "
+            "WHERE admin_requested = 1 AND is_admin = 0 ORDER BY created"
         ).fetchall()
     return [dict(r) for r in rows]
 
@@ -251,11 +394,19 @@ def get_member(user_id_val: str) -> dict | None:
     with _lock, _connect() as conn:
         _init(conn)
         row = conn.execute(
-            "SELECT id, email, name, company, team, marketing, terms_at, privacy_at, "
-            "created, is_admin, active FROM users WHERE id = ?",
-            (user_id_val,),
+            f"SELECT {_MEMBER_COLS} FROM users WHERE id = ?", (user_id_val,)
         ).fetchone()
     return dict(row) if row else None
+
+
+def set_admin(user_id_val: str, is_admin: bool) -> None:
+    """관리자 권한 부여/회수 + 신청 플래그 해제(승인·반려 공통)."""
+    with _lock, _connect() as conn:
+        _init(conn)
+        conn.execute(
+            "UPDATE users SET is_admin = ?, admin_requested = 0 WHERE id = ?",
+            (1 if is_admin else 0, user_id_val),
+        )
 
 
 def set_active(user_id_val: str, active: bool) -> None:

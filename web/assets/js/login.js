@@ -177,6 +177,64 @@
     docModal.hidden = true;
   });
 
+  // ── 회사 선택(직원 검색) / 관리자 신청 토글 ──
+  const signupForm = $('[data-form="signup"]');
+  const adminReq = signupForm.querySelector('[name="admin_request"]');
+  const empField = signupForm.querySelector('[data-role="company-emp"]');
+  const admField = signupForm.querySelector('[data-role="company-adm"]');
+  const compSearch = signupForm.querySelector('[name="company_search"]');
+  const compId = signupForm.querySelector('[name="company_id"]');
+  const compList = signupForm.querySelector(".lg-combo-list");
+
+  const toggleAdminReq = () => {
+    const on = adminReq.checked;
+    admField.hidden = !on;
+    empField.hidden = on;
+    compList.hidden = true;
+  };
+  adminReq?.addEventListener("change", toggleAdminReq);
+
+  const renderComps = (items) => {
+    if (!items.length) {
+      compList.innerHTML = '<div class="lg-combo-empty">일치하는 회사가 없습니다. 관리자로 신청해 등록하세요.</div>';
+      compList.hidden = false;
+      return;
+    }
+    compList.innerHTML = items
+      .map(
+        (x) =>
+          `<button type="button" class="lg-combo-item" data-id="${x.id}">${String(x.name).replace(/</g, "&lt;")}</button>`,
+      )
+      .join("");
+    compList.hidden = false;
+  };
+  const searchComps = async () => {
+    compId.value = ""; // 편집 중이면 이전 선택 무효화(정확히 고른 것만 유효)
+    try {
+      const res = await fetch(`/api/companies?q=${encodeURIComponent(compSearch.value.trim())}`);
+      const d = await res.json();
+      renderComps(d.companies || []);
+    } catch {
+      compList.hidden = true;
+    }
+  };
+  let compTimer = null;
+  compSearch?.addEventListener("input", () => {
+    clearTimeout(compTimer);
+    compTimer = setTimeout(searchComps, 180);
+  });
+  compSearch?.addEventListener("focus", searchComps);
+  compList?.addEventListener("click", (e) => {
+    const item = e.target.closest(".lg-combo-item");
+    if (!item) return;
+    compId.value = item.dataset.id;
+    compSearch.value = item.textContent;
+    compList.hidden = true;
+  });
+  document.addEventListener("click", (e) => {
+    if (compList && !compList.contains(e.target) && e.target !== compSearch) compList.hidden = true;
+  });
+
   // ── 로그인 ──
   $('[data-form="login"]').addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -204,20 +262,32 @@
     if (!agree("terms") || !agree("privacy")) {
       return alertIn(f, "필수 약관(이용약관·개인정보 수집이용)에 동의해주세요");
     }
+    // 소속: 관리자 신청이면 자유 입력(신규 등록), 직원이면 검색·선택한 회사(company_id).
+    const isAdminReq = adminReq.checked;
+    const companyPayload = {};
+    if (isAdminReq) {
+      const comp = admField.querySelector('[name="company"]').value.trim();
+      if (!comp) return alertIn(f, "관리자 신청 시 회사·기관명을 입력해주세요");
+      companyPayload.company = comp;
+      companyPayload.admin_request = true;
+    } else {
+      if (!compId.value) return alertIn(f, "회사를 검색해 목록에서 선택해주세요");
+      companyPayload.company_id = compId.value;
+    }
     try {
       const r = await api("/api/auth/signup", {
         email: f.email.value.trim(),
         password: f.password.value,
         name: f.name.value.trim(),
-        company: f.company.value.trim(),
         team: f.team.value.trim(),
         agree_terms: agree("terms"),
         agree_privacy: agree("privacy"),
         agree_marketing: agree("marketing"),
+        ...companyPayload,
       });
       if (!r.ok) return alertIn(f, r.error || "가입에 실패했습니다");
-      alertIn(f, "가입 완료! 프로젝트 선택으로 이동합니다", true);
-      setTimeout(() => enter(r), 600);
+      alertIn(f, r.message || "가입 완료! 프로젝트 선택으로 이동합니다", true);
+      setTimeout(() => enter(r), 900);
     } catch {
       alertIn(f, "서버 연결에 실패했습니다");
     }
