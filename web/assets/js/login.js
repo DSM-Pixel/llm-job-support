@@ -106,7 +106,10 @@
       // 사이드바 프로필(이름·소속)을 계정 정보로 동기화.
       const s = JSON.parse(localStorage.getItem("gnsoft.settings") || "{}");
       s.name = data.user.name;
-      s.team = [data.user.company, data.user.team].filter(Boolean).join(" · ");
+      // 슈퍼 어드민(순수 운영자)은 소속·직함이 없다.
+      s.team = data.user.is_super
+        ? ""
+        : [data.user.company, data.user.team].filter(Boolean).join(" · ");
       localStorage.setItem("gnsoft.settings", JSON.stringify(s));
     } catch {
       /* 무시 */

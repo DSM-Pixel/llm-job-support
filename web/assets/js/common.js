@@ -267,6 +267,13 @@ const ABC = (() => {
     if (document.querySelector("#settings-modal")) return document.querySelector("#settings-modal");
     // 이미지 탐지 모델은 프로젝트 안(작업 화면)에서만 노출. 프로필 선택 화면엔 숨김.
     const showModel = _needsProject();
+    // 슈퍼 어드민(순수 운영자)은 소속·직함이 없다 → 프로필에서 숨긴다.
+    let isSuper = false;
+    try {
+      isSuper = !!(JSON.parse(localStorage.getItem("gnsoft.auth") || "null") || {}).is_super;
+    } catch {
+      isSuper = false;
+    }
     const overlay = document.createElement("div");
     overlay.className = "modal-overlay";
     overlay.id = "settings-modal";
@@ -293,9 +300,13 @@ const ABC = (() => {
             <label class="field">이름
               <input type="text" name="name" placeholder="이름" />
             </label>
-            <label class="field">직함 · 소속
+            ${
+              isSuper
+                ? ""
+                : `<label class="field">직함 · 소속
               <input type="text" name="team" placeholder="예: 도로관리처 · 점검분석팀" />
-            </label>
+            </label>`
+            }
             <label class="field">화면 테마
               <select name="theme">
                 <option value="light">라이트 모드</option>
@@ -339,7 +350,8 @@ const ABC = (() => {
       const eng = overlay.querySelector("[name=engine]");
       if (eng) eng.value = settings.engine;
       overlay.querySelector("[name=name]").value = settings.name || "";
-      overlay.querySelector("[name=team]").value = settings.team || "";
+      const teamEl = overlay.querySelector("[name=team]");
+      if (teamEl) teamEl.value = settings.team || "";
       overlay.querySelector("[name=theme]").value = settings.theme || "light";
     };
 
@@ -350,10 +362,11 @@ const ABC = (() => {
     });
     overlay.querySelector(".modal-save-settings").addEventListener("click", () => {
       const eng = overlay.querySelector("[name=engine]");
+      const teamInput = overlay.querySelector("[name=team]");
       saveSettings({
         ...(eng ? { engine: eng.value } : {}),
         name: overlay.querySelector("[name=name]").value.trim() || "사용자",
-        team: overlay.querySelector("[name=team]").value.trim(),
+        ...(teamInput ? { team: teamInput.value.trim() } : {}),
         theme: overlay.querySelector("[name=theme]").value,
       });
       applyProfile();

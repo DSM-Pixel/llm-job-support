@@ -100,8 +100,12 @@ def _init(conn: sqlite3.Connection) -> None:
             "UPDATE users SET is_super = 1 "
             "WHERE id = (SELECT id FROM users ORDER BY created LIMIT 1)"
         )
-    # 불변식: 슈퍼 어드민은 '순수 서비스 운영자' — 회사 어드민을 겸하지 않는다.
-    conn.execute("UPDATE users SET is_admin = 0 WHERE is_super = 1")
+    # 불변식: 슈퍼 어드민은 '순수 서비스 운영자' — 회사 어드민을 겸하지 않고
+    # 소속(회사)·직함도 갖지 않는다.
+    conn.execute(
+        "UPDATE users SET is_admin = 0, company_id = NULL, company = '', team = '' "
+        "WHERE is_super = 1"
+    )
 
 
 # ── 비밀번호 해시 ────────────────────────────────────────────────────
