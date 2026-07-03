@@ -183,39 +183,44 @@
     docModal.hidden = true;
   });
 
-  // ── 회사 선택(직원 검색) / 관리자 신청 토글 ──
+  // ── 회사 검색·선택 (검색창 하나로 통합) ──
+  // 회사 이름을 치면 등록된 회사가 뜨고, 없으면 드롭다운에서 바로 '새로 등록'.
+  //   기존 회사 선택 → 직원(company_id) · 새 회사 등록 → 관리자 신청(admin_request)
   const signupForm = $('[data-form="signup"]');
-  const adminReq = signupForm.querySelector('[name="admin_request"]');
-  const empField = signupForm.querySelector('[data-role="company-emp"]');
-  const admField = signupForm.querySelector('[data-role="company-adm"]');
   const compSearch = signupForm.querySelector('[name="company_search"]');
-  const compId = signupForm.querySelector('[name="company_id"]');
   const compList = signupForm.querySelector(".lg-combo-list");
-
-  const toggleAdminReq = () => {
-    const on = adminReq.checked;
-    admField.hidden = !on;
-    empField.hidden = on;
-    compList.hidden = true;
-  };
-  adminReq?.addEventListener("change", toggleAdminReq);
+  const compHint = signupForm.querySelector('[data-role="company-hint"]');
+  const HINT_DEFAULT = compHint.innerHTML;
+  let selectedCompanyId = "";
+  let newCompanyName = "";
+  const _norm = (s) => (s || "").replace(/\s+/g, "").toLowerCase();
+  const esc = (s) => String(s).replace(/</g, "&lt;");
 
   const renderComps = (items) => {
-    if (!items.length) {
-      compList.innerHTML = '<div class="lg-combo-empty">일치하는 회사가 없습니다. 관리자로 신청해 등록하세요.</div>';
-      compList.hidden = false;
+    const q = compSearch.value.trim();
+    const rows = items.map(
+      (x) => `<button type="button" class="lg-combo-item" data-id="${x.id}">${esc(x.name)}</button>`,
+    );
+    // 입력값과 (정규화) 일치하는 회사가 없으면 '새로 등록' 항목을 준다.
+    const exact = items.some((x) => _norm(x.name) === _norm(q));
+    if (q && !exact) {
+      rows.push(
+        `<button type="button" class="lg-combo-item lg-combo-new" data-new="1">` +
+          `<b>‘${esc(q)}’</b> 새 회사로 등록 <span>· 관리자 신청</span></button>`,
+      );
+    }
+    if (!rows.length) {
+      compList.hidden = true;
       return;
     }
-    compList.innerHTML = items
-      .map(
-        (x) =>
-          `<button type="button" class="lg-combo-item" data-id="${x.id}">${String(x.name).replace(/</g, "&lt;")}</button>`,
-      )
-      .join("");
+    compList.innerHTML = rows.join("");
     compList.hidden = false;
   };
   const searchComps = async () => {
-    compId.value = ""; // 편집 중이면 이전 선택 무효화(정확히 고른 것만 유효)
+    // 편집하면 이전 선택은 무효화(정확히 고른 것만 유효).
+    selectedCompanyId = "";
+    newCompanyName = "";
+    compHint.innerHTML = HINT_DEFAULT;
     try {
       const res = await fetch(`/api/companies?q=${encodeURIComponent(compSearch.value.trim())}`);
       const d = await res.json();
@@ -227,14 +232,23 @@
   let compTimer = null;
   compSearch?.addEventListener("input", () => {
     clearTimeout(compTimer);
-    compTimer = setTimeout(searchComps, 180);
+    compTimer = setTimeout(searchComps, 160);
   });
   compSearch?.addEventListener("focus", searchComps);
   compList?.addEventListener("click", (e) => {
     const item = e.target.closest(".lg-combo-item");
     if (!item) return;
-    compId.value = item.dataset.id;
-    compSearch.value = item.textContent;
+    if (item.dataset.new) {
+      // 새 회사 등록 = 관리자 신청.
+      newCompanyName = compSearch.value.trim();
+      selectedCompanyId = "";
+      compHint.innerHTML = `✓ 새 회사 <b>‘${esc(newCompanyName)}’</b> 등록 — 승인 후 관리자 권한이 활성화됩니다.`;
+    } else {
+      selectedCompanyId = item.dataset.id;
+      newCompanyName = "";
+      compSearch.value = item.textContent;
+      compHint.textContent = "✓ 회사를 선택했습니다.";
+    }
     compList.hidden = true;
   });
   document.addEventListener("click", (e) => {
@@ -268,17 +282,15 @@
     if (!agree("terms") || !agree("privacy")) {
       return alertIn(f, "필수 약관(이용약관·개인정보 수집이용)에 동의해주세요");
     }
-    // 소속: 관리자 신청이면 자유 입력(신규 등록), 직원이면 검색·선택한 회사(company_id).
-    const isAdminReq = adminReq.checked;
+    // 소속: 기존 회사 선택 → 직원(company_id), 새 회사 등록 → 관리자 신청.
     const companyPayload = {};
-    if (isAdminReq) {
-      const comp = admField.querySelector('[name="company"]').value.trim();
-      if (!comp) return alertIn(f, "관리자 신청 시 회사·기관명을 입력해주세요");
-      companyPayload.company = comp;
+    if (selectedCompanyId) {
+      companyPayload.company_id = selectedCompanyId;
+    } else if (newCompanyName) {
+      companyPayload.company = newCompanyName;
       companyPayload.admin_request = true;
     } else {
-      if (!compId.value) return alertIn(f, "회사를 검색해 목록에서 선택해주세요");
-      companyPayload.company_id = compId.value;
+      return alertIn(f, "회사를 검색해 선택하거나, 목록에 없으면 ‘새 회사로 등록’을 선택해주세요");
     }
     try {
       const r = await api("/api/auth/signup", {

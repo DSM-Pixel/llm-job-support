@@ -6,8 +6,8 @@
   <title>GNSoft — 로그인</title>
     <link rel="icon" type="image/png" href="../assets/img/logomark-dark.png" />
     <script>try{var t=(JSON.parse(localStorage.getItem("gnsoft.settings")||"{}")||{}).theme;document.documentElement.setAttribute("data-theme",t==="dark"?"dark":"light");}catch(e){}</script>
-  <link rel="stylesheet" href="../assets/css/common.css?v=20260703g">
-  <link rel="stylesheet" href="../assets/css/login.css?v=20260703g">
+  <link rel="stylesheet" href="../assets/css/common.css?v=20260703h">
+  <link rel="stylesheet" href="../assets/css/login.css?v=20260703h">
 </head>
 <body>
   <div class="lg-page">
@@ -77,22 +77,13 @@
             <label class="field"><span class="field-cap">비밀번호 확인 <span class="req">*</span></span>
               <input type="password" name="password2" placeholder="다시 입력" autocomplete="new-password" required />
             </label>
-            <label class="lg-check lg-admin-req lg-span2">
-              <input type="checkbox" name="admin_request" />
-              <span><em class="opt-tag">[선택]</em> 회사 관리자로 신청 <small class="lg-admin-note">— 승인 후 관리자 권한이 활성화됩니다</small></span>
-            </label>
-            <label class="field lg-span2" data-role="company-emp">
+            <label class="field lg-span2">
               <span class="field-cap">회사·기관 <span class="req">*</span></span>
               <div class="lg-combo">
-                <input type="text" name="company_search" placeholder="회사 이름을 검색해 선택하세요" autocomplete="off" />
-                <input type="hidden" name="company_id" />
+                <input type="text" name="company_search" placeholder="회사 이름을 검색하세요" autocomplete="off" />
                 <div class="lg-combo-list" hidden></div>
               </div>
-              <small class="field-hint">목록에 없으면 위 ‘회사 관리자로 신청’을 체크하고 직접 등록하세요.</small>
-            </label>
-            <label class="field lg-span2" data-role="company-adm" hidden>
-              <span class="field-cap">회사·기관 (신규 등록 가능)</span>
-              <input type="text" name="company" placeholder="예: 지엔소프트(주)" autocomplete="organization" />
+              <small class="field-hint" data-role="company-hint">회사를 검색해 선택하세요. 목록에 없으면 <b>새로 등록</b>해 관리자로 신청할 수 있습니다.</small>
             </label>
             <label class="field lg-span2">부서·직함
               <input type="text" name="team" placeholder="예: 도로관리처 · 점검분석팀" />
@@ -156,6 +147,6 @@
     </div>
   </div>
 
-  <script src="../assets/js/login.js?v=20260703g"></script>
+  <script src="../assets/js/login.js?v=20260703h"></script>
 </body>
 </html>

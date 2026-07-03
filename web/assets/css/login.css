@@ -337,3 +337,17 @@
   font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
   letter-spacing: 0.02em;
 }
+
+/* 콤보박스 '새 회사로 등록' 항목 — 구분되게 */
+.lg-combo-new {
+  border-top: 1px solid var(--line);
+  color: var(--blue);
+  font-weight: 700;
+}
+.lg-combo-new b {
+  color: var(--text);
+}
+.lg-combo-new span {
+  color: var(--muted);
+  font-weight: 600;
+}
