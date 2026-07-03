@@ -386,3 +386,21 @@
   padding: 20px;
   text-align: center;
 }
+
+/* 어드민 진입 버튼(관리자에게만 노출) */
+.pj-admin-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 700;
+  font-size: 13.5px;
+}
+.pj-admin-link:hover {
+  border-color: var(--blue);
+  color: var(--blue);
+}

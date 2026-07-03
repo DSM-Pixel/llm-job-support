@@ -51,6 +51,20 @@ def _init(conn: sqlite3.Connection) -> None:
         "CREATE TABLE IF NOT EXISTS reset_tokens ("
         "token TEXT PRIMARY KEY, user_id TEXT NOT NULL, expires REAL NOT NULL)"
     )
+    # 권한·상태 컬럼(기존 DB 마이그레이션 겸용) — 없을 때만 추가.
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(users)")}
+    if "is_admin" not in cols:
+        conn.execute("ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0")
+    if "active" not in cols:
+        conn.execute("ALTER TABLE users ADD COLUMN active INTEGER DEFAULT 1")
+    # 어드민 부트스트랩: 어드민이 하나도 없으면 최초 가입 계정(dsmadmin)을 어드민으로.
+    has_user = conn.execute("SELECT 1 FROM users LIMIT 1").fetchone()
+    has_admin = conn.execute("SELECT 1 FROM users WHERE is_admin = 1 LIMIT 1").fetchone()
+    if has_user and not has_admin:
+        conn.execute(
+            "UPDATE users SET is_admin = 1 "
+            "WHERE id = (SELECT id FROM users ORDER BY created LIMIT 1)"
+        )
 
 
 # ── 비밀번호 해시 ────────────────────────────────────────────────────
@@ -82,6 +96,7 @@ def _issue_session(conn: sqlite3.Connection, user_id: str) -> str:
 
 
 def _user_payload(row: sqlite3.Row) -> dict:
+    # is_admin·active 는 _init 의 마이그레이션으로 항상 존재(모든 조회가 _init 이후).
     return {
         "id": row["id"],
         "email": row["email"],
@@ -89,6 +104,8 @@ def _user_payload(row: sqlite3.Row) -> dict:
         "company": row["company"] or "",
         "team": row["team"] or "",
         "marketing": bool(row["marketing"]),
+        "is_admin": bool(row["is_admin"]),
+        "active": bool(row["active"]),
     }
 
 
@@ -165,6 +182,12 @@ def login(email: str, password: str) -> dict:
             }
         if not _verify_pw(password or "", row["pw"]):
             return {"ok": False, "error": "비밀번호가 올바르지 않습니다."}
+        if not row["active"]:
+            return {
+                "ok": False,
+                "code": "deactivated",
+                "error": "비활성화된 계정입니다. 관리자에게 문의해주세요.",
+            }
         token = _issue_session(conn, row["id"])
     return {"ok": True, "token": token, "user": _user_payload(row)}
 
@@ -181,6 +204,8 @@ def me(token: str) -> dict:
         row = conn.execute("SELECT * FROM users WHERE id = ?", (s["user_id"],)).fetchone()
         if not row:
             return {"ok": False, "error": "사용자를 찾을 수 없습니다."}
+        if not row["active"]:
+            return {"ok": False, "code": "deactivated", "error": "비활성화된 계정입니다."}
     return {"ok": True, "user": _user_payload(row)}
 
 
@@ -194,6 +219,52 @@ def user_id(token: str) -> str | None:
         if not s or s["expires"] < time.time():
             return None
         return s["user_id"]
+
+
+def session_user(token: str) -> dict | None:
+    """유효 세션의 사용자 페이로드(is_admin·active 포함). 어드민 권한 검사용."""
+    with _lock, _connect() as conn:
+        _init(conn)
+        s = conn.execute(
+            "SELECT user_id, expires FROM sessions WHERE token = ?", (token or "",)
+        ).fetchone()
+        if not s or s["expires"] < time.time():
+            return None
+        row = conn.execute("SELECT * FROM users WHERE id = ?", (s["user_id"],)).fetchone()
+    return _user_payload(row) if row else None
+
+
+def members_by_company(company: str) -> list[dict]:
+    """같은 회사(company) 소속 사용자 목록(가입순). 비밀번호 해시는 제외."""
+    with _lock, _connect() as conn:
+        _init(conn)
+        rows = conn.execute(
+            "SELECT id, email, name, company, team, marketing, terms_at, privacy_at, "
+            "created, is_admin, active FROM users WHERE company = ? ORDER BY created",
+            (company or "",),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_member(user_id_val: str) -> dict | None:
+    """단일 사용자 조회(비밀번호 제외)."""
+    with _lock, _connect() as conn:
+        _init(conn)
+        row = conn.execute(
+            "SELECT id, email, name, company, team, marketing, terms_at, privacy_at, "
+            "created, is_admin, active FROM users WHERE id = ?",
+            (user_id_val,),
+        ).fetchone()
+    return dict(row) if row else None
+
+
+def set_active(user_id_val: str, active: bool) -> None:
+    """계정 활성/비활성 전환. 비활성화 시 기존 세션을 모두 종료(즉시 로그아웃)."""
+    with _lock, _connect() as conn:
+        _init(conn)
+        conn.execute("UPDATE users SET active = ? WHERE id = ?", (1 if active else 0, user_id_val))
+        if not active:
+            conn.execute("DELETE FROM sessions WHERE user_id = ?", (user_id_val,))
 
 
 def logout(token: str) -> dict:

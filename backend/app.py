@@ -18,7 +18,7 @@ from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import activity, auth, cache, projects, services, yolo_service
+from . import activity, admin, auth, cache, projects, services, yolo_service
 
 WEB_DIR = Path(__file__).resolve().parent.parent / "web"
 
@@ -218,6 +218,21 @@ class DashStatsIn(BaseModel):
     project: str = ""
 
 
+class AdminTokenIn(BaseModel):
+    token: str = ""
+
+
+class AdminMemberIn(BaseModel):
+    token: str = ""
+    user_id: str = ""
+
+
+class AdminStatusIn(BaseModel):
+    token: str = ""
+    user_id: str = ""
+    active: bool = True
+
+
 # ── API 라우트 ───────────────────────────────────────────────────────
 @app.get("/api/health")
 def health() -> dict:
@@ -354,6 +369,25 @@ def dashboard_real_stats(body: DashStatsIn) -> dict:
     data["cache_backend"] = cache.backend_name()
     cache.set_json(key, data, ttl=60)
     return data
+
+
+# ── 어드민 — 같은 회사 멤버 기록·상태 관리 (서버에서 권한 재검증) ────────
+@app.post("/api/admin/members")
+def admin_members(body: AdminTokenIn) -> dict:
+    """같은 회사 멤버 목록 + 각자 활동 통계(어드민 전용)."""
+    return admin.list_members(body.token)
+
+
+@app.post("/api/admin/member")
+def admin_member(body: AdminMemberIn) -> dict:
+    """멤버 상세 — 프로필·통계·최근 활동(어드민·동일 회사만)."""
+    return admin.member_detail(body.token, body.user_id)
+
+
+@app.post("/api/admin/member/status")
+def admin_member_status(body: AdminStatusIn) -> dict:
+    """멤버 계정 활성/비활성 전환(어드민·동일 회사만, 본인 비활성 불가)."""
+    return admin.set_member_active(body.token, body.user_id, body.active)
 
 
 @app.post("/api/query")

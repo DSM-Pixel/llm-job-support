@@ -111,6 +111,42 @@ def recent(user_id: str, project: str, limit: int = 6) -> list[dict]:
     return [dict(r) for r in rows]
 
 
+def stats_for_user(user_id: str) -> dict:
+    """어드민용 — 한 사용자의 전체 프로젝트 합산 통계(오늘/주/총·작업물·프로젝트수·최근활동)."""
+    now = _now_ms()
+    d0 = _day_start_ms(now)
+    week_from = now - 7 * _DAY_MS
+    with _lock, _connect() as conn:
+        _init(conn)
+        acts = conn.execute("SELECT ts FROM activity WHERE user_id=?", (user_id,)).fetchall()
+        arts = conn.execute("SELECT ts, kind FROM artifact WHERE user_id=?", (user_id,)).fetchall()
+        projects = conn.execute(
+            "SELECT COUNT(DISTINCT project) FROM activity WHERE user_id=?", (user_id,)
+        ).fetchone()[0]
+    ts_list = [a["ts"] for a in acts]
+    return {
+        "today": sum(1 for t in ts_list if t >= d0),
+        "week": sum(1 for t in ts_list if t >= week_from),
+        "total": len(ts_list),
+        "artifacts": len(arts),
+        "images": sum(1 for a in arts if a["kind"] == "image"),
+        "projects": projects,
+        "last_active": max(ts_list) if ts_list else 0,
+    }
+
+
+def recent_for_user(user_id: str, limit: int = 10) -> list[dict]:
+    """어드민용 — 한 사용자의 전체 프로젝트 최근 활동(최신순)."""
+    with _lock, _connect() as conn:
+        _init(conn)
+        rows = conn.execute(
+            "SELECT ts, project, page, type, label FROM activity WHERE user_id=? "
+            "ORDER BY ts DESC LIMIT ?",
+            (user_id, limit),
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
 def _day_start_ms(now_ms: float) -> int:
     """now(ms)가 속한 KST 하루의 0시를 UTC epoch(ms)로."""
     return ((int(now_ms) + _KST_MS) // _DAY_MS) * _DAY_MS - _KST_MS

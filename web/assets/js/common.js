@@ -1029,7 +1029,8 @@ const ABC = (() => {
 
   // 작업 화면인지(프로젝트 필요) — 프로젝트 선택/랜딩 화면은 제외.
   const _page = () => (location.pathname.split("/").pop() || "").replace(".html", "");
-  const _needsProject = () => !["projects", "login", "index", ""].includes(_page());
+  const _needsProject = () =>
+    !["projects", "login", "index", "admin", ""].includes(_page());
 
   document.addEventListener("DOMContentLoaded", () => {
     // 프로젝트 미선택 상태로 작업 화면에 오면 프로젝트 선택 화면으로 보낸다.

@@ -230,5 +230,34 @@
     const pid = new URLSearchParams(location.search).get("p");
     if (pid) openProject(pid);
     else loadGallery();
+
+    // 어드민이면 '회사 관리' 진입 버튼 노출 — 서버(/api/auth/me) 기준으로 권한 재확인.
+    // (로그인 이후 부여/회수된 권한, 비활성화 처리를 반영)
+    (async () => {
+      const link = document.querySelector(".pj-admin-link");
+      if (!link) return;
+      let auth;
+      try {
+        auth = JSON.parse(localStorage.getItem("gnsoft.auth") || "null");
+      } catch {
+        auth = null;
+      }
+      if (!auth?.token) return;
+      try {
+        const me = await ABC.api("/api/auth/me", { token: auth.token });
+        if (me.code === "deactivated") {
+          localStorage.removeItem("gnsoft.auth");
+          ABC.clearProject();
+          location.replace("login.html");
+          return;
+        }
+        if (me.ok && me.user) {
+          localStorage.setItem("gnsoft.auth", JSON.stringify({ ...auth, ...me.user }));
+          link.hidden = !me.user.is_admin;
+        }
+      } catch {
+        /* 서버 미연결 시 버튼 숨김 유지 */
+      }
+    })();
   });
 })();
