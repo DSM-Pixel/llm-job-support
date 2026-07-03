@@ -142,6 +142,11 @@ class AgentPlanIn(BaseModel):
     goal: str = ""
 
 
+class AgentRunIn(BaseModel):
+    goal: str = ""
+    project: str = ""
+
+
 class ProjectCreateIn(BaseModel):
     name: str = ""
     emoji: str = "📁"
@@ -605,6 +610,12 @@ def pubdata_catalog() -> dict:
 def agent_plan(body: AgentPlanIn) -> dict:
     """AI 에이전트 — 자연어 목표를 단계별 업무 절차(기능 매핑)로 설계."""
     return services.agent_plan(body.goal)
+
+
+@app.post("/api/agent/run")
+def agent_run(body: AgentRunIn) -> dict:
+    """원클릭 실행 — 설계한 절차를 실제로 수행하고 종합 결과물(보고서)까지 도출."""
+    return services.agent_run(body.goal, body.project)
 
 
 # ── 프로젝트(노트북) + 검수 워크플로 ─────────────────────────────────

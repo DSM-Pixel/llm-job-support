@@ -36,7 +36,91 @@
     } else {
       start.hidden = true;
     }
+    $('[data-role="run-all"]').hidden = !steps.length;
+    $('[data-role="run"]').hidden = true; // 새 계획이면 이전 실행 결과 감춤
     result.hidden = false;
+  };
+
+  // ── 원클릭 실행 결과 렌더링 ──
+  const esc = (s) => ABC.escapeHtml(s);
+  const STATUS = {
+    done: { t: "완료", c: "ok" },
+    manual: { t: "수동 필요", c: "warn" },
+    synth: { t: "종합", c: "info" },
+    skipped: { t: "건너뜀", c: "muted" },
+    error: { t: "오류", c: "err" },
+  };
+
+  // 아주 가벼운 마크다운(## 제목 · - 불릿)만 처리.
+  const mdLite = (text) =>
+    (text || "")
+      .split("\n")
+      .map((line) => {
+        const t = line.trim();
+        if (!t) return "";
+        if (t.startsWith("### ")) return `<h5>${esc(t.slice(4))}</h5>`;
+        if (t.startsWith("## ")) return `<h4>${esc(t.slice(3))}</h4>`;
+        if (t.startsWith("# ")) return `<h4>${esc(t.slice(2))}</h4>`;
+        if (/^[-*]\s/.test(t)) return `<div class="ag-li">${esc(t.replace(/^[-*]\s/, ""))}</div>`;
+        return `<p>${esc(t)}</p>`;
+      })
+      .join("");
+
+  let lastDeliverable = null;
+
+  const renderRun = (d) => {
+    $('[data-role="run-badge"]').textContent = d.backend === "GEMINI" ? "AI 실행" : "기본 실행";
+    $('[data-role="run-steps"]').innerHTML = (d.steps || [])
+      .map((s) => {
+        const st = STATUS[s.status] || STATUS.done;
+        const text = s.text ? `<p class="ag-run-text">${esc(s.text)}</p>` : "";
+        const src =
+          s.sources && s.sources.length
+            ? `<p class="ag-run-src">근거: ${s.sources.map(esc).join(", ")}</p>`
+            : "";
+        const link =
+          s.status === "manual" && s.route
+            ? `<a class="ag-run-link" href="${esc(s.route)}">직접 실행 →</a>`
+            : "";
+        return (
+          `<li class="ag-run-step"><div class="ag-run-step-top">` +
+          `<span class="ag-run-num">${s.n}</span><b>${esc(s.title)}</b>` +
+          `<span class="ag-run-badge ${st.c}">${st.t}</span></div>${text}${src}${link}</li>`
+        );
+      })
+      .join("");
+
+    const deliv = $('[data-role="deliverable"]');
+    lastDeliverable = d.deliverable || null;
+    if (lastDeliverable) {
+      $('[data-role="deliv-title"]').textContent = lastDeliverable.title;
+      $('[data-role="deliv-body"]').innerHTML = mdLite(lastDeliverable.content);
+      deliv.hidden = false;
+    } else {
+      deliv.hidden = true;
+    }
+    $('[data-role="run"]').hidden = false;
+  };
+
+  const runAll = async () => {
+    const goal = input.value.trim();
+    if (!goal) return ABC.toast("목표를 입력해주세요");
+    const proj = ABC.getProject && ABC.getProject() ? ABC.getProject().id : "";
+    const restore = ABC.setBusy($('[data-role="run-all"]'), "실행 중…");
+    $('[data-role="run"]').hidden = false;
+    $('[data-role="deliverable"]').hidden = true;
+    $('[data-role="run-steps"]').innerHTML =
+      '<li class="ag-run-loading">단계를 실행하고 결과를 종합하는 중…</li>';
+    $('[data-role="run"]').scrollIntoView({ behavior: "smooth", block: "nearest" });
+    try {
+      const d = await ABC.api("/api/agent/run", { goal, project: proj });
+      renderRun(d);
+      ABC.logActivity("업무 자동화", `${goal} (원클릭 실행)`);
+    } catch {
+      /* api()가 토스트 */
+    } finally {
+      restore();
+    }
   };
 
   const plan = async (goal) => {
@@ -65,6 +149,29 @@
     });
     document.querySelectorAll(".ag-chip").forEach((chip) => {
       chip.addEventListener("click", () => plan(chip.textContent.trim()));
+    });
+
+    // 원클릭 실행 + 결과물 복사/저장.
+    $('[data-role="run-all"]').addEventListener("click", runAll);
+    $('[data-role="deliv-copy"]').addEventListener("click", async () => {
+      if (!lastDeliverable) return;
+      try {
+        await navigator.clipboard.writeText(lastDeliverable.content);
+        ABC.toast("결과물을 복사했습니다");
+      } catch {
+        ABC.toast("복사에 실패했습니다");
+      }
+    });
+    $('[data-role="deliv-save"]').addEventListener("click", () => {
+      if (!lastDeliverable) return;
+      ABC.saveArtifact({
+        id: `agent_${Date.now()}`,
+        kind: "rag",
+        title: lastDeliverable.title,
+        text: lastDeliverable.content,
+      });
+      ABC.logActivity("업무 자동화", `결과물 저장 — ${lastDeliverable.title}`);
+      ABC.toast("결과물을 저장했습니다 (데이터·보고서에서 확인)");
     });
 
     // 이 화면에서 AI 대화는 '업무 절차' 관점으로.

@@ -8,8 +8,8 @@
     <script>try{var t=(JSON.parse(localStorage.getItem("gnsoft.settings")||"{}")||{}).theme;document.documentElement.setAttribute("data-theme",t==="dark"?"dark":"light");}catch(e){}</script>
     <script>try{var _a=localStorage.getItem("gnsoft.auth");if(!_a||_a==="null"){location.replace("login.html");}}catch(e){}</script>
     <script>try{var _p=localStorage.getItem("gnsoft.currentProject");if(!_p||_p==="null"){location.replace("projects.html");}}catch(e){}</script>
-  <link rel="stylesheet" href="../assets/css/common.css?v=20260703h">
-  <link rel="stylesheet" href="../assets/css/agent.css?v=20260703h">
+  <link rel="stylesheet" href="../assets/css/common.css?v=20260703i">
+  <link rel="stylesheet" href="../assets/css/agent.css?v=20260703i">
 </head>
 <body>
   <div class="app">
@@ -60,13 +60,29 @@
           </div>
           <ol class="ag-steps" data-role="steps"></ol>
           <div class="ag-foot">
-            <button class="btn primary ag-start" data-role="start" type="button">첫 단계부터 시작하기 →</button>
+            <button class="btn primary ag-run-all" data-role="run-all" type="button">▶ 원클릭 실행 — 결과물까지 도출</button>
+            <button class="btn ag-start" data-role="start" type="button">단계별로 직접 실행 →</button>
+          </div>
+
+          <div class="ag-run" data-role="run" hidden>
+            <div class="ag-run-head"><h3>⚙ 실행 결과 <span class="ag-badge" data-role="run-badge"></span></h3></div>
+            <ol class="ag-run-steps" data-role="run-steps"></ol>
+            <article class="ag-deliverable card" data-role="deliverable" hidden>
+              <div class="ag-deliverable-head">
+                <h3>📄 <span data-role="deliv-title"></span></h3>
+                <div class="ag-deliverable-actions">
+                  <button class="btn flat" data-role="deliv-copy" type="button">복사</button>
+                  <button class="btn primary" data-role="deliv-save" type="button">결과물 저장</button>
+                </div>
+              </div>
+              <div class="ag-deliverable-body" data-role="deliv-body"></div>
+            </article>
           </div>
         </div>
       </section>
     </main>
   </div>
-  <script src="../assets/js/common.js?v=20260703h"></script>
-  <script src="../assets/js/agent.js?v=20260703h"></script>
+  <script src="../assets/js/common.js?v=20260703i"></script>
+  <script src="../assets/js/agent.js?v=20260703i"></script>
 </body>
 </html>

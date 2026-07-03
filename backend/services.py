@@ -2079,6 +2079,121 @@ def agent_plan(goal: str) -> dict:
     }
 
 
+def _pick_text(d: dict) -> str:
+    """서비스 응답 dict 에서 사람이 읽을 대표 텍스트를 뽑는다."""
+    for k in ("answer", "summary", "text"):
+        v = d.get(k)
+        if isinstance(v, str) and v.strip():
+            return v.strip()
+    return ""
+
+
+def _agent_synthesize(goal: str, findings: list[tuple[str, str]]) -> dict:
+    """단계별 결과를 종합한 보고서를 만든다(Gemini 우선, 템플릿 폴백)."""
+    material = "\n\n".join(f"[{t}]\n{x}" for t, x in findings if x)
+    key = _gemini_key()
+    if key and material.strip():
+        try:
+            from google import genai
+
+            client = genai.Client(api_key=key, http_options={"timeout": 20000})
+            prompt = (
+                "너는 도로 유지보수·시설점검 업무지원 플랫폼의 업무 자동화 에이전트다. "
+                "아래는 사용자 목표를 처리하며 각 단계에서 수집한 결과다. 이를 종합해 "
+                "실무자가 바로 쓸 수 있는 간결한 한국어 보고서를 작성하라. "
+                "구성: '## 목표 요약' / '## 핵심 발견'(불릿) / '## 권고 조치'(불릿) / '## 다음 단계'. "
+                "수집 결과에 없는 수치를 지어내지 마라. 마크다운(##, -) 사용.\n\n"
+                f"목표: {goal}\n\n수집 결과:\n{material}"
+            )
+            resp = _gemini_generate(client, model="gemini-2.5-flash", contents=prompt)
+            text = (resp.text or "").strip()
+            if text:
+                return {
+                    "title": f"{goal} — 업무 자동화 결과 보고서",
+                    "content": text,
+                    "backend": "GEMINI",
+                }
+        except Exception:
+            pass
+
+    # 템플릿 폴백 — 수집 결과를 그대로 구조화한다.
+    lines = [f"## 목표\n{goal}", ""]
+    if findings:
+        lines.append("## 단계별 결과")
+        for t, x in findings:
+            if x:
+                lines.append(f"### {t}\n{x}\n")
+    else:
+        lines.append(
+            "_자동 실행 가능한 단계에서 도출된 내용이 없습니다. 문서를 색인하거나 "
+            "공공데이터를 추가하면 더 풍부한 결과가 나옵니다._"
+        )
+    lines.append("## 다음 단계\n이미지 라벨링 등 수동 단계는 각 기능 화면에서 이어서 실행하세요.")
+    return {
+        "title": f"{goal} — 업무 자동화 결과 보고서",
+        "content": "\n".join(lines),
+        "backend": "MOCK",
+    }
+
+
+def agent_run(goal: str, project: str = "") -> dict:
+    """원클릭 실행 — 설계한 절차를 실제로 수행하고 종합 결과물(보고서)까지 도출.
+
+    자동 실행 가능한 단계(query/rag/pubdata)는 서버에서 바로 실행하고,
+    이미지 라벨링은 사진 업로드가 필요해 '수동'으로 표시한다.
+    """
+    plan = agent_plan(goal)
+    g = plan["goal"]
+    if not g:
+        return {"backend": BACKEND, "goal": "", "summary": "", "steps": [], "deliverable": None}
+
+    results: list[dict] = []
+    findings: list[tuple[str, str]] = []  # (제목, 내용) — 종합 보고서 재료
+    for step in plan["steps"]:
+        tool = step["tool"]
+        q = (step.get("q") or "").strip() or g
+        out = dict(step)
+        out["status"] = "done"
+        try:
+            if tool == "query":
+                out["text"] = _pick_text(route_query(q))
+            elif tool == "rag":
+                r = rag_search(q, 4, project)
+                out["text"] = _pick_text(r)
+                out["found"] = bool(r.get("found"))
+                out["sources"] = [s.get("source", "") for s in r.get("sources", [])][:4]
+            elif tool == "pubdata":
+                r = pubdata_search(q)
+                out["text"] = _pick_text(r)
+                out["dataset_matched"] = r.get("dataset_matched", 0)
+            elif tool == "labeling":
+                out["status"] = "manual"
+                out["text"] = (
+                    "이미지 분석·라벨링은 사진 업로드가 필요해 자동 실행에서 제외했습니다. "
+                    "아래 링크에서 직접 실행하세요."
+                )
+            elif tool == "report":
+                out["status"] = "synth"
+                out["text"] = "위 단계 결과를 종합해 보고서를 생성합니다."
+            else:
+                out["status"] = "skipped"
+                out["text"] = ""
+        except Exception:
+            out["status"] = "error"
+            out["text"] = "이 단계 실행 중 문제가 발생했습니다."
+        if out["status"] == "done" and out.get("text"):
+            findings.append((step["title"], out["text"]))
+        results.append(out)
+
+    return {
+        "backend": plan["backend"],
+        "goal": g,
+        "summary": plan["summary"],
+        "steps": results,
+        "deliverable": _agent_synthesize(g, findings),
+    }
+
+
 def _extract_json(text: str) -> dict | None:
     """LLM 응답에서 첫 JSON 객체를 관대하게 추출(코드펜스·잡텍스트 허용)."""
     s = (text or "").strip()
