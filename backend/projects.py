@@ -70,11 +70,66 @@ def _project_summary(conn: sqlite3.Connection, row: sqlite3.Row) -> dict:
     }
 
 
-def list_projects() -> dict:
+def _summaries_for(conn: sqlite3.Connection, rows: list[sqlite3.Row]) -> list[dict]:
+    """페이지에 담긴 프로젝트들의 소스 집계를 IN 절 1회로 배치 계산(N+1 제거).
+
+    예전엔 프로젝트마다 sources 를 개별 조회(_project_summary)해 N+1 이었다.
+    """
+    ids = [r["id"] for r in rows]
+    agg: dict[str, sqlite3.Row] = {}
+    if ids:
+        ph = ",".join("?" * len(ids))
+        for a in conn.execute(
+            "SELECT project_id, COUNT(*) AS total, "
+            "SUM(CASE WHEN review='승인' THEN 1 ELSE 0 END) AS approved, "
+            "SUM(CASE WHEN review='대기' THEN 1 ELSE 0 END) AS pending "
+            f"FROM sources WHERE project_id IN ({ph}) GROUP BY project_id",
+            ids,
+        ).fetchall():
+            agg[a["project_id"]] = a
+    out = []
+    for r in rows:
+        a = agg.get(r["id"])
+        total = a["total"] if a else 0
+        approved = a["approved"] if a else 0
+        pending = a["pending"] if a else 0
+        out.append(
+            {
+                "id": r["id"],
+                "name": r["name"],
+                "emoji": r["emoji"] or "📁",
+                "created": r["created"],
+                "source_count": total,
+                "approved": approved,
+                "pending": pending,
+                "progress": round(100 * approved / total) if total else 0,
+            }
+        )
+    return out
+
+
+def list_projects(page: int = 1, page_size: int = 24) -> dict:
+    """프로젝트 목록(페이지네이션) + 소스 검수 집계.
+
+    DB 부하 완화: LIMIT/OFFSET 로 페이지당만 조회하고, 소스 집계는 배치(N+1 제거).
+    """
     ensure_seeded()
+    page = max(1, int(page or 1))
+    page_size = min(100, max(1, int(page_size or 24)))
+    offset = (page - 1) * page_size
     with _lock, _connect() as conn:
-        rows = conn.execute("SELECT * FROM projects ORDER BY created DESC").fetchall()
-        return {"projects": [_project_summary(conn, r) for r in rows]}
+        total = conn.execute("SELECT COUNT(*) FROM projects").fetchone()[0]
+        rows = conn.execute(
+            "SELECT * FROM projects ORDER BY created DESC LIMIT ? OFFSET ?",
+            (page_size, offset),
+        ).fetchall()
+        return {
+            "projects": _summaries_for(conn, rows),
+            "total": total,
+            "page": page,
+            "page_size": page_size,
+            "pages": max(1, (total + page_size - 1) // page_size),
+        }
 
 
 def get_project(pid: str) -> dict | None:

@@ -39,8 +39,10 @@
     });
 
   // ── 갤러리 ──
+  const PAGE_SIZE = 24;
+  let curPage = 1;
   let galleryProjects = [];
-  const renderGallery = (projects) => {
+  const renderGallery = (projects, showNew) => {
     galleryProjects = projects;
     const cards = projects
       .map((p) => {
@@ -58,9 +60,32 @@
         );
       })
       .join("");
-    grid.innerHTML =
-      `<button class="pj-card pj-new" data-role="new"><span class="pj-new-plus">+</span>새 프로젝트 만들기</button>` +
-      cards;
+    // '새 프로젝트' 타일은 첫 페이지에만(2쪽 이후엔 프로젝트 카드만).
+    const newTile = showNew
+      ? `<button class="pj-card pj-new" data-role="new"><span class="pj-new-plus">+</span>새 프로젝트 만들기</button>`
+      : "";
+    grid.innerHTML = newTile + cards;
+  };
+
+  // ── 페이지 이동 UI ──
+  const renderPager = (d) => {
+    const pager = $('[data-role="pager"]');
+    const pages = d.pages || 1;
+    if (pages <= 1) {
+      pager.hidden = true;
+      pager.innerHTML = "";
+      return;
+    }
+    const p = d.page || 1;
+    const nums = [];
+    const to = Math.min(pages, Math.max(1, p - 2) + 4);
+    for (let i = Math.max(1, to - 4); i <= to; i += 1) nums.push(i);
+    pager.innerHTML =
+      `<button class="pj-page-btn" data-page="${p - 1}" ${p <= 1 ? "disabled" : ""}>‹</button>` +
+      nums.map((i) => `<button class="pj-page-btn${i === p ? " on" : ""}" data-page="${i}">${i}</button>`).join("") +
+      `<button class="pj-page-btn" data-page="${p + 1}" ${p >= pages ? "disabled" : ""}>›</button>` +
+      `<span class="pj-page-info">프로젝트 ${d.total.toLocaleString("ko-KR")}개 · ${p}/${pages}쪽</span>`;
+    pager.hidden = false;
   };
 
   // 프로젝트로 '진입' — 현재 프로젝트로 설정하고 작업 공간(대시보드)으로.
@@ -72,10 +97,16 @@
     location.href = "dashboard.html";
   };
 
-  const loadGallery = async () => {
+  const loadGallery = async (page = curPage) => {
+    curPage = Math.max(1, page);
     try {
-      const data = await ABC.api("/api/projects");
-      renderGallery(data.projects || []);
+      const data = await ABC.api(`/api/projects?page=${curPage}&page_size=${PAGE_SIZE}`);
+      // 마지막 페이지에서 전부 삭제돼 빈 페이지가 되면 한 페이지 앞으로.
+      if (curPage > (data.pages || 1)) {
+        return loadGallery(data.pages || 1);
+      }
+      renderGallery(data.projects || [], curPage === 1);
+      renderPager(data);
     } catch {
       /* toast in api() */
     }
@@ -204,6 +235,12 @@
     $('[data-role="src-list"]').addEventListener("click", (e) => {
       const rv = e.target.closest("[data-review]");
       if (rv) setReview(rv.dataset.review, rv.dataset.status);
+    });
+
+    $('[data-role="pager"]')?.addEventListener("click", (e) => {
+      const btn = e.target.closest(".pj-page-btn");
+      if (!btn || btn.disabled) return;
+      loadGallery(Number(btn.dataset.page));
     });
 
     $('[data-role="add-src"]').addEventListener("click", async () => {

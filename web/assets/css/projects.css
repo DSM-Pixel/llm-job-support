@@ -404,3 +404,44 @@
   border-color: var(--blue);
   color: var(--blue);
 }
+
+/* ── 페이지 이동 UI(프로젝트 갤러리) ── */
+.pj-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 24px;
+  flex-wrap: wrap;
+}
+.pj-page-btn {
+  min-width: 34px;
+  height: 34px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.pj-page-btn:hover:not(:disabled):not(.on) {
+  border-color: var(--blue);
+  color: var(--blue);
+}
+.pj-page-btn.on {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
+}
+.pj-page-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.pj-page-info {
+  margin-left: 8px;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+}

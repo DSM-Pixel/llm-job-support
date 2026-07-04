@@ -626,9 +626,9 @@ def agent_run(body: AgentRunIn) -> dict:
 
 # ── 프로젝트(노트북) + 검수 워크플로 ─────────────────────────────────
 @app.get("/api/projects")
-def projects_list() -> dict:
-    """프로젝트(노트북) 목록 — 소스 수·검수 진행률 포함."""
-    return projects.list_projects()
+def projects_list(page: int = 1, page_size: int = 24) -> dict:
+    """프로젝트(노트북) 목록(페이지네이션) — 소스 수·검수 진행률 포함."""
+    return projects.list_projects(page, page_size)
 
 
 @app.post("/api/projects")
