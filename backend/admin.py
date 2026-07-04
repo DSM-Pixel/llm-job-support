@@ -63,26 +63,45 @@ def _member_view(r: dict, st: dict) -> dict:
     }
 
 
-def list_members(token: str) -> dict:
-    """멤버 목록 + 각자 활동 통계. 슈퍼는 전체, 회사 어드민은 자기 회사만."""
+def list_members(token: str, page: int = 1, page_size: int = 20) -> dict:
+    """멤버 목록(페이지네이션) + 각자 활동 통계. 슈퍼는 전체, 회사 어드민은 자기 회사만.
+
+    DB 부하 완화: LIMIT/OFFSET 로 페이지당만 조회하고, 통계는 배치 집계(N+1 제거).
+    """
     actor = _admin(token)
     if not actor:
         return _DENY
+    page = max(1, int(page or 1))
+    page_size = min(100, max(1, int(page_size or 20)))
+    offset = (page - 1) * page_size
+
     is_super = bool(actor.get("is_super"))
     if is_super:
-        rows = auth.all_members()
+        res = auth.all_members(page_size, offset)
         company = ""
     else:
         company = actor.get("company") or ""
         cid = actor.get("company_id") or ""
-        rows = auth.members_by_company_id(cid) if cid else [auth.get_member(actor["id"])]
-    members = [_member_view(r, activity.stats_for_user(r["id"])) for r in rows if r]
+        if cid:
+            res = auth.members_by_company_id(cid, page_size, offset)
+        else:
+            me = auth.get_member(actor["id"])
+            res = {"members": [me] if me else [], "total": 1 if me else 0}
+
+    rows = [r for r in res["members"] if r]
+    stats = activity.stats_for_users([r["id"] for r in rows])  # 배치 집계(1회)
+    members = [_member_view(r, stats.get(r["id"], {})) for r in rows]
+    total = res["total"]
     return {
         "ok": True,
         "is_super": is_super,
         "company": company,
         "me": actor["id"],
         "members": members,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "pages": max(1, (total + page_size - 1) // page_size),
     }
 
 

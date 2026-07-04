@@ -30,14 +30,14 @@
       ? '<span class="ad-badge ok">활성</span>'
       : '<span class="ad-badge off">비활성</span>';
 
-  const renderSummary = (members) => {
-    const total = members.length;
+  const renderSummary = (members, total) => {
+    // 전체 멤버 수는 total(모든 페이지), 나머지는 현재 페이지 기준.
     const active = members.filter((m) => m.active).length;
     const todaySum = members.reduce((s, m) => s + (m.today || 0), 0);
     $('[data-role="summary"]').innerHTML =
-      `<span class="ad-chip"><b>${num(total)}</b>멤버</span>` +
-      `<span class="ad-chip"><b>${num(active)}</b>활성</span>` +
-      `<span class="ad-chip"><b>${num(todaySum)}</b>오늘 활동 합계</span>`;
+      `<span class="ad-chip"><b>${num(total)}</b>전체 멤버</span>` +
+      `<span class="ad-chip"><b>${num(active)}</b>이 페이지 활성</span>` +
+      `<span class="ad-chip"><b>${num(todaySum)}</b>이 페이지 오늘</span>`;
   };
 
   const renderRows = (members) => {
@@ -72,8 +72,43 @@
     emptyEl.hidden = members.length > 0;
   };
 
-  const load = async () => {
-    const d = await ABC.api("/api/admin/members", { token: token() });
+  const PAGE_SIZE = 20;
+  let curPage = 1;
+
+  const renderPager = (d) => {
+    const pager = $('[data-role="pager"]');
+    const pages = d.pages || 1;
+    if (pages <= 1) {
+      pager.hidden = true;
+      pager.innerHTML = "";
+      return;
+    }
+    const p = d.page || 1;
+    // 현재 페이지 주변 위주로 페이지 번호(최대 5개) + 이전/다음.
+    const nums = [];
+    const from = Math.max(1, p - 2);
+    const to = Math.min(pages, from + 4);
+    for (let i = Math.max(1, to - 4); i <= to; i += 1) nums.push(i);
+    pager.innerHTML =
+      `<button class="ad-page-btn" data-page="${p - 1}" ${p <= 1 ? "disabled" : ""}>‹</button>` +
+      nums
+        .map(
+          (i) =>
+            `<button class="ad-page-btn${i === p ? " on" : ""}" data-page="${i}">${i}</button>`,
+        )
+        .join("") +
+      `<button class="ad-page-btn" data-page="${p + 1}" ${p >= pages ? "disabled" : ""}>›</button>` +
+      `<span class="ad-page-info">${d.total.toLocaleString("ko-KR")}명 · ${p}/${pages}쪽</span>`;
+    pager.hidden = false;
+  };
+
+  const load = async (page = curPage) => {
+    curPage = Math.max(1, page);
+    const d = await ABC.api("/api/admin/members", {
+      token: token(),
+      page: curPage,
+      page_size: PAGE_SIZE,
+    });
     if (!d.ok) {
       wrap.hidden = true;
       denied.hidden = false;
@@ -94,8 +129,9 @@
     $('[data-role="subtitle"]').textContent = isSuper
       ? "전체 회원의 활동·기록·상태를 관리하고, 관리자 신청을 승인합니다."
       : `${d.company || "우리 회사"} 멤버의 활동·기록·상태를 관리합니다.`;
-    renderSummary(d.members);
+    renderSummary(d.members, d.total);
     renderRows(d.members);
+    renderPager(d);
     if (d.is_super) loadRequests();
     else $('[data-role="requests"]').hidden = true;
   };
@@ -239,6 +275,13 @@
       if (ap) return resolveRequest(ap.dataset.approve, true);
       const rj = e.target.closest("[data-reject]");
       if (rj) return resolveRequest(rj.dataset.reject, false);
+    });
+
+    // 페이지 이동.
+    $('[data-role="pager"]')?.addEventListener("click", (e) => {
+      const btn = e.target.closest(".ad-page-btn");
+      if (!btn || btn.disabled) return;
+      load(Number(btn.dataset.page));
     });
 
     load().catch(() => {

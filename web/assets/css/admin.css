@@ -385,3 +385,43 @@
 .ad-table .ad-num {
   white-space: nowrap;
 }
+
+/* ── 페이지네이션 ── */
+.ad-pager {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+.ad-page-btn {
+  min-width: 34px;
+  height: 34px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.ad-page-btn:hover:not(:disabled):not(.on) {
+  border-color: var(--blue);
+  color: var(--blue);
+}
+.ad-page-btn.on {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
+}
+.ad-page-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.ad-page-info {
+  margin-left: 8px;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 600;
+}

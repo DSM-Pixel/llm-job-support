@@ -135,6 +135,66 @@ def stats_for_user(user_id: str) -> dict:
     }
 
 
+def stats_for_users(user_ids: list[str]) -> dict:
+    """여러 사용자의 통계를 한 번에 집계(어드민 목록용 N+1 제거).
+
+    사용자당 개별 쿼리 대신 IN 절로 활동·작업물을 한 번에 읽어 파이썬에서 합산한다.
+    반환: {user_id: {today, week, total, artifacts, images, projects, last_active}}
+    """
+    if not user_ids:
+        return {}
+    now = _now_ms()
+    d0 = _day_start_ms(now)
+    week_from = now - 7 * _DAY_MS
+    ph = ",".join("?" * len(user_ids))
+    with _lock, _connect() as conn:
+        _init(conn)
+        acts = conn.execute(
+            f"SELECT user_id, ts FROM activity WHERE user_id IN ({ph})", user_ids
+        ).fetchall()
+        arts = conn.execute(
+            f"SELECT user_id, ts, kind FROM artifact WHERE user_id IN ({ph})", user_ids
+        ).fetchall()
+        projrows = conn.execute(
+            f"SELECT user_id, COUNT(DISTINCT project) c FROM activity "
+            f"WHERE user_id IN ({ph}) GROUP BY user_id",
+            user_ids,
+        ).fetchall()
+    projmap = {r["user_id"]: r["c"] for r in projrows}
+    out = {
+        uid: {
+            "today": 0,
+            "week": 0,
+            "total": 0,
+            "artifacts": 0,
+            "images": 0,
+            "projects": projmap.get(uid, 0),
+            "last_active": 0,
+        }
+        for uid in user_ids
+    }
+    for a in acts:
+        s = out.get(a["user_id"])
+        if s is None:
+            continue
+        t = a["ts"]
+        s["total"] += 1
+        if t >= d0:
+            s["today"] += 1
+        if t >= week_from:
+            s["week"] += 1
+        if t > s["last_active"]:
+            s["last_active"] = t
+    for a in arts:
+        s = out.get(a["user_id"])
+        if s is None:
+            continue
+        s["artifacts"] += 1
+        if a["kind"] == "image":
+            s["images"] += 1
+    return out
+
+
 def recent_for_user(user_id: str, limit: int = 10) -> list[dict]:
     """어드민용 — 한 사용자의 전체 프로젝트 최근 활동(최신순)."""
     with _lock, _connect() as conn:

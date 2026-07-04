@@ -519,23 +519,37 @@ _MEMBER_COLS = (
 )
 
 
-def members_by_company_id(company_id: str) -> list[dict]:
-    """같은 회사(company_id) 소속 사용자 목록(가입순). 비밀번호 해시는 제외."""
+def members_by_company_id(company_id: str, limit: int | None = None, offset: int = 0) -> dict:
+    """같은 회사(company_id) 소속 사용자 목록(가입순) + 총 개수. 비밀번호 해시 제외.
+
+    limit 이 주어지면 LIMIT/OFFSET 페이지네이션. 반환: {"members": [...], "total": n}
+    """
     with _lock, _connect() as conn:
         _init(conn)
-        rows = conn.execute(
-            f"SELECT {_MEMBER_COLS} FROM users WHERE company_id = ? ORDER BY created",
-            (company_id or "",),
-        ).fetchall()
-    return [dict(r) for r in rows]
+        total = conn.execute(
+            "SELECT COUNT(*) FROM users WHERE company_id = ?", (company_id or "",)
+        ).fetchone()[0]
+        sql = f"SELECT {_MEMBER_COLS} FROM users WHERE company_id = ? ORDER BY created"
+        params: list = [company_id or ""]
+        if limit is not None:
+            sql += " LIMIT ? OFFSET ?"
+            params += [limit, offset]
+        rows = conn.execute(sql, params).fetchall()
+    return {"members": [dict(r) for r in rows], "total": total}
 
 
-def all_members() -> list[dict]:
-    """전체 사용자 목록(슈퍼 어드민용). 비밀번호 해시는 제외."""
+def all_members(limit: int | None = None, offset: int = 0) -> dict:
+    """전체 사용자 목록(슈퍼 어드민용) + 총 개수. 비밀번호 해시 제외."""
     with _lock, _connect() as conn:
         _init(conn)
-        rows = conn.execute(f"SELECT {_MEMBER_COLS} FROM users ORDER BY created").fetchall()
-    return [dict(r) for r in rows]
+        total = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+        sql = f"SELECT {_MEMBER_COLS} FROM users ORDER BY created"
+        params: list = []
+        if limit is not None:
+            sql += " LIMIT ? OFFSET ?"
+            params += [limit, offset]
+        rows = conn.execute(sql, params).fetchall()
+    return {"members": [dict(r) for r in rows], "total": total}
 
 
 def list_admin_requests() -> list[dict]:

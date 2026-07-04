@@ -238,6 +238,12 @@ class AdminTokenIn(BaseModel):
     token: str = ""
 
 
+class AdminMembersIn(BaseModel):
+    token: str = ""
+    page: int = 1
+    page_size: int = 20
+
+
 class AdminMemberIn(BaseModel):
     token: str = ""
     user_id: str = ""
@@ -415,9 +421,9 @@ def dashboard_real_stats(body: DashStatsIn) -> dict:
 
 # ── 어드민 — 같은 회사 멤버 기록·상태 관리 (서버에서 권한 재검증) ────────
 @app.post("/api/admin/members")
-def admin_members(body: AdminTokenIn) -> dict:
-    """같은 회사 멤버 목록 + 각자 활동 통계(어드민 전용)."""
-    return admin.list_members(body.token)
+def admin_members(body: AdminMembersIn) -> dict:
+    """같은 회사 멤버 목록(페이지네이션) + 각자 활동 통계(어드민 전용)."""
+    return admin.list_members(body.token, body.page, body.page_size)
 
 
 @app.post("/api/admin/member")
