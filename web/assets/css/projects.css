@@ -404,6 +404,11 @@
   border-color: var(--blue);
   color: var(--blue);
 }
+/* [hidden] 는 display:inline-flex 에 덮여 무력화된다 — 속성 선택자로 명시적으로 숨긴다.
+   (이 규칙이 없으면 비관리자에게도 '회사 관리' 버튼이 노출됐다) */
+.pj-admin-link[hidden] {
+  display: none;
+}
 
 /* ── 페이지 이동 UI(프로젝트 갤러리) ── */
 .pj-pager {
