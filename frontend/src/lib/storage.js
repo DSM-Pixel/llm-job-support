@@ -46,3 +46,21 @@ export function setProject(p) {
 export function clearProject() {
   localStorage.removeItem(PROJECT_KEY)
 }
+
+// 화면 테마(라이트/다크)를 <html data-theme>에 반영 — 기존 common.js applyTheme 이식.
+export function applyTheme() {
+  const t = getSettings().theme
+  document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light')
+}
+
+// 설정 병합·영속 + 테마 즉시 반영 — 기존 common.js saveSettings 이식. 병합된 설정을 돌려준다.
+export function saveSettings(next) {
+  const merged = { ...getSettings(), ...next }
+  try {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(merged))
+  } catch {
+    /* localStorage 불가 시 무시 */
+  }
+  applyTheme()
+  return merged
+}

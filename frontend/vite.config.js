@@ -16,6 +16,7 @@ export default defineConfig({
       input: {
         projects: resolve(__dirname, 'projects.html'),
         login: resolve(__dirname, 'login.html'),
+        dashboard: resolve(__dirname, 'dashboard.html'),
       },
     },
   },
