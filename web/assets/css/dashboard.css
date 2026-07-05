@@ -440,6 +440,13 @@ h3 {
   color: var(--muted);
   font-size: 13px;
 }
+/* 빈 상태 li 는 grid(30px 1fr) 를 벗어나 한 줄로 흐르게 — 안 그러면 텍스트가
+   30px 첫 칼럼에 갇혀 세로로 깨진다(활동 0건인 새 프로젝트에서 드러나던 버그). */
+.activity-card li.activity-empty {
+  display: block;
+  padding: 12px 2px;
+  border-bottom: 0;
+}
 .activity-empty small {
   color: var(--muted);
   font-size: 12.5px;
