@@ -15,6 +15,7 @@ export default defineConfig({
     rollupOptions: {
       input: {
         projects: resolve(__dirname, 'projects.html'),
+        login: resolve(__dirname, 'login.html'),
       },
     },
   },
