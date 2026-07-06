@@ -12,6 +12,7 @@
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, UploadFile
@@ -20,7 +21,11 @@ from pydantic import BaseModel
 
 from . import activity, admin, auth, cache, projects, services, yolo_service
 
-WEB_DIR = Path(__file__).resolve().parent.parent / "web"
+# 서빙할 정적 프론트 디렉터리. 기본은 바닐라 web/. 환경변수 WEB_DIR 로 교체 가능
+# (React 빌드본으로 컷오버 시 WEB_DIR=/app/webdist 처럼 지정). 존재하지 않으면 web/ 폴백.
+_web_env = os.environ.get("WEB_DIR")
+_default_web = Path(__file__).resolve().parent.parent / "web"
+WEB_DIR = Path(_web_env) if (_web_env and Path(_web_env).is_dir()) else _default_web
 
 app = FastAPI(title="GNSoft AI 플랫폼", version="0.1.0")
 
