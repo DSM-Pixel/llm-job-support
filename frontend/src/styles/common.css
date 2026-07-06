@@ -1272,10 +1272,17 @@ textarea {
 
 .hist-empty {
   padding: 38px 18px;
-  text-align: center;
+  text-align: left;
   color: var(--muted);
   font-size: 13px;
-  line-height: 1.6;
+  line-height: 1.7;
+  max-width: 520px;
+  margin: 0 auto;
+}
+/* 안내 문구를 문장별 한 줄씩 + 각 줄 들여쓰기 */
+.hist-empty-line {
+  display: block;
+  text-indent: 1em;
 }
 
 .ai-panel {

@@ -169,9 +169,20 @@ export default function HistoryModal({ open, onClose }) {
             <ul className="history-list">
               {shown.length === 0 ? (
                 <li className="hist-empty">
-                  {filter === 'report'
-                    ? '아직 생성한 보고서 문서가 없습니다. ‘요약·보고서 생성’에서 보고서를 만들면 여기에 모여, DOCX로 내려받을 수 있습니다.'
-                    : '아직 기록이 없습니다. 자연어 질의·RAG 검색·이미지 라벨링을 사용하면 여기에 쌓입니다.'}
+                  {(filter === 'report'
+                    ? [
+                        '아직 생성한 보고서 문서가 없습니다.',
+                        '‘요약·보고서 생성’에서 보고서를 만들면 여기에 모여, DOCX로 내려받을 수 있습니다.',
+                      ]
+                    : [
+                        '아직 기록이 없습니다.',
+                        '자연어 질의·RAG 검색·이미지 라벨링을 사용하면 여기에 쌓입니다.',
+                      ]
+                  ).map((line, i) => (
+                    <span className="hist-empty-line" key={i}>
+                      {line}
+                    </span>
+                  ))}
                 </li>
               ) : (
                 shown.map((r) => {
