@@ -169,14 +169,23 @@ def create_project(name: str, emoji: str = "📁") -> dict:
 
 
 def add_source(pid: str, name: str, kind: str = "문서") -> dict | None:
+    nm = (name or "새 소스").strip()
+    kd = (kind or "문서").strip()
     with _lock, _connect() as conn:
         _init(conn)
         if not conn.execute("SELECT 1 FROM projects WHERE id = ?", (pid,)).fetchone():
             return None
-        conn.execute(
-            "INSERT INTO sources(id, project_id, name, kind, review) VALUES (?,?,?,?,'대기')",
-            (_new_id(), pid, (name or "새 소스").strip(), (kind or "문서").strip()),
-        )
+        # 같은 이름·유형이 이미 있으면 중복 추가하지 않는다(실제 산출물이 소스로 자동
+        # 등록될 때 재생성마다 쌓이는 것 방지 + 기존 검수 상태 보존).
+        dup = conn.execute(
+            "SELECT 1 FROM sources WHERE project_id = ? AND name = ? AND kind = ?",
+            (pid, nm, kd),
+        ).fetchone()
+        if not dup:
+            conn.execute(
+                "INSERT INTO sources(id, project_id, name, kind, review) VALUES (?,?,?,?,'대기')",
+                (_new_id(), pid, nm, kd),
+            )
     return get_project(pid)
 
 

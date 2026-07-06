@@ -51,6 +51,33 @@ export function getActivity() {
   }
 }
 
+// 산출물 종류 → 프로젝트 '소스' 유형(이미지셋/문서/공공데이터/보고서) 매핑.
+const _sourceKind = (art) => {
+  if (art.kind === 'image') return '이미지셋'
+  if (art.kind === 'report') return '보고서'
+  if (String(art.title || '').includes('공공데이터')) return '공공데이터'
+  return '문서'
+}
+
+// 실제 산출물(라벨링·보고서·RAG·공공데이터)을 현재 프로젝트의 '소스(검수 대기)'로
+// 자동 등록 → 소스 검수를 실데이터와 연결. 서버가 이름·유형으로 중복을 막고(재생성해도
+// 안 쌓임) 기존 검수 상태를 보존한다. 프로젝트 미선택 시 생략, 실패는 무시.
+const registerSource = (art) => {
+  const p = pid()
+  const name = art.title || art.name
+  if (!p || p === 'none' || !name) return
+  try {
+    fetch(`/api/projects/${p}/sources`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, kind: _sourceKind(art) }),
+      keepalive: true,
+    }).catch(() => {})
+  } catch {
+    /* 무시 */
+  }
+}
+
 // 작업 산출물 저장 — 같은 id 는 최신 것으로 교체, 최근 24개 유지, 용량 초과 시 이미지부터 제거.
 export function saveArtifact(art) {
   const page = curPage()
@@ -63,6 +90,7 @@ export function saveArtifact(art) {
     page,
     ts: entry.ts,
   })
+  registerSource(entry) // 산출물을 현재 프로젝트 소스(검수 대기)로 등록
   try {
     let list = JSON.parse(localStorage.getItem(artKey()) || '[]')
     if (art.id) list = list.filter((a) => a.id !== art.id)
