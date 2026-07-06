@@ -159,9 +159,11 @@ export function useModalEditor({
       const engine =
         result.backend === 'YOLO'
           ? 'YOLO 로컬'
-          : result.backend === 'GEMINI'
-            ? 'Gemini'
-            : '예시(MOCK)'
+          : result.backend === 'OPENAI'
+            ? 'GPT'
+            : result.backend === 'GEMINI'
+              ? 'Gemini'
+              : '예시(MOCK)'
       toast(`${engine} 탐지 ${pending.length}개 — 추가할 클래스를 고르세요`)
     } catch {
       toast('전체 객체 탐지에 실패했습니다')

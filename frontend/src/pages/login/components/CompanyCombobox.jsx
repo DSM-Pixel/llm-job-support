@@ -98,7 +98,7 @@ export default function CompanyCombobox({ onSelectExisting, onSelectNew, onClear
           autoComplete="off"
           value={compQuery}
           onChange={(e) => onCompInput(e.target.value)}
-          onFocus={() => runSearch(compQuery)}
+          onFocus={() => hintMode !== 'selected' && runSearch(compQuery)}
         />
         <div className="lg-combo-list" hidden={!comboOpen}>
           {comboItems.map((x) => (

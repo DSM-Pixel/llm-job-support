@@ -1,5 +1,6 @@
 // 계획 요약 + 단계 카드 + 하단 실행 버튼 — 바닐라 render/renderSteps 재현.
 // React가 텍스트를 자동 이스케이프하므로 바닐라의 escapeHtml 은 불필요.
+import { isRealAI } from '../../../lib/aiBackend.js'
 
 // props: plan{ backend, summary, steps }, onRunAll, onStart, runBusy
 export default function PlanSteps({ plan, onRunAll, onStart, runBusy }) {
@@ -10,7 +11,7 @@ export default function PlanSteps({ plan, onRunAll, onStart, runBusy }) {
         <div className="ag-summary-head">
           <h3>
             ✦ 에이전트 업무 계획{' '}
-            <span className="ag-badge">{plan.backend === 'GEMINI' ? 'AI 생성' : '기본 절차'}</span>
+            <span className="ag-badge">{isRealAI(plan.backend) ? 'AI 생성' : '기본 절차'}</span>
           </h3>
         </div>
         <p className="ag-summary-text">{plan.summary}</p>

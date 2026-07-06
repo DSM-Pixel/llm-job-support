@@ -91,14 +91,22 @@ export default function ProjectsPage() {
     if (!name) return
     // 셀렉트 라벨('팀 공유 …' / '개인 …') → 서버 값('team' | 'private').
     const vis = String(visibility || '').startsWith('팀') ? 'team' : 'private'
-    const p = await api('/api/projects', {
-      token: authToken(),
-      name,
-      emoji: emoji || '📁',
-      visibility: vis,
-    })
-    toast(vis === 'team' ? '팀 공유 프로젝트를 만들었습니다' : '개인 프로젝트를 만들었습니다')
-    openProject(p.id)
+    try {
+      const p = await api('/api/projects', {
+        token: authToken(),
+        name,
+        emoji: emoji || '📁',
+        visibility: vis,
+      })
+      if (!p || p.error || !p.id) {
+        toast('프로젝트 생성에 실패했습니다')
+        return
+      }
+      toast(vis === 'team' ? '팀 공유 프로젝트를 만들었습니다' : '개인 프로젝트를 만들었습니다')
+      openProject(p.id)
+    } catch {
+      toast('프로젝트 생성에 실패했습니다')
+    }
   }
 
   const addSource = async ({ name, kind }) => {
@@ -130,8 +138,13 @@ export default function ProjectsPage() {
     try {
       const res = await del(`/api/projects/${pid}?token=${encodeURIComponent(authToken())}`)
       const body = await res.json().catch(() => ({}))
-      if (body.error === 'forbidden') {
-        toast('삭제 권한이 없습니다 (만든 본인·대표만 삭제 가능)')
+      // 서버가 HTTP 200 으로 {error:...} 를 줄 수 있어 성공을 낙관하지 않는다.
+      if (!res.ok || body.error) {
+        toast(
+          body.error === 'forbidden'
+            ? '삭제 권한이 없습니다 (만든 본인·대표만 삭제 가능)'
+            : '삭제에 실패했습니다',
+        )
         return
       }
     } catch {

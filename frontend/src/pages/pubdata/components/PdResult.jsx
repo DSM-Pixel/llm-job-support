@@ -1,5 +1,6 @@
 // 검색 결과 — AI 요약 + 막대차트 + 관련 데이터셋(바닐라 render/renderBars/renderDatasets 재현).
 // React 가 텍스트를 자동 이스케이프하므로 바닐라의 escapeHtml 은 불필요.
+import { isRealAI } from '../../../lib/aiBackend.js'
 
 // 값 배열 → CSS 막대. 최고값을 100%로 정규화(바닐라 renderBars 동일).
 function Bars({ stats }) {
@@ -31,7 +32,7 @@ export default function PdResult({ data, onToReport }) {
         <div className="pd-summary-head">
           <h3>
             ✣ AI 통계 요약{' '}
-            <span className="pd-badge">{data.summary_backend === 'GEMINI' ? 'AI 생성' : '템플릿'}</span>
+            <span className="pd-badge">{isRealAI(data.summary_backend) ? 'AI 생성' : '템플릿'}</span>
           </h3>
           <span className="pd-domain">{data.domain}</span>
         </div>
@@ -56,25 +57,27 @@ export default function PdResult({ data, onToReport }) {
         </div>
       </div>
 
-      <div className="pd-chart card">
-        <h3 className="pd-chart-title">{stats.title}</h3>
-        <p className="pd-chart-src">
-          출처: {stats.dataset || ''}{' '}
-          {stats.sample ? (
-            <span className="pd-badge sample">샘플 통계</span>
-          ) : (
-            <span className="pd-badge live">실데이터(data.go.kr)</span>
-          )}
-        </p>
-        <Bars stats={stats} />
-      </div>
+      {stats && Array.isArray(stats.values) && (
+        <div className="pd-chart card">
+          <h3 className="pd-chart-title">{stats.title}</h3>
+          <p className="pd-chart-src">
+            출처: {stats.dataset || ''}{' '}
+            {stats.sample ? (
+              <span className="pd-badge sample">샘플 통계</span>
+            ) : (
+              <span className="pd-badge live">실데이터(data.go.kr)</span>
+            )}
+          </p>
+          <Bars stats={stats} />
+        </div>
+      )}
 
       <div className="pd-datasets">
         <h2 className="section-title">
-          ▤ 관련 공공데이터셋 <small>{data.datasets.length} sets · data.go.kr</small>
+          ▤ 관련 공공데이터셋 <small>{(data.datasets || []).length} sets · data.go.kr</small>
         </h2>
         <div className="pd-ds-list">
-          {data.datasets.map((d, i) => (
+          {(data.datasets || []).map((d, i) => (
             <a className="pd-ds card" key={i} href={d.url} target="_blank" rel="noopener">
               <div className="pd-ds-main">
                 <b>{d.title}</b>

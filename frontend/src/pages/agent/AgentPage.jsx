@@ -53,7 +53,8 @@ function AgentContent() {
       setRun(d)
       logActivity('업무 자동화', `${g} (원클릭 실행)`)
     } catch {
-      /* api()가 토스트 — 로딩 상태 유지 */
+      // api()가 토스트로 알림 — 스피너가 영원히 돌지 않도록 실패 상태로 전환.
+      setRun({ loading: false, failed: true })
     } finally {
       setRunBusy(false)
     }

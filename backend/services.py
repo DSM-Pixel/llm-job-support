@@ -28,6 +28,12 @@ from datetime import datetime
 
 BACKEND = "MOCK"
 
+
+def _today() -> str:
+    """보고서 '작성일' — 실제 생성 날짜(YYYY-MM-DD). 하드코딩 날짜 대신 사용."""
+    return datetime.now().strftime("%Y-%m-%d")
+
+
 # Gemini 호출용 스레드풀 — 429 재시도로 길게 행하는 호출을 하드 타임아웃으로 끊는다.
 # (SDK의 http_options timeout/retry_options는 재시도 루프를 막지 못해 직접 끊는다.)
 _GEMINI_POOL = ThreadPoolExecutor(max_workers=8)
@@ -1103,10 +1109,10 @@ def generate_report(
         "backend": BACKEND,
         "report_type": kind,
         "org": "GNSOFT",
-        "date": "2026.6.22",
+        "date": _today(),
         "period": period,
         "title": f"도로 파손 {kind} 보고서",
-        "subtitle": f"생성일 2026.6.22 · 소스 {len(srcs) or 3}개 · {period}",
+        "subtitle": f"생성일 {_today()} · 소스 {len(srcs) or 3}개 · {period}",
         "sections": _report_sections(kind, period, srcs),
         "table": _report_table(period) if include_chart else None,
         "sources": srcs or ["도로 파손 신고 현황", "도로보수 예산 현황", "Vision AI 검수 리포트"],
@@ -1489,11 +1495,11 @@ def generate_report_web(
             "backend": backend,
             "report_type": kind,
             "org": "GNSOFT",
-            "date": "2026.6.23",
+            "date": _today(),
             "period": period,
             "query": topic,
             "title": f"도로 파손 {kind} 보고서",
-            "subtitle": f"생성일 2026.6.23 · 웹 검색 기반 · {period} · 소스 {len(srcs) or 3}개",
+            "subtitle": f"생성일 {_today()} · 웹 검색 기반 · {period} · 소스 {len(srcs) or 3}개",
             "sections": sections,
             "table": _report_table(period) if include_chart else None,
             "sources": sources or [{"title": "Google 검색", "url": "https://www.google.com"}],
@@ -1503,10 +1509,10 @@ def generate_report_web(
         "backend": "MOCK",
         "report_type": kind,
         "org": "GNSOFT",
-        "date": "2026.6.23",
+        "date": _today(),
         "period": period,
         "title": f"도로 파손 {kind} 보고서",
-        "subtitle": f"생성일 2026.6.23 · 예시(웹 검색 불가) · {period} · 소스 {len(srcs) or 3}개",
+        "subtitle": f"생성일 {_today()} · 예시(웹 검색 불가) · {period} · 소스 {len(srcs) or 3}개",
         "sections": _rich_report_sections(kind, period, focus),
         "table": _report_table(period) if include_chart else None,
         "sources": srcs or ["도로 파손 신고 현황", "도로보수 예산 현황", "Vision AI 검수 리포트"],
@@ -1646,7 +1652,7 @@ def generate_report_from_template(
                     "backend": "OPENAI" if _openai_key() else "GEMINI_TEMPLATE",
                     "report_type": "양식 기반",
                     "org": "GNSOFT",
-                    "date": "2026.6.23",
+                    "date": _today(),
                     "period": period or "",
                     "title": f"{stem} — 자동 작성",
                     "subtitle": f"업로드 양식 분석 기반 · {filename or '양식'}",
@@ -1664,7 +1670,7 @@ def generate_report_from_template(
         "backend": "MOCK",
         "report_type": "양식 기반",
         "org": "GNSOFT",
-        "date": "2026.6.23",
+        "date": _today(),
         "period": period or "",
         "title": f"{stem} — 자동 작성(예시)",
         "subtitle": f"업로드 양식 기반 · {filename or '양식'}",
@@ -1716,11 +1722,11 @@ def generate_report_from_rag(
                     "backend": "OPENAI" if _openai_key() else "GEMINI_RAG",
                     "report_type": kind,
                     "org": "GNSOFT · RAG 검색 보고서",
-                    "date": "2026.6.24",
+                    "date": _today(),
                     "period": period,
                     "query": question,
                     "title": question.strip() or f"{kind} 보고서",
-                    "subtitle": f"생성일 2026.6.24 · RAG 검색 결과 기반 · 근거 {len(file_names)}건",
+                    "subtitle": f"생성일 {_today()} · RAG 검색 결과 기반 · 근거 {len(file_names)}건",
                     "sections": sections,
                     "table": None,
                     "sources": file_names or ["RAG 근거 문서"],
@@ -1743,11 +1749,11 @@ def generate_report_from_rag(
         "backend": "MOCK",
         "report_type": kind,
         "org": "GNSOFT · RAG 검색 보고서",
-        "date": "2026.6.24",
+        "date": _today(),
         "period": period,
         "query": question,
         "title": question.strip() or f"{kind} 보고서",
-        "subtitle": f"생성일 2026.6.24 · RAG 검색 결과 기반(예시) · 근거 {len(file_names)}건",
+        "subtitle": f"생성일 {_today()} · RAG 검색 결과 기반(예시) · 근거 {len(file_names)}건",
         "sections": sections,
         "table": None,
         "sources": file_names or ["RAG 근거 문서"],

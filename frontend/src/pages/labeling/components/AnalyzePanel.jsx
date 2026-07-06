@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { toast } from '../../../lib/toast.js'
 import { logActivity, saveArtifact } from '../../../lib/activity.js'
+import { isRealAI } from '../../../lib/aiBackend.js'
 import {
   analyzeImage,
   analyzePreset,
@@ -31,11 +32,12 @@ export default function AnalyzePanel({ active, activeIdx, onResult }) {
           .filter(Boolean)
           .map((line) => `<li>${escapeHtml(line.replace(/^[-*•]\s*/, ''))}</li>`)
           .join('')
-        const isGemini = result.backend === 'GEMINI'
+        const isAi = isRealAI(result.backend)
+        const engineName = result.backend === 'OPENAI' ? 'GPT Vision' : 'Gemini Vision'
         const stored = {
           html,
-          confText: isGemini ? 'Gemini Vision' : 'MOCK 분석',
-          confClass: `status ${isGemini ? 'green' : 'gray'}`,
+          confText: isAi ? engineName : 'MOCK 분석',
+          confClass: `status ${isAi ? 'green' : 'gray'}`,
         }
         onResult(activeIdx, stored)
         // 보고서에 넣을 산출물로 저장(분석한 이미지 + 분석 요약).
@@ -59,7 +61,7 @@ export default function AnalyzePanel({ active, activeIdx, onResult }) {
             })
           }
         }
-        toast(isGemini ? '이미지를 분석했습니다' : '분석 결과(MOCK)')
+        toast(isAi ? '이미지를 분석했습니다' : '분석 결과(MOCK)')
       } else {
         // 이미지 없으면 프리셋 기반 예시 결과(MOCK).
         const result = await analyzePreset(preset, customPrompt, active.name)

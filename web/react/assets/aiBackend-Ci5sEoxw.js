@@ -1,0 +1,1 @@
+var e=e=>!!e&&e!==`MOCK`;export{e as t};

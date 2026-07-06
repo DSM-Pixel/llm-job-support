@@ -10,6 +10,12 @@ export const escapeHtml = (value) =>
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#039;')
 
+// AI가 준 출처 URL은 innerHTML href 로 들어가므로 http(s) 만 허용(javascript: 등 스킴 차단).
+export const safeUrl = (value) => {
+  const s = String(value ?? '').trim()
+  return /^https?:\/\//i.test(s) ? s : '#'
+}
+
 // 본문(여러 문단 + '- ' 불릿)을 문단/목록 HTML로 렌더.
 export const renderBody = (body) => {
   const lines = String(body || '')
@@ -96,7 +102,7 @@ export const buildReportHtml = (r) => {
   const sources = (r.sources || [])
     .map((s) =>
       s && typeof s === 'object'
-        ? `<a class="pill src-link" href="${escapeHtml(s.url)}" target="_blank" rel="noopener">${escapeHtml(s.title)}</a>`
+        ? `<a class="pill src-link" href="${escapeHtml(safeUrl(s.url))}" target="_blank" rel="noopener">${escapeHtml(s.title)}</a>`
         : `<span class="pill">${escapeHtml(s)}</span>`,
     )
     .join('')

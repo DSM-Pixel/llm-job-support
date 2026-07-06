@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { toast } from '../../../lib/toast.js'
 import { saveArtifact, logActivity } from '../../../lib/activity.js'
+import { isRealAI } from '../../../lib/aiBackend.js'
 
 // 원클릭 실행 결과 — 바닐라 renderRun/mdLite/복사·저장 재현.
 
@@ -74,14 +75,16 @@ export default function RunResult({ run }) {
       <div className="ag-run-head">
         <h3>
           ⚙ 실행 결과{' '}
-          {!run.loading && (
-            <span className="ag-badge">{run.backend === 'GEMINI' ? 'AI 실행' : '기본 실행'}</span>
+          {!run.loading && !run.failed && (
+            <span className="ag-badge">{isRealAI(run.backend) ? 'AI 실행' : '기본 실행'}</span>
           )}
         </h3>
       </div>
       <ol className="ag-run-steps">
         {run.loading ? (
           <li className="ag-run-loading">단계를 실행하고 결과를 종합하는 중…</li>
+        ) : run.failed ? (
+          <li className="ag-run-loading">실행에 실패했습니다. 잠시 후 다시 시도해주세요.</li>
         ) : (
           (run.steps || []).map((s) => {
             const st = STATUS[s.status] || STATUS.done
