@@ -35,7 +35,9 @@ export default function ProjectsPage() {
   const loadGallery = useCallback(async (page = 1) => {
     const p = Math.max(1, page)
     try {
-      const data = await api(`/api/projects?page=${p}&page_size=${PAGE_SIZE}`)
+      const data = await api(
+        `/api/projects?page=${p}&page_size=${PAGE_SIZE}&token=${encodeURIComponent(authToken())}`,
+      )
       // 마지막 페이지에서 전부 삭제돼 빈 페이지가 되면 한 페이지 앞으로.
       if (p > (data.pages || 1)) return loadGallery(data.pages || 1)
       setCurPage(p)
@@ -53,7 +55,7 @@ export default function ProjectsPage() {
   // ── 상세 열기 ──
   const openProject = useCallback(async (pid) => {
     try {
-      const p = await api(`/api/projects/${pid}`)
+      const p = await api(`/api/projects/${pid}?token=${encodeURIComponent(authToken())}`)
       if (p.error) return showGallery()
       setDetail(p)
       setView('detail')
@@ -79,11 +81,18 @@ export default function ProjectsPage() {
   }
 
   // ── 생성/소스/검수/삭제 ──
-  const createProject = async ({ name, emoji }) => {
+  const createProject = async ({ name, emoji, visibility }) => {
     setModal(null)
     if (!name) return
-    const p = await api('/api/projects', { name, emoji: emoji || '📁' })
-    toast('프로젝트를 만들었습니다')
+    // 셀렉트 라벨('팀 공유 …' / '개인 …') → 서버 값('team' | 'private').
+    const vis = String(visibility || '').startsWith('팀') ? 'team' : 'private'
+    const p = await api('/api/projects', {
+      token: authToken(),
+      name,
+      emoji: emoji || '📁',
+      visibility: vis,
+    })
+    toast(vis === 'team' ? '팀 공유 프로젝트를 만들었습니다' : '개인 프로젝트를 만들었습니다')
     openProject(p.id)
   }
 
@@ -114,9 +123,15 @@ export default function ProjectsPage() {
   const deleteProject = async (pid) => {
     setModal(null)
     try {
-      await del(`/api/projects/${pid}`)
+      const res = await del(`/api/projects/${pid}?token=${encodeURIComponent(authToken())}`)
+      const body = await res.json().catch(() => ({}))
+      if (body.error === 'forbidden') {
+        toast('삭제 권한이 없습니다 (만든 본인·대표만 삭제 가능)')
+        return
+      }
     } catch {
       toast('삭제에 실패했습니다')
+      return
     }
     toast('프로젝트를 삭제했습니다')
     loadGallery(curPage)
@@ -237,6 +252,12 @@ export default function ProjectsPage() {
           fields={[
             { name: 'name', label: '이름', placeholder: '예: CCTV 이상행동 검색', autoFocus: true },
             { name: 'emoji', label: '아이콘', type: 'select', options: EMOJIS },
+            {
+              name: 'visibility',
+              label: '공개 범위',
+              type: 'select',
+              options: ['팀 공유 — 같은 팀이 함께 봄', '개인 — 검수자·대표만 열람'],
+            },
           ]}
           onSubmit={createProject}
           onClose={() => setModal(null)}

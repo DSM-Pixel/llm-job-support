@@ -139,6 +139,41 @@
   color: var(--muted);
   font-size: 12.5px;
 }
+/* 공개범위 배지(팀 공유/개인) + '내 프로젝트' 표시. */
+.pj-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 2px 0 1px;
+}
+.pj-vis {
+  display: inline-block;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.pj-vis.team {
+  background: rgba(70, 96, 191, 0.14);
+  color: var(--blue);
+}
+.pj-vis.private {
+  background: rgba(139, 92, 246, 0.16);
+  color: #7c53e6;
+}
+.pj-vis.mine {
+  background: rgba(26, 165, 102, 0.16);
+  color: var(--green);
+}
+/* 상세 머리말의 공개범위·만든이 한 줄. */
+.pj-detail-owner {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 700;
+}
 .pj-card-bar {
   margin-top: auto;
   height: 6px;

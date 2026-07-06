@@ -162,8 +162,10 @@ class AgentRunIn(BaseModel):
 
 
 class ProjectCreateIn(BaseModel):
+    token: str = ""
     name: str = ""
     emoji: str = "📁"
+    visibility: str = "team"  # 'team'(팀 공유) | 'private'(개인 — 검수자·대표만 열람)
 
 
 class SourceAddIn(BaseModel):
@@ -669,27 +671,31 @@ def agent_run(body: AgentRunIn) -> dict:
 
 # ── 프로젝트(노트북) + 검수 워크플로 ─────────────────────────────────
 @app.get("/api/projects")
-def projects_list(page: int = 1, page_size: int = 24) -> dict:
-    """프로젝트(노트북) 목록(페이지네이션) — 소스 수·검수 진행률 포함."""
-    return projects.list_projects(page, page_size)
+def projects_list(page: int = 1, page_size: int = 24, token: str = "") -> dict:
+    """열람 가능한 프로젝트 목록(페이지네이션) — 세션의 소속·계급·공개범위로 필터."""
+    viewer = auth.session_user(token)
+    return projects.list_projects(page, page_size, viewer)
 
 
 @app.post("/api/projects")
 def projects_create(body: ProjectCreateIn) -> dict:
-    """새 프로젝트(노트북) 생성."""
-    return projects.create_project(body.name, body.emoji)
+    """새 프로젝트(노트북) 생성 — 만든이·소속·공개범위(팀/개인)를 기록."""
+    owner = auth.session_user(body.token)
+    return projects.create_project(body.name, body.emoji, body.visibility, owner)
 
 
 @app.get("/api/projects/{pid}")
-def projects_get(pid: str) -> dict:
-    """프로젝트 상세 — 소스 목록·검수 상태."""
-    return projects.get_project(pid) or {"error": "not_found"}
+def projects_get(pid: str, token: str = "") -> dict:
+    """프로젝트 상세 — 열람 권한이 있을 때만(소스 목록·검수 상태)."""
+    viewer = auth.session_user(token)
+    return projects.get_project(pid, viewer, enforce=True) or {"error": "not_found"}
 
 
 @app.delete("/api/projects/{pid}")
-def projects_delete(pid: str) -> dict:
-    """프로젝트 삭제."""
-    return projects.delete_project(pid)
+def projects_delete(pid: str, token: str = "") -> dict:
+    """프로젝트 삭제 — 만든 본인·회사 대표·슈퍼만."""
+    viewer = auth.session_user(token)
+    return projects.delete_project(pid, viewer, enforce=True)
 
 
 @app.post("/api/projects/{pid}/sources")
@@ -710,6 +716,9 @@ def review_set(body: ReviewIn) -> dict:
         return {"error": "로그인이 필요합니다.", "code": "unauthorized"}
     if not (actor.get("is_admin") or actor.get("is_super") or actor.get("is_reviewer")):
         return {"error": "검수(승인·반려)는 검수자·대표만 할 수 있습니다.", "code": "forbidden"}
+    # 검수자라도 열람 범위(같은 팀/회사) 밖 프로젝트의 소스는 검수할 수 없다.
+    if not projects.can_access_source(body.source_id, actor):
+        return {"error": "이 프로젝트의 검수 범위가 아닙니다.", "code": "forbidden"}
     return projects.set_review(body.source_id, body.status, actor.get("name") or "검수자") or {
         "error": "invalid"
     }

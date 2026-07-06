@@ -19,7 +19,15 @@ export default function DetailView({ project, onBack, onEnter, onAddSource, onRe
       <div className="pj-detail-head">
         <div className="pj-detail-title">
           <span className="pj-emoji">{p.emoji}</span>
-          <h2>{p.name}</h2>
+          <div>
+            <h2>{p.name}</h2>
+            <small className="pj-detail-owner">
+              {(p.visibility || 'team') === 'team'
+                ? `👥 팀 공유${p.team ? ` · ${p.team}` : ''}`
+                : '🔒 개인'}
+              {p.owner_name ? ` · 만든이 ${p.owner_name}` : ''}
+            </small>
+          </div>
         </div>
         <div className="pj-progress-wrap">
           <span className="pj-progress-label">
