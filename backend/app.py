@@ -211,6 +211,12 @@ class TokenIn(BaseModel):
     token: str = ""
 
 
+class ProfileUpdateIn(BaseModel):
+    token: str = ""
+    name: str = ""
+    team: str = ""
+
+
 class ResetRequestIn(BaseModel):
     email: str = ""
 
@@ -347,6 +353,12 @@ def auth_login(body: LoginIn) -> dict:
 def auth_me(body: TokenIn) -> dict:
     """세션 토큰 검증 — 유효하면 사용자 정보."""
     return auth.me(body.token)
+
+
+@app.post("/api/auth/profile")
+def auth_profile(body: ProfileUpdateIn) -> dict:
+    """내 프로필(이름·팀) 수정 — 본인 세션만. 팀은 프로젝트 팀 공유 스코프 기준값."""
+    return auth.update_profile(body.token, body.name, body.team)
 
 
 @app.post("/api/auth/logout")

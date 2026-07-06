@@ -508,6 +508,37 @@ def me(token: str) -> dict:
     return {"ok": True, "user": _user_payload(row)}
 
 
+def update_profile(token: str, name: str = "", team: str = "") -> dict:
+    """내 프로필(이름·팀) 계정 갱신 — 세션 사용자 본인만. 슈퍼는 팀 없음.
+
+    팀은 프로젝트 팀 공유 스코프의 기준값이라, 여기서 바꾸면 소속 팀도 바뀐다.
+    """
+    with _lock, _connect() as conn:
+        _init(conn)
+        s = conn.execute(
+            "SELECT user_id, expires FROM sessions WHERE token = ?", (token or "",)
+        ).fetchone()
+        if not s or s["expires"] < time.time():
+            return {"ok": False, "error": "세션이 만료되었습니다. 다시 로그인해주세요."}
+        uid = s["user_id"]
+        row = conn.execute("SELECT is_super FROM users WHERE id = ?", (uid,)).fetchone()
+        if not row:
+            return {"ok": False, "error": "사용자를 찾을 수 없습니다."}
+        sets, params = [], []
+        nm = (name or "").strip()
+        if nm:
+            sets.append("name = ?")
+            params.append(nm)
+        if not row["is_super"]:  # 슈퍼(순수 운영자)는 팀을 두지 않는다
+            sets.append("team = ?")
+            params.append((team or "").strip())
+        if sets:
+            params.append(uid)
+            conn.execute(f"UPDATE users SET {', '.join(sets)} WHERE id = ?", params)
+        updated = conn.execute("SELECT * FROM users WHERE id = ?", (uid,)).fetchone()
+    return {"ok": True, "user": _user_payload(updated)}
+
+
 def user_id(token: str) -> str | None:
     """세션 토큰 → 사용자 id (유효/미만료일 때만). 활동 기록 귀속용 경량 조회."""
     with _lock, _connect() as conn:

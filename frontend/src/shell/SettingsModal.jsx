@@ -13,16 +13,26 @@ export default function SettingsModal({ open, onClose, onSaved }) {
   const [engine, setEngine] = useState('Gemini')
   const [name, setName] = useState('')
   const [team, setTeam] = useState('')
+  const [teamList, setTeamList] = useState([]) // 회사 팀 목록(선택지)
   const [theme, setTheme] = useState('light')
 
-  // 열 때마다 저장된 설정으로 폼을 채운다(바닐라 overlay._fill 과 동일).
+  // 열 때마다 폼을 채운다 — 팀은 로컬 표시값이 아니라 '계정' 값(스코프 기준)으로.
   useEffect(() => {
     if (!open) return
     const s = getSettings()
+    const a = getAuth() || {}
     setEngine(s.engine)
-    setName(s.name || '')
-    setTeam(s.team || '')
+    setName(a.name || s.name || '')
+    setTeam(a.team || '')
     setTheme(s.theme || 'light')
+    // 회사 팀 목록을 불러와 datalist 선택지로(오타·불일치 방지).
+    setTeamList([])
+    if (!a.is_super && a.token) {
+      fetch(`/api/companies/teams?token=${encodeURIComponent(a.token)}`)
+        .then((r) => r.json())
+        .then((d) => setTeamList(d.teams || []))
+        .catch(() => {})
+    }
   }, [open])
 
   // Escape 로 닫기.
@@ -54,11 +64,38 @@ export default function SettingsModal({ open, onClose, onSaved }) {
     location.replace('login.html')
   }
 
-  const save = () => {
+  const save = async () => {
+    const a = getAuth() || {}
+    // 계정(서버) 이름·팀 갱신 — 팀은 프로젝트 팀 공유 스코프의 기준값이라 서버에 저장한다.
+    let user = null
+    if (a.token) {
+      try {
+        const res = await fetch('/api/auth/profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            token: a.token,
+            name: name.trim(),
+            team: isSuper ? '' : team.trim(),
+          }),
+        })
+        const d = await res.json()
+        if (d.ok && d.user) {
+          user = d.user
+          localStorage.setItem('gnsoft.auth', JSON.stringify({ ...a, ...d.user }))
+        }
+      } catch {
+        /* 서버 실패 시 로컬 표시라도 저장 */
+      }
+    }
+    // 사이드바 표시용은 '회사 · 팀' 조합(기존과 동일).
+    const displayTeam = isSuper
+      ? ''
+      : [user?.company ?? a.company, (user?.team ?? team).trim()].filter(Boolean).join(' · ')
     const merged = saveSettings({
       ...(showModel ? { engine } : {}),
-      name: name.trim() || '사용자',
-      ...(isSuper ? {} : { team: team.trim() }),
+      name: user?.name || name.trim() || '사용자',
+      ...(isSuper ? {} : { team: displayTeam }),
       theme,
     })
     onSaved(merged) // 사이드바 프로필·인사말 즉시 갱신 + 테마 적용은 saveSettings 가 처리
@@ -106,14 +143,24 @@ export default function SettingsModal({ open, onClose, onSaved }) {
             </label>
             {!isSuper && (
               <label className="field">
-                직함 · 소속
+                팀
                 <input
                   type="text"
                   name="team"
-                  placeholder="예: 도로관리처 · 점검분석팀"
+                  list="settings-team-options"
+                  placeholder="회사 팀을 고르거나 새로 입력"
+                  autoComplete="off"
                   value={team}
                   onChange={(e) => setTeam(e.target.value)}
                 />
+                <datalist id="settings-team-options">
+                  {teamList.map((t) => (
+                    <option key={t} value={t} />
+                  ))}
+                </datalist>
+                <small className="field-hint">
+                  프로젝트 ‘팀 공유’는 이 팀 기준입니다. 같은 팀끼리 이름을 똑같이 맞춰주세요.
+                </small>
               </label>
             )}
             <label className="field">

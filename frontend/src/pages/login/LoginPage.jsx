@@ -12,6 +12,7 @@ export default function LoginPage() {
   // 로그인 폼
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPw, setShowPw] = useState(false) // 비밀번호 보기(눈 아이콘)
   // 재설정 폼
   const [resetEmail, setResetEmail] = useState('')
 
@@ -97,15 +98,27 @@ export default function LoginPage() {
             </label>
             <label className="field">
               비밀번호
-              <input
-                type="password"
-                name="password"
-                placeholder="비밀번호"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+              <div className="pw-wrap">
+                <input
+                  type={showPw ? 'text' : 'password'}
+                  name="password"
+                  placeholder="비밀번호"
+                  autoComplete="current-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="pw-toggle"
+                  aria-label={showPw ? '비밀번호 숨기기' : '비밀번호 보기'}
+                  aria-pressed={showPw}
+                  title={showPw ? '숨기기' : '보기'}
+                  onClick={() => setShowPw((v) => !v)}
+                >
+                  {showPw ? '🙈' : '👁'}
+                </button>
+              </div>
             </label>
             <button className="btn primary lg-submit" type="submit">
               로그인

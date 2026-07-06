@@ -162,6 +162,10 @@
   background: rgba(139, 92, 246, 0.16);
   color: #7c53e6;
 }
+.pj-vis.owner {
+  background: color-mix(in srgb, var(--text) 9%, transparent);
+  color: var(--text);
+}
 .pj-vis.mine {
   background: rgba(26, 165, 102, 0.16);
   color: var(--green);

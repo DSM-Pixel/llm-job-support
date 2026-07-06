@@ -25,7 +25,7 @@ export default function DetailView({ project, onBack, onEnter, onAddSource, onRe
               {(p.visibility || 'team') === 'team'
                 ? `👥 팀 공유${p.team ? ` · ${p.team}` : ''}`
                 : '🔒 개인'}
-              {p.owner_name ? ` · 만든이 ${p.owner_name}` : ''}
+              {p.owner_name ? ` · 👤 ${p.owner_name}` : ''}
             </small>
           </div>
         </div>

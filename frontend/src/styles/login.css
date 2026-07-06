@@ -137,6 +137,32 @@
   border-color: var(--blue);
 }
 
+/* 비밀번호 보기 토글(눈 아이콘) — 입력칸 오른쪽에 겹쳐 배치. */
+.pw-wrap {
+  position: relative;
+  display: block;
+}
+.pw-wrap input {
+  width: 100%;
+  padding-right: 42px !important;
+}
+.pw-toggle {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 6px;
+  border-radius: 8px;
+}
+.pw-toggle:hover {
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+}
+
 .req {
   color: var(--red);
 }

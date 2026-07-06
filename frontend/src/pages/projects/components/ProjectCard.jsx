@@ -19,11 +19,11 @@ export default function ProjectCard({ project: p, onEnter, onDelete, onOpen }) {
         <span className={`pj-vis ${isTeam ? 'team' : 'private'}`}>
           {isTeam ? `👥 팀 공유${p.team ? ` · ${p.team}` : ''}` : '🔒 개인'}
         </span>
+        {p.owner_name && <span className="pj-vis owner">👤 {p.owner_name}</span>}
         {p.mine && <span className="pj-vis mine">내 프로젝트</span>}
       </div>
       <small className="pj-card-meta">
-        {p.owner_name ? `만든이 ${p.owner_name} · ` : ''}소스 {p.source_count}개 · 검수{' '}
-        {p.approved}/{p.source_count}
+        소스 {p.source_count}개 · 검수 {p.approved}/{p.source_count}
       </small>
       <div className="pj-card-bar">
         <span style={{ width: `${p.progress}%` }} />
