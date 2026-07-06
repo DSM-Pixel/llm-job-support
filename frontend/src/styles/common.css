@@ -980,6 +980,49 @@ textarea {
   align-items: center;
 }
 
+/* 팀 선택 콤보박스(TeamCombo) — 입력칸은 기존 .field input 스타일을 그대로 상속하고,
+   그 아래로 회사 팀 목록을 드롭다운으로 띄운다(모달·폼 공용). */
+.field-combo {
+  position: relative;
+}
+.field-combo > input {
+  width: 100%;
+}
+.field-combo-list {
+  position: absolute;
+  z-index: 40;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.16);
+}
+.field-combo-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.field-combo-item:hover {
+  background: color-mix(in srgb, var(--blue) 12%, transparent);
+}
+.field-combo-item.is-new {
+  color: var(--blue);
+  font-weight: 700;
+}
+
 .modal-foot {
   display: flex;
   justify-content: flex-end;

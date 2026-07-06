@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getSettings, getProject, saveSettings, clearProject, getAuth } from '../lib/storage.js'
 import { toast } from '../lib/toast.js'
+import TeamCombo from '../components/TeamCombo.jsx'
 
 // 설정 모달 — 기존 common.js buildSettingsModal/openSettings/저장 로직 이식.
 // 이미지 탐지 모델은 프로젝트 안(작업 화면)에서만 노출, 슈퍼 어드민은 소속·직함 숨김.
@@ -144,20 +145,12 @@ export default function SettingsModal({ open, onClose, onSaved }) {
             {!isSuper && (
               <label className="field">
                 팀
-                <input
-                  type="text"
-                  name="team"
-                  list="settings-team-options"
-                  placeholder="회사 팀을 고르거나 새로 입력"
-                  autoComplete="off"
+                <TeamCombo
+                  teams={teamList}
                   value={team}
-                  onChange={(e) => setTeam(e.target.value)}
+                  onChange={setTeam}
+                  placeholder="회사 팀을 고르거나 새로 입력"
                 />
-                <datalist id="settings-team-options">
-                  {teamList.map((t) => (
-                    <option key={t} value={t} />
-                  ))}
-                </datalist>
                 <small className="field-hint">
                   프로젝트 ‘팀 공유’는 이 팀 기준입니다. 같은 팀끼리 이름을 똑같이 맞춰주세요.
                 </small>
