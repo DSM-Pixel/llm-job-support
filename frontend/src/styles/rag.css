@@ -1,0 +1,515 @@
+.rag-layout {
+  display: grid;
+  grid-template-columns: 360px minmax(0, 1fr);
+  min-height: calc(100vh - 54px);
+}
+
+.knowledge {
+  padding: 26px 22px;
+  border-right: 1px solid #e1e7f0;
+  background: var(--surface);
+}
+
+.knowledge h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 20px;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.kb-icon {
+  color: var(--blue);
+  font-size: 18px;
+}
+
+.kb-section {
+  margin-bottom: 18px;
+}
+
+.knowledge h3,
+.rag-content label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.knowledge h3::before,
+.rag-content label::before {
+  content: "";
+  width: 3px;
+  height: 20px;
+  border-radius: 999px;
+  background: var(--blue);
+}
+
+.knowledge h3 span,
+.rag-content label span {
+  color: var(--blue);
+}
+
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.toggle-row b {
+  color: var(--text);
+}
+
+.toggle-row p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.upload {
+  display: grid;
+  place-items: center;
+  min-height: 106px;
+  margin-bottom: 10px;
+  border-style: dashed;
+  border-color: var(--line);
+  box-shadow: none;
+  background: rgba(70, 96, 191, 0.035);
+  color: #7b879a;
+  cursor: pointer;
+  text-align: center;
+}
+
+.upload:hover {
+  border-color: var(--blue);
+  background: rgba(70, 96, 191, 0.07);
+}
+
+.upload-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.upload-icon {
+  color: #75849c;
+  font-size: 22px;
+}
+
+.upload b,
+.upload small {
+  display: block;
+}
+
+.upload small {
+  color: #a0abc0;
+}
+
+.index-actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+}
+
+.index-actions .primary {
+  width: 100%;
+}
+
+.index-actions .flat {
+  border-color: transparent;
+}
+
+.indexed {
+  margin-top: 12px;
+  padding: 11px 12px;
+  border-radius: 8px;
+  background: rgba(118, 130, 152, 0.1);
+  color: var(--muted);
+  font-weight: 800;
+}
+
+.search-line,
+.ask-line {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.search-line input,
+.ask-line input {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  outline: none;
+  color: var(--text);
+}
+
+.search-line button {
+  min-width: 54px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 800;
+}
+
+.file-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.file-list li {
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  color: var(--text);
+}
+
+.file-list i {
+  grid-row: span 2;
+  color: var(--blue);
+  font-style: normal;
+}
+
+.file-list b {
+  font-size: 14px;
+}
+
+.file-list small {
+  color: var(--muted);
+}
+
+.rag-content {
+  padding: 28px 34px;
+}
+
+.ask-box {
+  margin-bottom: 22px;
+}
+
+.ask-line {
+  grid-template-columns: minmax(0, 1fr) 136px;
+}
+
+.ask-line input {
+  min-height: 50px;
+  font-size: 16px;
+}
+
+.ask-line .btn {
+  min-height: 50px;
+  font-size: 16px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  color: var(--muted);
+}
+
+.answer {
+  margin-top: 0;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--blue); /* AI 답변임을 은은하게 강조 */
+  box-shadow: none;
+}
+
+.answer h3 {
+  color: var(--blue); /* 'AI 답변' 라벨 하이라이팅 */
+}
+
+.answer-head,
+.answer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.answer h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 18px;
+}
+
+.answer p {
+  margin: 18px 0;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #e7ecf4;
+  color: var(--text);
+  font-size: 17px;
+  line-height: 1.8;
+}
+
+.answer sup {
+  display: inline-grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border-radius: 5px;
+  background: rgba(118, 130, 152, 0.14);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.answer-actions small {
+  margin-left: auto;
+  color: #97a4ba;
+  font-weight: 700;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 24px 0 14px;
+  font-size: 24px;
+}
+
+.section-title small {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.source-list {
+  display: grid;
+  gap: 14px;
+}
+
+.source {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px 42px;
+  align-items: center;
+  gap: 14px;
+  min-height: 80px;
+  padding: 16px 18px;
+}
+
+.source b {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.source b span {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 7px;
+  background: rgba(118, 130, 152, 0.14);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.source p {
+  margin: 8px 0 0 34px;
+  color: #66738b;
+}
+
+.source i {
+  display: block;
+  width: 70px;
+  height: 6px;
+  justify-self: end;
+  border-radius: 999px;
+  background: #e6edf6;
+}
+
+.source i span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--cyan);
+}
+
+.source:nth-child(3) i span {
+  background: var(--blue);
+}
+
+.source em {
+  color: #69758b;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.kb-help {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.6;
+}
+
+/* 색인 전 선택된 문서(스테이징) 표시 */
+.staged-files {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: rgba(70, 96, 191, 0.06);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.staged-files[hidden] {
+  display: none;
+}
+
+.staged-files b {
+  color: var(--blue);
+}
+
+/* 전체 참고 파일 초기화 버튼(목록 아래) */
+.reset-all {
+  width: 100%;
+  margin-top: 12px;
+}
+
+/* 참고중인 파일 — 클릭하면 내용 열람, ✕로 삭제 */
+.file-list li {
+  position: relative;
+  cursor: pointer;
+  padding-right: 26px;
+}
+
+.file-list li:hover {
+  background: rgba(70, 96, 191, 0.07);
+  border-radius: 7px;
+}
+
+.file-del {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: #94a3b8;
+  font-weight: 800;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.file-list li:hover .file-del {
+  opacity: 1;
+}
+
+.file-del:hover {
+  background: #fdeaea;
+  color: var(--red);
+}
+
+.doc-body {
+  display: grid;
+  gap: 12px;
+  padding: 18px 20px 22px;
+}
+
+.doc-chunk {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.doc-no {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: rgba(70, 96, 191, 0.10);
+  color: var(--blue);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.doc-empty {
+  color: var(--muted);
+}
+
+/* 웹에서 찾아 넣기 — 선택형 결과 */
+.web-results {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.web-results:empty {
+  display: none;
+}
+
+.web-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.web-item input {
+  margin-top: 3px;
+}
+
+.web-item b {
+  font-size: 13px;
+}
+
+.web-item small {
+  display: block;
+  color: var(--blue);
+  font-size: 11px;
+}
+
+.web-item p {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.web-results .add-web {
+  width: 100%;
+  margin-top: 2px;
+}
+
+@media (max-width: 1200px) {
+  .rag-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .knowledge {
+    border-right: 0;
+    border-bottom: 1px solid #e1e7f0;
+  }
+}

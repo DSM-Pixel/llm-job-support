@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-// 입력 모달 — 기존 askInput 대체(프로젝트/소스 생성).
+// 입력 모달 — 프로젝트/소스 생성 등 공용.
 // fields: [{ name, label, type?: 'text'|'select', options?, placeholder?, default?, autoFocus? }]
 export function InputModal({ title, fields, onSubmit, onClose }) {
   const [values, setValues] = useState(() =>

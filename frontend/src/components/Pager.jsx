@@ -1,9 +1,11 @@
-// 페이지 이동 UI — 기존 projects.js renderPager 를 그대로 이식(같은 pj-page-* 클래스).
-export function Pager({ page, pages, total, onGo }) {
+// 페이지 이동 UI — 페이지 간 공용. 우측 안내문(info)만 페이지별로 다르게 준다.
+// 같은 pj-page-* 클래스를 재사용(기존 스타일 그대로).
+export function Pager({ page, pages, total, onGo, info }) {
   if (pages <= 1) return null
   const nums = []
   const to = Math.min(pages, Math.max(1, page - 2) + 4)
   for (let i = Math.max(1, to - 4); i <= to; i += 1) nums.push(i)
+  const infoText = info ?? `${(total ?? 0).toLocaleString('ko-KR')}개`
 
   return (
     <nav className="pj-pager">
@@ -23,7 +25,7 @@ export function Pager({ page, pages, total, onGo }) {
         ›
       </button>
       <span className="pj-page-info">
-        프로젝트 {total.toLocaleString('ko-KR')}개 · {page}/{pages}쪽
+        {infoText} · {page}/{pages}쪽
       </span>
     </nav>
   )

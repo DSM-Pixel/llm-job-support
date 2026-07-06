@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { api, enter } from './authApi.js'
 import DocModal from './DocModal.jsx'
-
-const norm = (s) => (s || '').replace(/\s+/g, '').toLowerCase()
+import CompanyCombobox from './components/CompanyCombobox.jsx'
+import ConsentSection from './components/ConsentSection.jsx'
+import VerifyPanel from './components/VerifyPanel.jsx'
 
 // 회원가입 모달 — 입력 폼 ↔ 이메일 인증 단계 전환, 회사 검색 콤보박스, 필수 동의.
 export default function SignupModal({ open, onClose }) {
@@ -20,17 +21,10 @@ export default function SignupModal({ open, onClose }) {
   const [terms, setTerms] = useState(false)
   const [privacy, setPrivacy] = useState(false)
   const [marketing, setMarketing] = useState(false)
-  const allChecked = terms && privacy && marketing
 
-  // 회사 검색 콤보박스
-  const [compQuery, setCompQuery] = useState('')
-  const [comboItems, setComboItems] = useState([])
-  const [comboOpen, setComboOpen] = useState(false)
+  // 회사 선택 결과(콤보박스가 알려준다)
   const [selectedCompanyId, setSelectedCompanyId] = useState('')
   const [newCompanyName, setNewCompanyName] = useState('')
-  const [hintMode, setHintMode] = useState('default') // 'default' | 'new' | 'selected'
-  const comboRef = useRef(null)
-  const timerRef = useRef(null)
 
   // 약관 전문 모달
   const [docModal, setDocModal] = useState(null) // null | 'terms' | 'privacy'
@@ -48,56 +42,6 @@ export default function SignupModal({ open, onClose }) {
       setSignupAlert(null)
     }
   }, [open])
-
-  // 콤보 리스트 바깥 클릭 시 닫기.
-  useEffect(() => {
-    const onDoc = (e) => {
-      if (comboRef.current && !comboRef.current.contains(e.target)) setComboOpen(false)
-    }
-    document.addEventListener('click', onDoc)
-    return () => document.removeEventListener('click', onDoc)
-  }, [])
-
-  // ── 회사 검색 ── 편집하면 이전 선택은 무효화(정확히 고른 것만 유효).
-  const runSearch = async (q) => {
-    setSelectedCompanyId('')
-    setNewCompanyName('')
-    setHintMode('default')
-    try {
-      const res = await fetch(`/api/companies?q=${encodeURIComponent((q || '').trim())}`)
-      const d = await res.json()
-      const items = d.companies || []
-      const query = (q || '').trim()
-      const exact = items.some((x) => norm(x.name) === norm(query))
-      setComboItems(items)
-      // 입력값과 (정규화) 일치하는 회사가 없으면 '새로 등록' 항목을 준다.
-      setComboOpen(items.length > 0 || (!!query && !exact))
-    } catch {
-      setComboOpen(false)
-    }
-  }
-
-  const onCompInput = (v) => {
-    setCompQuery(v)
-    clearTimeout(timerRef.current)
-    timerRef.current = setTimeout(() => runSearch(v), 160)
-  }
-
-  const pickExisting = (x) => {
-    setSelectedCompanyId(String(x.id))
-    setNewCompanyName('')
-    setCompQuery(x.name)
-    setHintMode('selected')
-    setComboOpen(false)
-  }
-
-  const pickNew = () => {
-    // 새 회사 등록 = 관리자 신청.
-    setNewCompanyName(compQuery.trim())
-    setSelectedCompanyId('')
-    setHintMode('new')
-    setComboOpen(false)
-  }
 
   // ── 동의(전체 동의 연동) ──
   const toggleAll = (v) => {
@@ -185,27 +129,6 @@ export default function SignupModal({ open, onClose }) {
     }
   }
 
-  // 회사 힌트 렌더링.
-  const hint = () => {
-    if (hintMode === 'selected') return '✓ 회사를 선택했습니다.'
-    if (hintMode === 'new') {
-      return (
-        <>
-          ✓ 새 회사 <b>‘{newCompanyName}’</b> 등록 — 승인 후 관리자 권한이 활성화됩니다.
-        </>
-      )
-    }
-    return (
-      <>
-        회사를 검색해 선택하세요. 목록에 없으면 <b>새로 등록</b>해 관리자로 신청할 수 있습니다.
-      </>
-    )
-  }
-
-  const q = compQuery.trim()
-  const exactMatch = comboItems.some((x) => norm(x.name) === norm(q))
-  const showNew = !!q && !exactMatch
-
   return (
     <>
       <div
@@ -285,46 +208,20 @@ export default function SignupModal({ open, onClose }) {
                     onChange={(e) => setPassword2(e.target.value)}
                   />
                 </label>
-                <label className="field lg-span2">
-                  <span className="field-cap">
-                    회사·기관 <span className="req">*</span>
-                  </span>
-                  <div className="lg-combo" ref={comboRef}>
-                    <input
-                      type="text"
-                      name="company_search"
-                      placeholder="회사 이름을 검색하세요"
-                      autoComplete="off"
-                      value={compQuery}
-                      onChange={(e) => onCompInput(e.target.value)}
-                      onFocus={() => runSearch(compQuery)}
-                    />
-                    <div className="lg-combo-list" hidden={!comboOpen}>
-                      {comboItems.map((x) => (
-                        <button
-                          key={x.id}
-                          type="button"
-                          className="lg-combo-item"
-                          onClick={() => pickExisting(x)}
-                        >
-                          {x.name}
-                        </button>
-                      ))}
-                      {showNew && (
-                        <button
-                          type="button"
-                          className="lg-combo-item lg-combo-new"
-                          onClick={pickNew}
-                        >
-                          <b>‘{q}’</b> 새 회사로 등록 <span>· 관리자 신청</span>
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  <small className="field-hint" data-role="company-hint">
-                    {hint()}
-                  </small>
-                </label>
+                <CompanyCombobox
+                  onSelectExisting={(id) => {
+                    setSelectedCompanyId(id)
+                    setNewCompanyName('')
+                  }}
+                  onSelectNew={(companyName) => {
+                    setNewCompanyName(companyName)
+                    setSelectedCompanyId('')
+                  }}
+                  onClear={() => {
+                    setSelectedCompanyId('')
+                    setNewCompanyName('')
+                  }}
+                />
                 <label className="field lg-span2">
                   부서·직함
                   <input
@@ -337,59 +234,16 @@ export default function SignupModal({ open, onClose }) {
                 </label>
               </div>
 
-              <div className="lg-consent">
-                <label className="lg-check all">
-                  <input
-                    type="checkbox"
-                    data-consent="all"
-                    checked={allChecked}
-                    onChange={(e) => toggleAll(e.target.checked)}
-                  />
-                  <span>
-                    <b>전체 동의</b> (선택 항목 포함)
-                  </span>
-                </label>
-                <hr />
-                <label className="lg-check">
-                  <input
-                    type="checkbox"
-                    data-consent="terms"
-                    checked={terms}
-                    onChange={(e) => setTerms(e.target.checked)}
-                  />
-                  <span>
-                    <em className="req-tag">[필수]</em> 서비스 이용약관 동의
-                  </span>
-                  <button className="lg-view" type="button" onClick={() => setDocModal('terms')}>
-                    보기
-                  </button>
-                </label>
-                <label className="lg-check">
-                  <input
-                    type="checkbox"
-                    data-consent="privacy"
-                    checked={privacy}
-                    onChange={(e) => setPrivacy(e.target.checked)}
-                  />
-                  <span>
-                    <em className="req-tag">[필수]</em> 개인정보 수집·이용 동의
-                  </span>
-                  <button className="lg-view" type="button" onClick={() => setDocModal('privacy')}>
-                    보기
-                  </button>
-                </label>
-                <label className="lg-check">
-                  <input
-                    type="checkbox"
-                    data-consent="marketing"
-                    checked={marketing}
-                    onChange={(e) => setMarketing(e.target.checked)}
-                  />
-                  <span>
-                    <em className="opt-tag">[선택]</em> 서비스 소식·알림 수신 동의
-                  </span>
-                </label>
-              </div>
+              <ConsentSection
+                terms={terms}
+                privacy={privacy}
+                marketing={marketing}
+                onToggleAll={toggleAll}
+                onTerms={setTerms}
+                onPrivacy={setPrivacy}
+                onMarketing={setMarketing}
+                onView={setDocModal}
+              />
 
               <button className="btn primary lg-submit" type="submit">
                 동의하고 가입하기
@@ -403,60 +257,17 @@ export default function SignupModal({ open, onClose }) {
             </form>
 
             {/* 이메일 인증 단계(코드 입력) */}
-            <div className="lg-verify" data-role="verify" hidden={panel !== 'verify'}>
-              <div
-                className={'lg-alert' + (verifyAlert?.ok ? ' ok' : '')}
-                data-role="verify-alert"
-                hidden={!verifyAlert}
-              >
-                {verifyAlert?.msg}
-              </div>
-              <p className="lg-verify-desc">
-                입력하신 이메일 <b data-role="verify-email">{pendingEmail}</b> 로 6자리 인증 코드를
-                보냈습니다.
-                <br />
-                메일함(스팸함 포함)을 확인해 코드를 입력해주세요.
-              </p>
-              <div className="lg-alert ok lg-devcode" data-role="devcode" hidden={!devCode}>
-                데모용 코드(메일 미설정): {devCode}
-              </div>
-              <label className="field">
-                <span className="field-cap">인증 코드</span>
-                <input
-                  type="text"
-                  name="verify_code"
-                  inputMode="numeric"
-                  maxLength={6}
-                  placeholder="6자리 숫자"
-                  autoComplete="one-time-code"
-                  value={verifyCode}
-                  onChange={(e) => setVerifyCode(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && submitVerify()}
-                />
-              </label>
-              <button
-                className="btn primary lg-submit"
-                type="button"
-                data-role="verify-btn"
-                onClick={submitVerify}
-              >
-                인증하고 가입 완료
-              </button>
-              <p className="lg-hint">
-                <button className="lg-switch" type="button" data-role="resend" onClick={resendCode}>
-                  코드 재전송
-                </button>
-                <span className="lg-dot">·</span>
-                <button
-                  className="lg-switch"
-                  type="button"
-                  data-role="verify-back"
-                  onClick={() => setPanel('form')}
-                >
-                  이메일 다시 입력
-                </button>
-              </p>
-            </div>
+            <VerifyPanel
+              hidden={panel !== 'verify'}
+              pendingEmail={pendingEmail}
+              verifyCode={verifyCode}
+              verifyAlert={verifyAlert}
+              devCode={devCode}
+              onCodeChange={setVerifyCode}
+              onSubmit={submitVerify}
+              onResend={resendCode}
+              onBack={() => setPanel('form')}
+            />
           </div>
         </div>
       </div>

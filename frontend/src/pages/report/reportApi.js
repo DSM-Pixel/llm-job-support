@@ -1,0 +1,15 @@
+import { api } from '../../lib/api.js'
+
+// 보고서 생성/수정 엔드포인트 — 기존 report.js 가 쓰던 경로 그대로.
+// web=false 면 빠른 예시, web=true 면 인터넷 웹 검색(Gemini 그라운딩) 기반.
+export const genReport = (body, web) =>
+  api(web ? '/api/report/web' : '/api/report', body)
+
+// 내 웹 활동을 날짜 범위로 필터해 분석·통계 보고서 생성.
+export const genActivity = (body) => api('/api/report/activity', body)
+
+// RAG 검색 결과를 그대로 이어받아 보고서로 생성.
+export const genFromRag = (body) => api('/api/report/from-rag', body)
+
+// AI 대화 패널(보고서 편집기) — 수정 지시/질문 처리.
+export const reviseReport = (body) => api('/api/report/revise', body)

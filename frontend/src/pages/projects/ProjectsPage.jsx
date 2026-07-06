@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api, del } from '../../lib/api.js'
 import { toast } from '../../lib/toast.js'
-import { relTime } from '../../lib/time.js'
 import { getSettings, setProject } from '../../lib/storage.js'
-import { Pager } from './Pager.jsx'
-import { ConfirmModal, InputModal } from './modals.jsx'
+import { Pager } from '../../components/Pager.jsx'
+import { ConfirmModal, InputModal } from '../../components/Modal.jsx'
+import ProjectCard from './components/ProjectCard.jsx'
+import DetailView from './components/DetailView.jsx'
 
 const PAGE_SIZE = 24
 const EMOJIS = ['📁', '🛣️', '🏗️', '📹', '📊', '🚧', '🧭', '🗂️']
-const REVIEW_TONE = { 대기: 'wait', 승인: 'ok', 반려: 'no' }
 
 const reviewer = () => getSettings().name || '검수자'
 
@@ -185,43 +185,13 @@ export default function ProjectsPage() {
                 <span className="pj-new-plus">+</span>새 프로젝트 만들기
               </button>
               {gallery.projects.map((p) => (
-                <article
-                  className="pj-card"
+                <ProjectCard
                   key={p.id}
-                  title="이 프로젝트로 들어가기"
-                  onClick={() => enterProject(p)}
-                >
-                  <button
-                    className="pj-card-del"
-                    title="프로젝트 삭제"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setModal({ kind: 'delete', pid: p.id })
-                    }}
-                  >
-                    ✕
-                  </button>
-                  <div className="pj-card-emoji">{p.emoji}</div>
-                  <b className="pj-card-name">{p.name}</b>
-                  <small className="pj-card-meta">
-                    소스 {p.source_count}개 · 검수 {p.approved}/{p.source_count}
-                  </small>
-                  <div className="pj-card-bar">
-                    <span style={{ width: `${p.progress}%` }} />
-                  </div>
-                  <div className="pj-card-foot">
-                    <small className="pj-card-progress">검수 진행률 {p.progress}%</small>
-                    <button
-                      className="pj-card-manage"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        openProject(p.id)
-                      }}
-                    >
-                      소스·검수 →
-                    </button>
-                  </div>
-                </article>
+                  project={p}
+                  onEnter={enterProject}
+                  onDelete={(pid) => setModal({ kind: 'delete', pid })}
+                  onOpen={openProject}
+                />
               ))}
             </div>
             <Pager
@@ -229,6 +199,7 @@ export default function ProjectsPage() {
               pages={gallery.pages}
               total={gallery.total}
               onGo={loadGallery}
+              info={`프로젝트 ${gallery.total.toLocaleString('ko-KR')}개`}
             />
           </section>
         ) : (
@@ -267,75 +238,5 @@ export default function ProjectsPage() {
         />
       )}
     </div>
-  )
-}
-
-// ── 상세(소스 + 검수) ──
-function DetailView({ project, onBack, onEnter, onAddSource, onReview }) {
-  const p = project
-  return (
-    <section className="pj-detail">
-      <div className="pj-detail-bar">
-        <button className="pj-back" type="button" onClick={onBack}>
-          ← 프로젝트 목록
-        </button>
-        <button className="btn primary pj-enter" type="button" onClick={() => onEnter(p)}>
-          이 프로젝트로 들어가기 →
-        </button>
-      </div>
-      <div className="pj-detail-head">
-        <div className="pj-detail-title">
-          <span className="pj-emoji">{p.emoji}</span>
-          <h2>{p.name}</h2>
-        </div>
-        <div className="pj-progress-wrap">
-          <span className="pj-progress-label">
-            검수 {p.approved}/{p.source_count} · {p.progress}%
-          </span>
-          <div className="pj-progress">
-            <span style={{ width: `${p.progress}%` }} />
-          </div>
-        </div>
-      </div>
-      <div className="pj-src-toolbar">
-        <h3>소스 · 검수</h3>
-        <button className="btn primary pj-add-src" type="button" onClick={onAddSource}>
-          + 소스 추가
-        </button>
-      </div>
-      <div className="pj-src-list">
-        {(p.sources || []).length === 0 ? (
-          <p className="pj-empty">아직 소스가 없습니다. ‘+ 소스 추가’로 데이터를 넣어보세요.</p>
-        ) : (
-          p.sources.map((s) => {
-            const tone = REVIEW_TONE[s.review] || 'wait'
-            const who = s.reviewer ? `${s.reviewer} · ${relTime(s.reviewed_at)}` : '미검수'
-            const rvBtn = (st, label, cls) => (
-              <button
-                className={`pj-rv-btn ${cls}${s.review === st ? ' on' : ''}`}
-                onClick={() => onReview(s.id, st)}
-              >
-                {label}
-              </button>
-            )
-            return (
-              <div className="pj-src" key={s.id}>
-                <span className="pj-src-kind">{s.kind}</span>
-                <div className="pj-src-main">
-                  <b>{s.name}</b>
-                  <small>검수자 {who}</small>
-                </div>
-                <span className={`pj-badge ${tone}`}>{s.review}</span>
-                <div className="pj-rv-btns">
-                  {rvBtn('승인', '승인', 'ok')}
-                  {rvBtn('반려', '반려', 'no')}
-                  {rvBtn('대기', '대기', 'wait')}
-                </div>
-              </div>
-            )
-          })
-        )}
-      </div>
-    </section>
   )
 }
