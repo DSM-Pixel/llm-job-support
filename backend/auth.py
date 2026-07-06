@@ -78,6 +78,8 @@ def _init(conn: sqlite3.Connection) -> None:
         ("is_super", "INTEGER DEFAULT 0"),
         ("admin_requested", "INTEGER DEFAULT 0"),
         ("company_id", "TEXT"),
+        # 검수자(팀장) — 회사 대표(대빵)가 지정. 검수(승인/반려) 권한을 갖되 멤버 관리는 못 함.
+        ("is_reviewer", "INTEGER DEFAULT 0"),
     ):
         if col not in cols:
             conn.execute(f"ALTER TABLE users ADD COLUMN {col} {ddl}")
@@ -116,7 +118,7 @@ def _init(conn: sqlite3.Connection) -> None:
     # 불변식: 슈퍼 어드민은 '순수 서비스 운영자' — 회사 어드민을 겸하지 않고
     # 소속(회사)·직함도 갖지 않는다.
     conn.execute(
-        "UPDATE users SET is_admin = 0, company_id = NULL, company = '', team = '' "
+        "UPDATE users SET is_admin = 0, is_reviewer = 0, company_id = NULL, company = '', team = '' "
         "WHERE is_super = 1"
     )
 
@@ -257,6 +259,7 @@ def _user_payload(row: sqlite3.Row) -> dict:
         "team": row["team"] or "",
         "marketing": bool(row["marketing"]),
         "is_admin": bool(row["is_admin"]),
+        "is_reviewer": bool(row["is_reviewer"]),
         "is_super": bool(row["is_super"]),
         "active": bool(row["active"]),
         "company_id": row["company_id"] or "",
@@ -515,7 +518,7 @@ def session_user(token: str) -> dict | None:
 # 멤버 조회 공통 컬럼(비밀번호 해시 제외).
 _MEMBER_COLS = (
     "id, email, name, company, company_id, team, marketing, terms_at, privacy_at, "
-    "created, is_admin, is_super, active, admin_requested"
+    "created, is_admin, is_reviewer, is_super, active, admin_requested"
 )
 
 
@@ -580,6 +583,48 @@ def set_admin(user_id_val: str, is_admin: bool) -> None:
         conn.execute(
             "UPDATE users SET is_admin = ?, admin_requested = 0 WHERE id = ?",
             (1 if is_admin else 0, user_id_val),
+        )
+
+
+def promote_company_admin(user_id_val: str) -> dict:
+    """회사 대표(대빵) 승격 — 회사당 1명 원칙으로 같은 회사 기존 대표는 자동 이임(강등).
+
+    대상의 company_id 를 찾아 그 회사의 다른 is_admin 을 모두 팀원으로 내리고,
+    대상만 대표(is_admin=1)로 세운다. company_id 가 없으면 대상만 승격.
+    반환: {"company_id": cid, "demoted": [내려간 대표 id...]}
+    """
+    with _lock, _connect() as conn:
+        _init(conn)
+        row = conn.execute("SELECT company_id FROM users WHERE id = ?", (user_id_val,)).fetchone()
+        cid = (row["company_id"] if row else "") or ""
+        demoted: list[str] = []
+        if cid:
+            for r in conn.execute(
+                "SELECT id FROM users WHERE company_id = ? AND is_admin = 1 AND id != ?",
+                (cid, user_id_val),
+            ).fetchall():
+                demoted.append(r["id"])
+            # 기존 대표 이임 — 대표직만 내린다(검수자 자격은 유지하지 않고 팀원으로).
+            conn.execute(
+                "UPDATE users SET is_admin = 0, is_reviewer = 0 "
+                "WHERE company_id = ? AND is_admin = 1 AND id != ?",
+                (cid, user_id_val),
+            )
+        # 대표는 검수 권한을 겸하므로 별도 is_reviewer 플래그는 두지 않는다.
+        conn.execute(
+            "UPDATE users SET is_admin = 1, is_reviewer = 0, admin_requested = 0 WHERE id = ?",
+            (user_id_val,),
+        )
+    return {"company_id": cid, "demoted": demoted}
+
+
+def set_reviewer(user_id_val: str, is_reviewer: bool) -> None:
+    """검수자(팀장) 지정/해제 — 회사 대표(대빵)가 자기 회사 팀원에게 검수 권한을 준다."""
+    with _lock, _connect() as conn:
+        _init(conn)
+        conn.execute(
+            "UPDATE users SET is_reviewer = ? WHERE id = ?",
+            (1 if is_reviewer else 0, user_id_val),
         )
 
 

@@ -44,7 +44,8 @@ export function MemberDetailModal({ detail, onClose }) {
             <div className="ad-dl">
               <span>권한</span>
               <b>
-                {m.is_admin ? '관리자' : '일반'} · {m.active ? '활성' : '비활성'}
+                {m.is_super ? '슈퍼' : m.is_admin ? '대표' : m.is_reviewer ? '검수자' : '팀원'} ·{' '}
+                {m.active ? '활성' : '비활성'}
               </b>
             </div>
             <div className="ad-dl">

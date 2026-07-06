@@ -14,6 +14,7 @@ import {
   resolveRequest as apiResolveRequest,
   fetchMember,
   setMemberStatus,
+  setMemberReviewer,
 } from './adminApi.js'
 
 const PAGE_SIZE = 20
@@ -108,6 +109,21 @@ export default function AdminPage() {
     [runStatus],
   )
 
+  // ── 검수자(팀장) 지정/해제 ──
+  const setReviewer = useCallback(
+    async (uid, makeReviewer, name = '') => {
+      try {
+        const r = await setMemberReviewer(uid, makeReviewer)
+        if (!r.ok) return toast(r.error || '변경에 실패했습니다')
+        toast(makeReviewer ? `${name} 님을 검수자로 지정했습니다` : `${name} 님의 검수자 권한을 해제했습니다`)
+        load()
+      } catch {
+        /* toast in api() */
+      }
+    },
+    [load],
+  )
+
   // ── 승인/반려 ──
   const resolveRequest = useCallback(
     async (uid, approve) => {
@@ -198,6 +214,7 @@ export default function AdminPage() {
               isSuper={isSuper}
               onDetail={openDetail}
               onToggle={toggleActive}
+              onReviewer={setReviewer}
             />
             <Pager
               page={data.page || 1}

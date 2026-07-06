@@ -27,6 +27,7 @@ export default function ProjectsPage() {
   const [detail, setDetail] = useState(null) // 상세 프로젝트(소스 포함)
   const [modal, setModal] = useState(null) // { kind: 'new' | 'source' | 'delete', pid? }
   const [adminLink, setAdminLink] = useState(false)
+  const [canReview, setCanReview] = useState(false) // 검수(승인/반려) 권한 = 대표 ∨ 검수자
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [, bumpProfile] = useState(0) // 설정 저장 후 아바타 이니셜 갱신용 리렌더
 
@@ -150,6 +151,7 @@ export default function ProjectsPage() {
             return
           }
           setAdminLink(!!me.user.is_admin)
+          setCanReview(!!me.user.is_admin || !!me.user.is_reviewer)
         }
       } catch {
         /* 서버 미연결 시 버튼 숨김 유지 */
@@ -225,7 +227,7 @@ export default function ProjectsPage() {
           </section>
         ) : (
           detail && <DetailView project={detail} onBack={showGallery} onEnter={enterProject}
-            onAddSource={() => setModal({ kind: 'source' })} onReview={setReview} canReview={adminLink} />
+            onAddSource={() => setModal({ kind: 'source' })} onReview={setReview} canReview={canReview} />
         )}
       </main>
 

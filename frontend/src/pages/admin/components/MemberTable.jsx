@@ -11,7 +11,7 @@ function StatusBadge({ active }) {
 }
 
 // 멤버 표 — 기존 renderRows + 표 헤더/빈 안내 이식. 슈퍼는 회사 컬럼 노출(is-super).
-export function MemberTable({ members, meId, isSuper, onDetail, onToggle }) {
+export function MemberTable({ members, meId, isSuper, onDetail, onToggle, onReviewer }) {
   return (
     <>
       <div className="ad-table-wrap">
@@ -42,7 +42,14 @@ export function MemberTable({ members, meId, isSuper, onDetail, onToggle }) {
                       <span className="ad-avatar">{(m.name || '?').slice(-2)}</span>
                       <div className="ad-member-txt">
                         <b>
-                          {m.name} {m.is_admin && <span className="ad-tag">관리자</span>}
+                          {m.name}{' '}
+                          {m.is_super ? (
+                            <span className="ad-tag">슈퍼</span>
+                          ) : m.is_admin ? (
+                            <span className="ad-tag">대표</span>
+                          ) : m.is_reviewer ? (
+                            <span className="ad-tag rv">검수자</span>
+                          ) : null}
                           {isMe && <span className="ad-tag me">나</span>}
                         </b>
                         <small>{m.email}</small>
@@ -70,6 +77,16 @@ export function MemberTable({ members, meId, isSuper, onDetail, onToggle }) {
                     <button className="ad-btn" onClick={() => onDetail(m.id)}>
                       상세
                     </button>
+                    {/* 검수자 지정/해제 — 팀원 대상만(대표·슈퍼·본인 제외). */}
+                    {onReviewer && !isMe && !m.is_admin && !m.is_super && (
+                      <button
+                        className={`ad-btn ${m.is_reviewer ? 'rv-on' : 'rv'}`}
+                        onClick={() => onReviewer(m.id, !m.is_reviewer, m.name)}
+                        title="검수(승인/반려) 권한을 주거나 회수합니다"
+                      >
+                        {m.is_reviewer ? '검수자 해제' : '검수자 지정'}
+                      </button>
+                    )}
                     {/* 본인은 비활성화 불가 → 토글 숨김. */}
                     {!isMe && (
                       <button

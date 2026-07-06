@@ -27,6 +27,15 @@ export function setMemberStatus(userId, active) {
   return api('/api/admin/member/status', { token: authToken(), user_id: userId, active })
 }
 
+// 검수자(팀장) 지정/해제 — 대표(대빵)·슈퍼만, 동일 회사 팀원 대상.
+export function setMemberReviewer(userId, isReviewer) {
+  return api('/api/admin/member/reviewer', {
+    token: authToken(),
+    user_id: userId,
+    is_reviewer: isReviewer,
+  })
+}
+
 // 가입일 등 초 단위 타임스탬프 → 'YYYY.M.D'. 기존 admin.js fmtDate 이식.
 export function fmtDate(sec) {
   if (!sec) return '—'

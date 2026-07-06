@@ -1,9 +1,10 @@
 """어드민 — 멤버 기록·상태 관리 + 관리자 신청 승인.
 
-권한 3단계:
-  - 슈퍼 어드민(is_super): 전체 회사·멤버 조회, 관리자 신청 승인/반려, 누구든 상태 변경.
-  - 회사 어드민(is_admin): 자기 회사(company_id) 멤버만 조회·상태 변경.
-  - 일반: 접근 불가.
+권한 계층:
+  - 슈퍼 어드민(is_super): 전체 회사·멤버 조회, 회사 대표(대빵) 승인/반려(회사당 1명), 누구든 상태 변경.
+  - 회사 대표·대빵(is_admin): 자기 회사(company_id) 멤버 조회·상태 변경 + 검수자(계급) 지정.
+  - 검수자(is_reviewer): 소스 검수(승인/반려)만 가능(멤버 관리·어드민 페이지 접근 불가).
+  - 팀원(일반): 작업만. 어드민 접근 불가.
 
 접근 통제는 모든 함수에서 토큰→권한→active 를 서버에서 재검증한다.
 비밀번호 해시는 어떤 응답에도 포함하지 않는다.
@@ -55,6 +56,7 @@ def _member_view(r: dict, st: dict) -> dict:
         "team": r["team"] or "",
         "created": r["created"],
         "is_admin": bool(r["is_admin"]),
+        "is_reviewer": bool(r["is_reviewer"]),
         "is_super": bool(r["is_super"]),
         "active": bool(r["active"]),
         "consent": bool(r["terms_at"]) and bool(r["privacy_at"]),
@@ -124,14 +126,38 @@ def list_requests(token: str) -> dict:
 
 
 def resolve_request(token: str, user_id_val: str, approve: bool) -> dict:
-    """관리자 신청 승인(is_admin 부여) 또는 반려(신청만 해제). 슈퍼 어드민 전용."""
+    """회사 대표(대빵) 신청 승인/반려 — 슈퍼 어드민 전용.
+
+    승인 시 회사당 1명 원칙으로 같은 회사 기존 대표는 자동 이임(강등)한다.
+    반려는 신청 플래그만 해제.
+    """
     if not _super(token):
         return _DENY
     member = auth.get_member(user_id_val)
     if not member:
         return _DENY
-    auth.set_admin(user_id_val, approve)
-    return {"ok": True, "approved": bool(approve)}
+    if approve:
+        res = auth.promote_company_admin(user_id_val)
+        return {"ok": True, "approved": True, "demoted": res.get("demoted", [])}
+    auth.set_admin(user_id_val, False)
+    return {"ok": True, "approved": False}
+
+
+def set_member_reviewer(token: str, user_id_val: str, is_reviewer: bool) -> dict:
+    """검수자(팀장) 지정/해제 — 회사 대표(대빵)·슈퍼만. 자기 회사 팀원에게 검수 권한 부여.
+
+    다른 대표/슈퍼 계정의 계급은 건드릴 수 없다(대표 승계는 슈퍼의 신청 승인으로만).
+    """
+    actor = _admin(token)
+    if not actor:
+        return _DENY
+    member = auth.get_member(user_id_val)
+    if not _can_manage(actor, member):
+        return _DENY
+    if member["is_admin"] or member["is_super"]:
+        return {"ok": False, "error": "대표·슈퍼 계정의 계급은 변경할 수 없습니다."}
+    auth.set_reviewer(user_id_val, is_reviewer)
+    return {"ok": True, "is_reviewer": bool(is_reviewer)}
 
 
 def member_detail(token: str, user_id_val: str) -> dict:
@@ -152,6 +178,7 @@ def member_detail(token: str, user_id_val: str) -> dict:
             "team": member["team"] or "",
             "created": member["created"],
             "is_admin": bool(member["is_admin"]),
+            "is_reviewer": bool(member["is_reviewer"]),
             "is_super": bool(member["is_super"]),
             "active": bool(member["active"]),
             "consent": bool(member["terms_at"]) and bool(member["privacy_at"]),

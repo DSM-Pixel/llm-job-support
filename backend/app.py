@@ -276,6 +276,12 @@ class AdminRequestIn(BaseModel):
     approve: bool = True
 
 
+class AdminReviewerIn(BaseModel):
+    token: str = ""
+    user_id: str = ""
+    is_reviewer: bool = True
+
+
 # ── API 라우트 ───────────────────────────────────────────────────────
 @app.get("/api/health")
 def health() -> dict:
@@ -461,8 +467,14 @@ def admin_requests(body: AdminTokenIn) -> dict:
 
 @app.post("/api/admin/request/resolve")
 def admin_request_resolve(body: AdminRequestIn) -> dict:
-    """관리자 신청 승인(is_admin 부여)/반려(슈퍼 어드민 전용)."""
+    """회사 대표(대빵) 승인(회사당 1명·기존 대표 이임)/반려(슈퍼 어드민 전용)."""
     return admin.resolve_request(body.token, body.user_id, body.approve)
+
+
+@app.post("/api/admin/member/reviewer")
+def admin_member_reviewer(body: AdminReviewerIn) -> dict:
+    """검수자(팀장) 지정/해제 — 회사 대표(대빵)·슈퍼만, 동일 회사 팀원 대상."""
+    return admin.set_member_reviewer(body.token, body.user_id, body.is_reviewer)
 
 
 @app.post("/api/query")
@@ -696,9 +708,9 @@ def review_set(body: ReviewIn) -> dict:
     actor = auth.session_user(body.token)
     if not actor or not actor.get("active"):
         return {"error": "로그인이 필요합니다.", "code": "unauthorized"}
-    if not (actor.get("is_admin") or actor.get("is_super")):
-        return {"error": "검수(승인·반려)는 관리자만 할 수 있습니다.", "code": "forbidden"}
-    return projects.set_review(body.source_id, body.status, actor.get("name") or "관리자") or {
+    if not (actor.get("is_admin") or actor.get("is_super") or actor.get("is_reviewer")):
+        return {"error": "검수(승인·반려)는 검수자·대표만 할 수 있습니다.", "code": "forbidden"}
+    return projects.set_review(body.source_id, body.status, actor.get("name") or "검수자") or {
         "error": "invalid"
     }
 
