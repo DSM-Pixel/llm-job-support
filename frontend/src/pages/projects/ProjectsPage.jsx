@@ -223,7 +223,11 @@ export default function ProjectsPage() {
                 질의·검색·라벨링·보고서·기록이 따로 관리됩니다.
               </p>
             </div>
-            <h3 className="pj-group-title">✏️ 내가 편집할 수 있는 프로젝트</h3>
+            {/* '편집 가능' 제목은 열람만 구역이 있을 때(대표 등)만 — 일반 유저는 편집 가능만
+                있으므로 제목 없이 프로젝트만 보여준다. */}
+            {gallery.projects.some((p) => !p.editable) && (
+              <h3 className="pj-group-title">✏️ 내가 편집할 수 있는 프로젝트</h3>
+            )}
             <div className="pj-grid">
               <button className="pj-card pj-new" onClick={() => setModal({ kind: 'new' })}>
                 <span className="pj-new-plus">+</span>새 프로젝트 만들기
