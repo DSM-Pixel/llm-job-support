@@ -44,12 +44,14 @@ export default function HistoryModal({ open, onClose }) {
   const [selected, setSelected] = useState(() => new Set())
   const [confirm, setConfirm] = useState(false) // 삭제 확인 모달
   const [lightbox, setLightbox] = useState('') // 라이트박스 이미지 src
+  const [filter, setFilter] = useState('all') // 'all' | 'report' — 보고서 문서만 보기
 
   // 열 때마다 목록 갱신 + 선택 초기화.
   useEffect(() => {
     if (open) {
       setTick((t) => t + 1)
       setSelected(new Set())
+      setFilter('all')
     }
   }, [open])
 
@@ -68,6 +70,9 @@ export default function HistoryModal({ open, onClose }) {
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const rows = useMemo(() => buildRows(), [tick])
+  const reportCount = useMemo(() => rows.filter((r) => r.report).length, [rows])
+  // 필터 적용: '보고서 문서'면 report 데이터가 있는 행만.
+  const shown = filter === 'report' ? rows.filter((r) => r.report) : rows
 
   const keyOf = (r) => `${r.kind}:${r.ts}`
   const toggle = (key) =>
@@ -88,9 +93,9 @@ export default function HistoryModal({ open, onClose }) {
     }
   }
 
-  const allChecked = rows.length > 0 && selected.size === rows.length
+  const allChecked = shown.length > 0 && shown.every((r) => selected.has(keyOf(r)))
   const toggleAll = (checked) => {
-    setSelected(checked ? new Set(rows.map(keyOf)) : new Set())
+    setSelected(checked ? new Set(shown.map(keyOf)) : new Set())
   }
 
   // 실제 영구 삭제 — 활동/산출물 ts 를 분리해 각각 삭제.
@@ -124,6 +129,22 @@ export default function HistoryModal({ open, onClose }) {
               ✕
             </button>
           </header>
+          <div className="hist-filters">
+            <button
+              type="button"
+              className={'hist-chip' + (filter === 'all' ? ' on' : '')}
+              onClick={() => setFilter('all')}
+            >
+              전체
+            </button>
+            <button
+              type="button"
+              className={'hist-chip' + (filter === 'report' ? ' on' : '')}
+              onClick={() => setFilter('report')}
+            >
+              📄 보고서 문서{reportCount ? ` (${reportCount})` : ''}
+            </button>
+          </div>
           <div className="history-toolbar">
             <label className="hist-all">
               <input
@@ -146,12 +167,14 @@ export default function HistoryModal({ open, onClose }) {
           </div>
           <div className="modal-body">
             <ul className="history-list">
-              {rows.length === 0 ? (
+              {shown.length === 0 ? (
                 <li className="hist-empty">
-                  아직 기록이 없습니다. 자연어 질의·RAG 검색·이미지 라벨링을 사용하면 여기에 쌓입니다.
+                  {filter === 'report'
+                    ? '아직 생성한 보고서 문서가 없습니다. ‘요약·보고서 생성’에서 보고서를 만들면 여기에 모여, DOCX로 내려받을 수 있습니다.'
+                    : '아직 기록이 없습니다. 자연어 질의·RAG 검색·이미지 라벨링을 사용하면 여기에 쌓입니다.'}
                 </li>
               ) : (
-                rows.map((r) => {
+                shown.map((r) => {
                   const key = keyOf(r)
                   const ic = r.report ? '📄' : HIST_ICON[r.cat] || (r.kind === 'art' ? '◫' : '•')
                   return (

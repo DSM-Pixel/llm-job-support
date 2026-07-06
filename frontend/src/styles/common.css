@@ -1133,6 +1133,32 @@ textarea {
   max-width: 640px;
 }
 
+/* 기록 관리 필터 칩(전체 / 보고서 문서) */
+.hist-filters {
+  display: flex;
+  gap: 8px;
+  padding: 12px 18px 0;
+}
+.hist-chip {
+  padding: 6px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.hist-chip:hover:not(.on) {
+  border-color: var(--blue);
+  color: var(--blue);
+}
+.hist-chip.on {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
+}
+
 .history-toolbar {
   display: flex;
   align-items: center;
