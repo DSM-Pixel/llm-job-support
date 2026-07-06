@@ -1457,9 +1457,12 @@ def _hwp_text(data: bytes) -> str:
     import io
 
     try:
-        import olefile
+        from .vendor import olefile  # 레포에 벤더링(서버 재빌드 불필요)
     except Exception:
-        return ""
+        try:
+            import olefile  # 시스템에 설치돼 있으면 그것도 허용
+        except Exception:
+            return ""
     try:
         ole = olefile.OleFileIO(io.BytesIO(data))
         if ole.exists("PrvText"):
