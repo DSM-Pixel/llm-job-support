@@ -1564,9 +1564,8 @@ def generate_report_from_template(
         "subtitle": f"업로드 양식 기반 · {filename or '양식'}",
         "sections": [
             {
-                "title": "안내",
+                "heading": "안내",
                 "body": ("AI 양식 분석을 사용하려면 Gemini API 키가 필요합니다." + hint),
-                "bullets": [],
             }
         ],
         "table": _report_table(period) if include_chart else None,
