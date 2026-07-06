@@ -28,7 +28,7 @@ export default function ProjectCard({ project: p, editable, onEnter, onDelete, o
         <span className={`pj-vis ${isTeam ? 'team' : 'private'}`}>
           {isTeam ? `👥 팀 공유${p.team ? ` · ${p.team}` : ''}` : '🔒 개인'}
         </span>
-        {p.owner_name && <span className="pj-vis owner">👤 {p.owner_name}</span>}
+        {!p.mine && p.owner_name && <span className="pj-vis owner">👤 {p.owner_name}</span>}
         {p.mine && <span className="pj-vis mine">내 프로젝트</span>}
       </div>
       <small className="pj-card-meta">

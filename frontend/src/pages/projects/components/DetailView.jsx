@@ -39,7 +39,7 @@ export default function DetailView({
               {(p.visibility || 'team') === 'team'
                 ? `👥 팀 공유${p.team ? ` · ${p.team}` : ''}`
                 : '🔒 개인'}
-              {p.owner_name ? ` · 👤 ${p.owner_name}` : ''}
+              {!p.mine && p.owner_name ? ` · 👤 ${p.owner_name}` : ''}
             </small>
           </div>
         </div>
