@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { api, enter } from './authApi.js'
 import DocModal from './DocModal.jsx'
 import CompanyCombobox from './components/CompanyCombobox.jsx'
+import TeamCombobox from './components/TeamCombobox.jsx'
 import ConsentSection from './components/ConsentSection.jsx'
 import VerifyPanel from './components/VerifyPanel.jsx'
 
@@ -222,16 +223,7 @@ export default function SignupModal({ open, onClose }) {
                     setNewCompanyName('')
                   }}
                 />
-                <label className="field lg-span2">
-                  부서·직함
-                  <input
-                    type="text"
-                    name="team"
-                    placeholder="예: 도로관리처 · 점검분석팀"
-                    value={team}
-                    onChange={(e) => setTeam(e.target.value)}
-                  />
-                </label>
+                <TeamCombobox companyId={selectedCompanyId} value={team} onChange={setTeam} />
               </div>
 
               <ConsentSection

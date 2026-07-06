@@ -326,6 +326,18 @@ def companies(q: str = "") -> dict:
     return {"companies": auth.search_companies(q)}
 
 
+@app.get("/api/companies/teams")
+def company_teams(company_id: str = "", token: str = "") -> dict:
+    """회사의 기존 팀 목록 — 가입/프로필에서 팀을 목록에서 고르게(오타·불일치 방지).
+
+    company_id 를 직접 주거나(가입 시 선택한 회사), token 으로 내 회사를 유추한다.
+    """
+    cid = (company_id or "").strip()
+    if not cid and token:
+        cid = (auth.session_user(token) or {}).get("company_id") or ""
+    return {"teams": auth.teams_for_company(cid)}
+
+
 @app.post("/api/auth/login")
 def auth_login(body: LoginIn) -> dict:
     return auth.login(body.email, body.password)

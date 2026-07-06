@@ -229,6 +229,24 @@ def search_companies(query: str = "", limit: int = 20) -> list[dict]:
     return [dict(r) for r in rows]
 
 
+def teams_for_company(company_id: str) -> list[str]:
+    """회사에 이미 등록된(구성원이 쓰는) 팀 이름 목록 — 가입 시 팀 선택 목록.
+
+    자유 입력 대신 이 목록에서 고르게 해 팀명 불일치(오타·띄어쓰기)를 줄인다.
+    """
+    if not (company_id or "").strip():
+        return []
+    with _lock, _connect() as conn:
+        _init(conn)
+        rows = conn.execute(
+            "SELECT DISTINCT team FROM users "
+            "WHERE company_id = ? AND team IS NOT NULL AND TRIM(team) != '' "
+            "ORDER BY team",
+            (company_id,),
+        ).fetchall()
+    return [r["team"] for r in rows]
+
+
 def get_company(company_id: str) -> dict | None:
     with _lock, _connect() as conn:
         _init(conn)
