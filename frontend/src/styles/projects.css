@@ -108,6 +108,32 @@
   grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
   gap: 16px;
 }
+/* 갤러리 그룹 구분(편집 가능 / 열람만). */
+.pj-group-title {
+  margin: 28px 0 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text);
+}
+.pj-group-title:first-of-type {
+  margin-top: 26px;
+}
+.pj-group-sub {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+/* 상세 상단 '열람·검수 전용' 표시(작업공간 진입 버튼 대체). */
+.pj-viewonly {
+  padding: 8px 14px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 13px;
+  white-space: nowrap;
+}
 .pj-card {
   position: relative;
   background: var(--surface);

@@ -16,10 +16,13 @@
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 import re
 import time
+import urllib.error
+import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
@@ -108,6 +111,114 @@ def _gemini_generate(client, **kwargs):
     return resp
 
 
+def _openai_chat(messages, *, max_tokens=2048):
+    """OpenAI Chat Completions REST 호출(stdlib urllib, 추가 의존성 없음).
+
+    성공 시 choices[0].message.content(str), 실패/오류 시 None.
+    사용량은 대시보드가 이미 쓰는 _gemini_usage/_gemini_calls 에 그대로 기록해
+    기존 대시보드 로직(사용률 막대 등)이 OpenAI 호출도 똑같이 반영하게 한다.
+    """
+    key = _openai_key()
+    if not key:
+        return None
+    _gemini_usage["requests"] += 1
+    call = {"ts": time.time(), "tok": 0}  # 분당/일일 사용률 집계용
+    _gemini_calls.append(call)
+    body = json.dumps(
+        {
+            "model": os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+            "messages": messages,
+            "max_tokens": max_tokens,
+        }
+    ).encode("utf-8")
+    req = urllib.request.Request(
+        "https://api.openai.com/v1/chat/completions",
+        data=body,
+        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as r:
+            data = json.loads(r.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        if e.code == 429:
+            _gemini_usage["rate_limited"] = True  # 한도 소진 관측
+        return None
+    except Exception:
+        return None
+    try:
+        content = data["choices"][0]["message"]["content"]
+    except (KeyError, IndexError, TypeError):
+        return None
+    if not content:
+        return None
+    # 성공 — 대시보드 사용량 갱신(Gemini와 동일 카운터 공유).
+    _gemini_usage["rate_limited"] = False
+    _gemini_usage["success"] += 1
+    _gemini_usage["last_success_at"] = time.time()
+    _save_gemini_state()
+    try:
+        total = int((data.get("usage") or {}).get("total_tokens") or 0)
+    except (TypeError, ValueError):
+        total = 0
+    if total:
+        _gemini_usage["tokens"] += total
+    call["tok"] = total  # 분당 토큰 사용률 집계용
+    return content
+
+
+def _ai_backend() -> str | None:
+    """현재 활성 AI 제공자 라벨. OpenAI 키 우선, 없으면 Gemini, 둘 다 없으면 None."""
+    if _openai_key():
+        return "OPENAI"
+    if _gemini_key():
+        return "GEMINI"
+    return None
+
+
+def _ai_text(prompt: str) -> str | None:
+    """텍스트 프롬프트 → 답변 문자열. OpenAI 우선, 없으면 Gemini. 실패 시 None."""
+    if _openai_key():
+        text = _openai_chat([{"role": "user", "content": prompt}])
+        return text.strip() if text else None
+    if _gemini_key():
+        try:
+            from google import genai
+
+            client = genai.Client(api_key=_gemini_key(), http_options={"timeout": 20000})
+            resp = _gemini_generate(client, model="gemini-2.5-flash", contents=prompt)
+            text = (resp.text or "").strip()
+            return text or None
+        except Exception:
+            return None
+    return None
+
+
+def _ai_vision(prompt: str, image_bytes: bytes, mime: str) -> str | None:
+    """이미지+프롬프트 → 답변 문자열. OpenAI 비전 우선, 없으면 Gemini 멀티모달. 실패 시 None."""
+    if _openai_key():
+        b64 = base64.b64encode(image_bytes).decode("ascii")
+        content = [
+            {"type": "text", "text": prompt},
+            {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}},
+        ]
+        text = _openai_chat([{"role": "user", "content": content}])
+        return text.strip() if text else None
+    if _gemini_key():
+        try:
+            from google import genai
+            from google.genai import types
+
+            client = genai.Client(api_key=_gemini_key(), http_options={"timeout": 20000})
+            part = types.Part.from_bytes(data=image_bytes, mime_type=mime or "image/png")
+            resp = _gemini_generate(client, model="gemini-2.5-flash", contents=[part, prompt])
+            text = (resp.text or "").strip()
+            return text or None
+        except Exception:
+            return None
+    return None
+
+
 # ────────────────────────────────────────────────────────────────────
 # 1. 메인 대시보드 통계
 # ────────────────────────────────────────────────────────────────────
@@ -132,8 +243,8 @@ _GEMINI_CTX = 1_000_000  # 컨텍스트 윈도우
 def real_model_status(yolo_ok: bool) -> list[dict]:
     """모델 상태 — YOLO(best.pt)·Gemini 는 실제 가용성/사용량, 나머지는 데모값."""
     u = _gemini_usage
-    gemini_ok = bool(_gemini_key())
-    if not gemini_ok:
+    ai_ok = bool(_gemini_key() or _openai_key())
+    if not ai_ok:
         g_state, g_tone = "키 없음", "gray"
     elif u["requests"] == 0:
         g_state, g_tone = "대기", "gray"  # 아직 호출 없음 → 확인 전
@@ -153,9 +264,9 @@ def real_model_status(yolo_ok: bool) -> list[dict]:
     tpm_pct = pct(min_toks, _GEMINI_TPM)
     rpd_pct = pct(day_reqs, _GEMINI_RPD)
     # 막대 = 한도에 가장 근접한 사용률(병목). 한도 소진이면 가득 채움.
-    g_load = 100 if (gemini_ok and u["rate_limited"]) else max(rpm_pct, tpm_pct, rpd_pct)
+    g_load = 100 if (ai_ok and u["rate_limited"]) else max(rpm_pct, tpm_pct, rpd_pct)
     # 사용자 관점 — 지금 쓸 수 있는지 / 언제 다시 쓸 수 있는지에 집중.
-    if not gemini_ok:
+    if not ai_ok:
         status_v = "API 키 없음"
     elif u["requests"] == 0:
         status_v = "대기 — 아직 사용 전"
@@ -165,7 +276,7 @@ def real_model_status(yolo_ok: bool) -> list[dict]:
         status_v = "사용 가능"
     g_detail = [{"k": "상태", "v": status_v}]
     # 마지막으로 호출이 성공한 시각(한도에 막히기 전 마지막 정상 응답).
-    if gemini_ok:
+    if ai_ok:
         last_ok = u.get("last_success_at", 0)
         g_detail.append(
             {
@@ -175,7 +286,7 @@ def real_model_status(yolo_ok: bool) -> list[dict]:
                 else "성공 기록 없음",
             }
         )
-    if gemini_ok:
+    if ai_ok:
         # 막대가 '남은 양'이 아니라 '사용량'임을 분명히 한다(이 서버 기준).
         g_detail.append(
             {"note": "아래는 한도 대비 ‘사용량’이에요 (이 서버가 보낸 요청 기준 · 남은 양 아님)."}
@@ -194,7 +305,7 @@ def real_model_status(yolo_ok: bool) -> list[dict]:
         g_detail.append(
             {"k": "하루 요청", "v": f"{day_reqs} / {_GEMINI_RPD}회  ({rpd_pct}%)", "pct": rpd_pct}
         )
-    if gemini_ok and u["rate_limited"]:
+    if ai_ok and u["rate_limited"]:
         remain = int(max(0, u.get("retry_at", 0) - now))
         if remain <= 0:
             when = "지금 다시 시도하면 될 수 있어요"
@@ -226,7 +337,9 @@ def real_model_status(yolo_ok: bool) -> list[dict]:
             "tone": "green" if yolo_ok else "gray",
         },
         {
-            "name": "gemini-2.5-flash",
+            "name": f"{os.getenv('OPENAI_MODEL', 'gpt-4o-mini')} · GPT"
+            if _openai_key()
+            else "gemini-2.5-flash",
             "kind": f"VLM·생성 · 요청 {u['requests']}/{_GEMINI_RPD}",
             "load": g_load,
             "state": g_state,
@@ -508,27 +621,57 @@ _gemini_key.mtime = None  # type: ignore[attr-defined]
 _gemini_key.value = None  # type: ignore[attr-defined]
 
 
+def _openai_key() -> str | None:
+    """prototypes/api-test/.env 의 OPENAI_API_KEY 를 읽는다.
+
+    .env 가 바뀌면(키 교체) 자동으로 다시 읽어 서버 재시작 없이 적용한다.
+    (_gemini_key 와 동일한 파일+mtime 캐시 + 환경변수 폴백 구조.)
+    """
+    from pathlib import Path
+
+    env = Path(__file__).resolve().parent.parent / "prototypes" / "api-test" / ".env"
+    try:
+        mtime = env.stat().st_mtime
+    except OSError:
+        mtime = 0.0
+
+    if mtime != _openai_key.mtime:  # type: ignore[attr-defined]
+        _openai_key.mtime = mtime  # type: ignore[attr-defined]
+        value = None
+        try:
+            for line in env.read_text(encoding="utf-8").splitlines():
+                s = line.strip()
+                if s.startswith("#") or "=" not in s:
+                    continue
+                k, v = s.split("=", 1)
+                if k.strip() == "OPENAI_API_KEY":
+                    value = v.strip().strip('"').strip("'") or None
+                    break
+        except OSError:
+            pass
+        if value is None:  # 파일에 없으면 환경변수 폴백
+            value = os.getenv("OPENAI_API_KEY")
+        _openai_key.value = value  # type: ignore[attr-defined]
+    return _openai_key.value  # type: ignore[attr-defined]
+
+
+_openai_key.mtime = None  # type: ignore[attr-defined]
+_openai_key.value = None  # type: ignore[attr-defined]
+
+
 def _generate_answer(query: str, hits: list[dict]) -> tuple[str, str]:
     """근거(hits) 기반 답변 생성. Gemini 우선, 실패/무키 시 템플릿. (answer, backend)"""
     context = "\n".join(f"- ({h['source']}) {h['text']}" for h in hits)
-    key = _gemini_key()
-    if key and hits:
-        try:
-            from google import genai
-
-            client = genai.Client(api_key=key, http_options={"timeout": 20000})
-            prompt = (
-                "너는 도로 유지보수 지식 도우미다. 아래 '근거'에 적힌 내용만으로 한국어로 "
-                "2~3문장으로 간결히 답하라. 근거에 질문의 답이 없으면 추측하지 말고 "
-                "반드시 '참고 문서에 해당 정보가 없습니다.' 라고만 답하라.\n\n"
-                f"질문: {query}\n\n근거:\n{context}"
-            )
-            resp = _gemini_generate(client, model="gemini-2.5-flash", contents=prompt)
-            text = (resp.text or "").strip()
-            if text:
-                return text, "GEMINI"
-        except Exception:
-            pass  # 한도/네트워크 오류 → 템플릿 폴백
+    if hits:
+        prompt = (
+            "너는 도로 유지보수 지식 도우미다. 아래 '근거'에 적힌 내용만으로 한국어로 "
+            "2~3문장으로 간결히 답하라. 근거에 질문의 답이 없으면 추측하지 말고 "
+            "반드시 '참고 문서에 해당 정보가 없습니다.' 라고만 답하라.\n\n"
+            f"질문: {query}\n\n근거:\n{context}"
+        )
+        text = _ai_text(prompt)  # 한도/네트워크 오류 시 None → 템플릿 폴백
+        if text:
+            return text, _ai_backend() or "GEMINI"
     # 폴백: 질문 + 최상위 근거로 구성(질문에 따라 달라짐).
     if hits:
         top = hits[0]
@@ -794,32 +937,24 @@ def detect_objects_vision(image_bytes: bytes, mime: str = "image/png") -> dict:
     모든 객체를 돌려준다. 프론트는 클래스별로 묶어 필터 후 선택만 라벨링한다.
     키/오류 시 다중 클래스 MOCK 폴백. 좌표 규약은 box_2d 0~1000 [ymin,xmin,ymax,xmax].
     """
-    key = _gemini_key() if image_bytes else None
     objects: list[dict] | None = None
     backend = "MOCK"
-    if key:
-        try:
-            from google import genai
-            from google.genai import types
-
-            client = genai.Client(api_key=key, http_options={"timeout": 20000})
-            part = types.Part.from_bytes(data=image_bytes, mime_type=mime or "image/png")
-            prompt = (
-                "이 도로 이미지에 보이는 모든 객체를 탐지하라. 포트홀·균열 같은 노면 파손뿐 "
-                "아니라 차량, 보행자, 표지판, 신호등, 차선, 맨홀, 가드레일, 가로수, 건물 등 "
-                "화면에 보이는 모든 것을 포함한다. 같은 종류가 여러 개면 각각 따로. "
-                "반드시 아래 JSON만 출력(코드펜스·설명 금지):\n"
-                '{"objects":[{"label":"포트홀","box_2d":[ymin,xmin,ymax,xmax],"confidence":87}]}\n'
-                "box_2d 는 0~1000 정규화 정수. label 은 짧은 한국어 명사. "
-                "confidence 는 0~100 정수."
-            )
-            resp = _gemini_generate(client, model="gemini-2.5-flash", contents=[part, prompt])
-            data = _extract_json(resp.text or "")
+    if image_bytes:
+        prompt = (
+            "이 도로 이미지에 보이는 모든 객체를 탐지하라. 포트홀·균열 같은 노면 파손뿐 "
+            "아니라 차량, 보행자, 표지판, 신호등, 차선, 맨홀, 가드레일, 가로수, 건물 등 "
+            "화면에 보이는 모든 것을 포함한다. 같은 종류가 여러 개면 각각 따로. "
+            "반드시 아래 JSON만 출력(코드펜스·설명 금지):\n"
+            '{"objects":[{"label":"포트홀","box_2d":[ymin,xmin,ymax,xmax],"confidence":87}]}\n'
+            "box_2d 는 0~1000 정규화 정수. label 은 짧은 한국어 명사. "
+            "confidence 는 0~100 정수."
+        )
+        text = _ai_vision(prompt, image_bytes, mime or "image/png")
+        if text:
+            data = _extract_json(text)
             if data and isinstance(data.get("objects"), list) and data["objects"]:
                 objects = data["objects"]
-                backend = "GEMINI"
-        except Exception:
-            pass
+                backend = _ai_backend() or "GEMINI"
     if objects is None:
         objects = _MOCK_OBJECTS
 
@@ -867,20 +1002,9 @@ def analyze_image_vision(
     prompt = custom_prompt.strip() or _ANALYZE_PROMPTS.get(
         preset, _ANALYZE_PROMPTS["이미지 전체 설명"]
     )
-    key = _gemini_key()
-    if key:
-        try:
-            from google import genai
-            from google.genai import types
-
-            client = genai.Client(api_key=key, http_options={"timeout": 20000})
-            part = types.Part.from_bytes(data=image_bytes, mime_type=mime or "image/png")
-            resp = _gemini_generate(client, model="gemini-2.5-flash", contents=[part, prompt])
-            text = (resp.text or "").strip()
-            if text:
-                return {"backend": "GEMINI", "preset": preset, "description": text}
-        except Exception:
-            pass
+    text = _ai_vision(prompt, image_bytes, mime or "image/png")
+    if text:
+        return {"backend": _ai_backend() or "GEMINI", "preset": preset, "description": text}
     # 폴백: 프리셋 고정 결과를 설명 문장으로.
     findings = _PRESET_FINDINGS.get(preset, _PRESET_FINDINGS["도로 파손/포트홀 찾기"])
     desc = "\n".join(f"{f['class_name']}: {f['note']}" for f in findings)
@@ -1161,26 +1285,23 @@ def revise_report(content: str, instruction: str) -> dict:
     if not instr:
         return {"backend": "MOCK", "mode": "answer", "answer": "무엇을 도와드릴까요?"}
 
-    key = _gemini_key()
-    if key and body:
-        try:
-            from google import genai
-
-            client = genai.Client(api_key=key, http_options={"timeout": 20000})
-            prompt = (
-                "너는 한국어 보고서 편집 도우미다. 아래 '현재 보고서'를 사용자 '지시'대로 처리하라.\n"
-                "- 보고서를 고치는 지시면: 수정된 전체 보고서를 다음 형식으로만 출력한다.\n"
-                "  · 첫 줄: '# 제목'\n"
-                "  · 이후 각 섹션: '## 소제목' 한 줄 + 다음 줄부터 본문(2~4문장 또는 '- ' 불릿)\n"
-                "  · 머리말/맺음말/코드펜스(```) 없이 본문만.\n"
-                "- 보고서를 고치지 않는 단순 질문이면: 'ANSWER:' 로 시작해 2~4문장으로 답한다.\n\n"
-                f"지시: {instr}\n\n현재 보고서:\n{body[:6000]}"
-            )
-            resp = _gemini_generate(client, model="gemini-2.5-flash", contents=prompt)
-            text = (resp.text or "").strip().strip("`")
+    if body:
+        prompt = (
+            "너는 한국어 보고서 편집 도우미다. 아래 '현재 보고서'를 사용자 '지시'대로 처리하라.\n"
+            "- 보고서를 고치는 지시면: 수정된 전체 보고서를 다음 형식으로만 출력한다.\n"
+            "  · 첫 줄: '# 제목'\n"
+            "  · 이후 각 섹션: '## 소제목' 한 줄 + 다음 줄부터 본문(2~4문장 또는 '- ' 불릿)\n"
+            "  · 머리말/맺음말/코드펜스(```) 없이 본문만.\n"
+            "- 보고서를 고치지 않는 단순 질문이면: 'ANSWER:' 로 시작해 2~4문장으로 답한다.\n\n"
+            f"지시: {instr}\n\n현재 보고서:\n{body[:6000]}"
+        )
+        text = _ai_text(prompt)
+        if text:
+            be = _ai_backend() or "GEMINI"
+            text = text.strip("`")
             if text.upper().startswith("ANSWER:"):
                 return {
-                    "backend": "GEMINI",
+                    "backend": be,
                     "mode": "answer",
                     "answer": text.split(":", 1)[1].strip(),
                 }
@@ -1192,11 +1313,9 @@ def revise_report(content: str, instruction: str) -> dict:
                 text = "\n".join(lines[1:])
             sections = _parse_md_sections(text)
             if sections:
-                return {"backend": "GEMINI", "mode": "edit", "title": title, "sections": sections}
+                return {"backend": be, "mode": "edit", "title": title, "sections": sections}
             if text.strip():
-                return {"backend": "GEMINI", "mode": "answer", "answer": text.strip()}
-        except Exception:
-            pass
+                return {"backend": be, "mode": "answer", "answer": text.strip()}
 
     return {
         "backend": "MOCK",
@@ -1235,19 +1354,23 @@ def _web_answer(question: str) -> tuple[str, list[dict], str]:
     q = (question or "").strip()
     if not q:
         return ("무엇이 궁금한지 입력해 주세요.", [], "MOCK")
-    key = _gemini_key()
-    if key:
+    prompt = (
+        "너는 도로 유지보수·공공데이터 업무 도우미다. 다음 질문에 한국어로 정확하고 친절하게 "
+        "답하라. 필요하면 웹을 검색해 최신 사실·수치에 근거하라. 3~6문장으로 답하고, 핵심은 "
+        f"'- ' 불릿으로 정리해도 좋다.\n\n질문: {q}"
+    )
+    if _openai_key():
+        # OpenAI 는 실시간 웹 그라운딩이 없어 일반 답변만(출처 없음).
+        text = _ai_text(prompt)
+        if text:
+            return (text, [], "OPENAI")
+    elif _gemini_key():
         try:
             from google import genai
             from google.genai import types
 
-            client = genai.Client(api_key=key, http_options={"timeout": 20000})
+            client = genai.Client(api_key=_gemini_key(), http_options={"timeout": 20000})
             tool = types.Tool(google_search=types.GoogleSearch())
-            prompt = (
-                "너는 도로 유지보수·공공데이터 업무 도우미다. 다음 질문에 한국어로 정확하고 친절하게 "
-                "답하라. 필요하면 웹을 검색해 최신 사실·수치에 근거하라. 3~6문장으로 답하고, 핵심은 "
-                f"'- ' 불릿으로 정리해도 좋다.\n\n질문: {q}"
-            )
             resp = _gemini_generate(
                 client,
                 model="gemini-2.5-flash",
@@ -1279,23 +1402,14 @@ def ask_about_text(context: str, question: str) -> dict:
             "backend": "MOCK",
             "answer": "이 페이지에 참조할 내용이 아직 없습니다. 먼저 보고서를 생성해 주세요.",
         }
-    key = _gemini_key()
-    if key:
-        try:
-            from google import genai
-
-            client = genai.Client(api_key=key, http_options={"timeout": 20000})
-            prompt = (
-                "아래 '문서'의 내용만 근거로 질문에 한국어로 간결히(2~4문장) 답하라. "
-                "문서에 답이 없으면 '이 문서에는 해당 내용이 없습니다.'라고만 답하라.\n\n"
-                f"문서:\n{ctx[:6000]}\n\n질문: {q}"
-            )
-            resp = _gemini_generate(client, model="gemini-2.5-flash", contents=prompt)
-            text = (resp.text or "").strip()
-            if text:
-                return {"backend": "GEMINI", "answer": text}
-        except Exception:
-            pass
+    prompt = (
+        "아래 '문서'의 내용만 근거로 질문에 한국어로 간결히(2~4문장) 답하라. "
+        "문서에 답이 없으면 '이 문서에는 해당 내용이 없습니다.'라고만 답하라.\n\n"
+        f"문서:\n{ctx[:6000]}\n\n질문: {q}"
+    )
+    text = _ai_text(prompt)
+    if text:
+        return {"backend": _ai_backend() or "GEMINI", "answer": text}
     return {
         "backend": "MOCK",
         "answer": "AI 사용량(토큰)이 일시적으로 소진되었습니다. 회복되거나 API 키 교체 시 자동으로 답변이 표시됩니다.",
@@ -1307,21 +1421,10 @@ def ask_about_image(image_bytes: bytes, question: str, mime: str = "image/png") 
     q = (question or "").strip()
     if not q:
         return {"backend": "MOCK", "answer": "질문을 입력해 주세요."}
-    key = _gemini_key()
-    if key:
-        try:
-            from google import genai
-            from google.genai import types
-
-            client = genai.Client(api_key=key, http_options={"timeout": 20000})
-            part = types.Part.from_bytes(data=image_bytes, mime_type=mime or "image/png")
-            prompt = f"이 이미지만 보고 질문에 한국어로 간결히(2~4문장) 답하라.\n질문: {q}"
-            resp = _gemini_generate(client, model="gemini-2.5-flash", contents=[part, prompt])
-            text = (resp.text or "").strip()
-            if text:
-                return {"backend": "GEMINI", "answer": text}
-        except Exception:
-            pass
+    prompt = f"이 이미지만 보고 질문에 한국어로 간결히(2~4문장) 답하라.\n질문: {q}"
+    text = _ai_vision(prompt, image_bytes, mime or "image/png")
+    if text:
+        return {"backend": _ai_backend() or "GEMINI", "answer": text}
     return {
         "backend": "MOCK",
         "answer": "AI 사용량(토큰)이 일시적으로 소진되었습니다. 회복되거나 API 키 교체 시 자동으로 이미지 답변이 표시됩니다.",
@@ -1344,24 +1447,32 @@ def generate_report_web(
     srcs = [s for s in srcs if s]
     focus = ", ".join(srcs) if srcs else "신고 현황, 보수 예산, 검수 결과"
     topic = (query or "").strip() or f"한국 도로 포트홀·파손 {kind} ({focus})"
-    key = _gemini_key()
-    if key:
+    prompt = (
+        f"'{topic}' 주제로 한국어 {kind} 보고서를 풍부하고 충실하게 작성해라. "
+        "반드시 웹을 검색해 최신 사실·수치에 근거하라. 모든 섹션에 구체적 수치·연도·지역·"
+        f"기관명 등 근거를 포함하라. 기간 관점: {period}.\n"
+        "출력 형식:\n"
+        "- 6~7개 섹션. 각 섹션은 '## N. 제목' 한 줄, 다음 줄부터 본문.\n"
+        "- 본문은 3~5문장으로 충분히 서술하되, 핵심 항목은 '- '로 시작하는 불릿 3개 내외로 정리.\n"
+        "- 가능하면 '핵심 수치', '지역별/연도별 현황', '원인 분석', '대응 방안/권고' 섹션을 포함.\n"
+        "- 머리말/맺음말/코드펜스 없이 섹션만 출력."
+    )
+    sections = None
+    sources: list[dict] = []
+    backend = ""
+    if _openai_key():
+        # OpenAI 는 실시간 웹 그라운딩이 없어 일반 생성 + 대체 출처로 폴백.
+        text = _ai_text(prompt)
+        if text:
+            sections = _parse_md_sections(text)
+            backend = "OPENAI"
+    elif _gemini_key():
         try:
             from google import genai
             from google.genai import types
 
-            client = genai.Client(api_key=key, http_options={"timeout": 20000})
+            client = genai.Client(api_key=_gemini_key(), http_options={"timeout": 20000})
             tool = types.Tool(google_search=types.GoogleSearch())
-            prompt = (
-                f"'{topic}' 주제로 한국어 {kind} 보고서를 풍부하고 충실하게 작성해라. "
-                "반드시 웹을 검색해 최신 사실·수치에 근거하라. 모든 섹션에 구체적 수치·연도·지역·"
-                f"기관명 등 근거를 포함하라. 기간 관점: {period}.\n"
-                "출력 형식:\n"
-                "- 6~7개 섹션. 각 섹션은 '## N. 제목' 한 줄, 다음 줄부터 본문.\n"
-                "- 본문은 3~5문장으로 충분히 서술하되, 핵심 항목은 '- '로 시작하는 불릿 3개 내외로 정리.\n"
-                "- 가능하면 '핵심 수치', '지역별/연도별 현황', '원인 분석', '대응 방안/권고' 섹션을 포함.\n"
-                "- 머리말/맺음말/코드펜스 없이 섹션만 출력."
-            )
             resp = _gemini_generate(
                 client,
                 model="gemini-2.5-flash",
@@ -1370,23 +1481,23 @@ def generate_report_web(
             )
             sections = _parse_md_sections(resp.text or "")
             sources = _grounding_sources(resp)
-            if sections:
-                return {
-                    "backend": "GEMINI_WEB",
-                    "report_type": kind,
-                    "org": "GNSOFT",
-                    "date": "2026.6.23",
-                    "period": period,
-                    "query": topic,
-                    "title": f"도로 파손 {kind} 보고서",
-                    "subtitle": f"생성일 2026.6.23 · 웹 검색 기반 · {period} · 소스 {len(srcs) or 3}개",
-                    "sections": sections,
-                    "table": _report_table(period) if include_chart else None,
-                    "sources": sources
-                    or [{"title": "Google 검색", "url": "https://www.google.com"}],
-                }
+            backend = "GEMINI_WEB"
         except Exception:
-            pass
+            sections = None
+    if sections:
+        return {
+            "backend": backend,
+            "report_type": kind,
+            "org": "GNSOFT",
+            "date": "2026.6.23",
+            "period": period,
+            "query": topic,
+            "title": f"도로 파손 {kind} 보고서",
+            "subtitle": f"생성일 2026.6.23 · 웹 검색 기반 · {period} · 소스 {len(srcs) or 3}개",
+            "sections": sections,
+            "table": _report_table(period) if include_chart else None,
+            "sources": sources or [{"title": "Google 검색", "url": "https://www.google.com"}],
+        }
     # 폴백: 웹 검색 불가 시에도 초기 화면보다 풍부한 보고서로(내용이 바뀌도록).
     return {
         "backend": "MOCK",
@@ -1521,24 +1632,18 @@ def generate_report_from_template(
     """
     stem = re.sub(r"\.[^.]+$", "", filename or "양식").strip() or "양식"
     kind, value = _template_payload(data, filename, mime)
-    key = _gemini_key()
 
-    if key and (kind == "file" or (value and value.strip())):
-        try:
-            from google import genai
-            from google.genai import types
-
-            client = genai.Client(api_key=key, http_options={"timeout": 30000})
-            if kind == "file":
-                part = types.Part.from_bytes(data=data, mime_type=value)
-                contents = [part, _TEMPLATE_PROMPT]
-            else:
-                contents = f"[양식 원문]\n{value[:12000]}\n\n{_TEMPLATE_PROMPT}"
-            resp = _gemini_generate(client, model="gemini-2.5-flash", contents=contents)
-            sections = _parse_md_sections(resp.text or "")
+    if _ai_backend() and (kind == "file" or (value and value.strip())):
+        if kind == "file":
+            # 파일(pdf/이미지) 원본은 비전으로. OpenAI는 이미지 data URI만 지원(pdf는 폴백).
+            text = _ai_vision(_TEMPLATE_PROMPT, data, value)
+        else:
+            text = _ai_text(f"[양식 원문]\n{value[:12000]}\n\n{_TEMPLATE_PROMPT}")
+        if text:
+            sections = _parse_md_sections(text)
             if sections:
                 return {
-                    "backend": "GEMINI_TEMPLATE",
+                    "backend": "OPENAI" if _openai_key() else "GEMINI_TEMPLATE",
                     "report_type": "양식 기반",
                     "org": "GNSOFT",
                     "date": "2026.6.23",
@@ -1550,8 +1655,6 @@ def generate_report_from_template(
                     "sources": [{"title": filename or "업로드 양식", "url": ""}],
                     "template_name": filename or "",
                 }
-        except Exception:
-            pass
 
     # 폴백: 키 없음/추출 실패(특히 .hwp olefile 미설치·본문 추출 불가).
     hint = ""
@@ -1597,24 +1700,20 @@ def generate_report_from_rag(
     evidence = "\n".join(f"- ({s.get('source', '')}) {s.get('text', '')}" for s in srcs)
     context = f"질문: {question}\n\nAI 답변:\n{answer}\n\n근거 문서:\n{evidence}"
 
-    key = _gemini_key()
-    if key and (answer or srcs):
-        try:
-            from google import genai
-
-            client = genai.Client(api_key=key, http_options={"timeout": 20000})
-            prompt = (
-                f"아래 'RAG 검색 결과'(질문·AI 답변·근거 문서)를 바탕으로 한국어 {kind} 보고서를 "
-                "충실하게 작성하라. 근거 문서에 있는 내용만 사용하고(추측 금지), 질문과 답변을 보고서 "
-                "형태로 확장하라.\n"
-                "출력: 5~6개 섹션. 각 섹션 '## N. 제목' 한 줄, 다음 줄에 본문 2~4문장 또는 '- ' 불릿. "
-                "머리말/맺음말/코드펜스 없이 섹션만.\n\n" + context
-            )
-            resp = _gemini_generate(client, model="gemini-2.5-flash", contents=prompt)
-            sections = _parse_md_sections(resp.text or "")
+    if answer or srcs:
+        prompt = (
+            f"아래 'RAG 검색 결과'(질문·AI 답변·근거 문서)를 바탕으로 한국어 {kind} 보고서를 "
+            "충실하게 작성하라. 근거 문서에 있는 내용만 사용하고(추측 금지), 질문과 답변을 보고서 "
+            "형태로 확장하라.\n"
+            "출력: 5~6개 섹션. 각 섹션 '## N. 제목' 한 줄, 다음 줄에 본문 2~4문장 또는 '- ' 불릿. "
+            "머리말/맺음말/코드펜스 없이 섹션만.\n\n" + context
+        )
+        text = _ai_text(prompt)
+        if text:
+            sections = _parse_md_sections(text)
             if sections:
                 return {
-                    "backend": "GEMINI_RAG",
+                    "backend": "OPENAI" if _openai_key() else "GEMINI_RAG",
                     "report_type": kind,
                     "org": "GNSOFT · RAG 검색 보고서",
                     "date": "2026.6.24",
@@ -1626,8 +1725,6 @@ def generate_report_from_rag(
                     "table": None,
                     "sources": file_names or ["RAG 근거 문서"],
                 }
-        except Exception:
-            pass
 
     # 폴백: RAG 내용을 그대로 섹션으로 구성(질문/답변/근거).
     sections = [
@@ -1844,25 +1941,19 @@ def generate_report_activity(
 
     # Gemini 로 본문 품질 향상(가능 시) — 통계 표는 그대로 유지
     backend = "MOCK"
-    key = _gemini_key()
-    if key and n:
-        try:
-            from google import genai
-
-            client = genai.Client(api_key=key, http_options={"timeout": 20000})
-            prompt = (
-                f"다음은 사용자의 도로 유지보수 AI 플랫폼 사용 활동 로그 요약이다. 이를 분석해 한국어 "
-                f"'{rtype} 보고서'를 작성하라. 활동 통계·패턴·주요 작업·인사이트를 포함하고, "
-                "4~5개 섹션 '## N. 제목' 한 줄 + 본문 2~3문장 또는 '- ' 불릿으로. 머리말/맺음말 없이.\n\n"
-                + context
-            )
-            resp = _gemini_generate(client, model="gemini-2.5-flash", contents=prompt)
-            parsed = _parse_md_sections(resp.text or "")
+    if n:
+        prompt = (
+            f"다음은 사용자의 도로 유지보수 AI 플랫폼 사용 활동 로그 요약이다. 이를 분석해 한국어 "
+            f"'{rtype} 보고서'를 작성하라. 활동 통계·패턴·주요 작업·인사이트를 포함하고, "
+            "4~5개 섹션 '## N. 제목' 한 줄 + 본문 2~3문장 또는 '- ' 불릿으로. 머리말/맺음말 없이.\n\n"
+            + context
+        )
+        text = _ai_text(prompt)
+        if text:
+            parsed = _parse_md_sections(text)
             if parsed:
                 sections = parsed
-                backend = "GEMINI"
-        except Exception:
-            pass
+                backend = _ai_backend() or "GEMINI"
 
     return {
         "backend": backend,
@@ -2070,24 +2161,15 @@ def _summarize_pubdata(kw: str, domain: str, stats: dict) -> tuple[str, str]:
         f"최고 {labels[peak_i]}={values[peak_i]}, 최저 {labels[low_i]}={values[low_i]}, "
         f"합계 {sum(values)}, 평균 {round(sum(values) / len(values), 1)}."
     )
-    key = _gemini_key()
-    if key:
-        try:
-            from google import genai
-
-            client = genai.Client(api_key=key, http_options={"timeout": 20000})
-            prompt = (
-                "너는 공공데이터 분석 도우미다. 아래 통계 요약 수치만 근거로, "
-                "도로·시설 유지보수 담당자에게 도움이 되도록 한국어 2~3문장으로 "
-                "핵심 경향과 시사점을 간결히 설명하라. 수치를 지어내지 마라.\n\n"
-                f"질문 키워드: {kw}\n{facts}"
-            )
-            resp = _gemini_generate(client, model="gemini-2.5-flash", contents=prompt)
-            text = (resp.text or "").strip()
-            if text:
-                return text, "GEMINI"
-        except Exception:
-            pass
+    prompt = (
+        "너는 공공데이터 분석 도우미다. 아래 통계 요약 수치만 근거로, "
+        "도로·시설 유지보수 담당자에게 도움이 되도록 한국어 2~3문장으로 "
+        "핵심 경향과 시사점을 간결히 설명하라. 수치를 지어내지 마라.\n\n"
+        f"질문 키워드: {kw}\n{facts}"
+    )
+    text = _ai_text(prompt)
+    if text:
+        return text, _ai_backend() or "GEMINI"
     return (
         f"‘{kw}’ 관련 {domain} 데이터를 보면, {labels[peak_i]}({stats['unit']} {values[peak_i]})에 "
         f"가장 높고 {labels[low_i]}에 가장 낮습니다. 합계 {sum(values)}{stats['unit']}, "
@@ -2211,28 +2293,23 @@ def _agent_plan_fallback(goal: str) -> dict:
     }
 
 
-def _agent_plan_gemini(goal: str, key: str) -> dict | None:
-    """Gemini로 절차 설계(JSON). 실패 시 None → 폴백."""
-    try:
-        from google import genai
-
-        client = genai.Client(api_key=key, http_options={"timeout": 20000})
-        tools_desc = "\n".join(f"- {t}: {m['label']}" for t, m in _AGENT_TOOLS.items())
-        prompt = (
-            "너는 도로 유지보수·시설점검 업무지원 플랫폼의 '업무 자동화 에이전트'다. "
-            "사용자 목표를 달성할 업무 절차를 3~5단계로 설계하라. 각 단계는 아래 기능(tool) "
-            "중 하나에 매핑한다:\n" + tools_desc + "\n\n"
-            "반드시 아래 JSON만 출력(코드펜스·설명 금지):\n"
-            '{"summary":"한줄요약","steps":[{"title":"단계명","tool":"rag",'
-            '"why":"이 단계가 필요한 이유","q":"검색어(query/rag/pubdata일 때만, 없으면 빈칸)"}]}\n\n'
-            f"목표: {goal}"
-        )
-        resp = _gemini_generate(client, model="gemini-2.5-flash", contents=prompt)
-        data = _extract_json(resp.text or "")
+def _agent_plan_gemini(goal: str) -> dict | None:
+    """AI로 절차 설계(JSON). OpenAI/Gemini 공통. 실패 시 None → 폴백."""
+    tools_desc = "\n".join(f"- {t}: {m['label']}" for t, m in _AGENT_TOOLS.items())
+    prompt = (
+        "너는 도로 유지보수·시설점검 업무지원 플랫폼의 '업무 자동화 에이전트'다. "
+        "사용자 목표를 달성할 업무 절차를 3~5단계로 설계하라. 각 단계는 아래 기능(tool) "
+        "중 하나에 매핑한다:\n" + tools_desc + "\n\n"
+        "반드시 아래 JSON만 출력(코드펜스·설명 금지):\n"
+        '{"summary":"한줄요약","steps":[{"title":"단계명","tool":"rag",'
+        '"why":"이 단계가 필요한 이유","q":"검색어(query/rag/pubdata일 때만, 없으면 빈칸)"}]}\n\n'
+        f"목표: {goal}"
+    )
+    text = _ai_text(prompt)
+    if text:
+        data = _extract_json(text)
         if data and isinstance(data.get("steps"), list) and data["steps"]:
             return data
-    except Exception:
-        pass
     return None
 
 
@@ -2241,9 +2318,8 @@ def agent_plan(goal: str) -> dict:
     g = (goal or "").strip()
     if not g:
         return {"backend": BACKEND, "goal": "", "summary": "목표를 입력해주세요.", "steps": []}
-    key = _gemini_key()
-    plan = _agent_plan_gemini(g, key) if key else None
-    backend = "GEMINI"
+    plan = _agent_plan_gemini(g) if _ai_backend() else None
+    backend = _ai_backend() or "GEMINI"
     if not plan:
         plan = _agent_plan_fallback(g)
         backend = "MOCK"
@@ -2268,30 +2344,22 @@ def _pick_text(d: dict) -> str:
 def _agent_synthesize(goal: str, findings: list[tuple[str, str]]) -> dict:
     """단계별 결과를 종합한 보고서를 만든다(Gemini 우선, 템플릿 폴백)."""
     material = "\n\n".join(f"[{t}]\n{x}" for t, x in findings if x)
-    key = _gemini_key()
-    if key and material.strip():
-        try:
-            from google import genai
-
-            client = genai.Client(api_key=key, http_options={"timeout": 20000})
-            prompt = (
-                "너는 도로 유지보수·시설점검 업무지원 플랫폼의 업무 자동화 에이전트다. "
-                "아래는 사용자 목표를 처리하며 각 단계에서 수집한 결과다. 이를 종합해 "
-                "실무자가 바로 쓸 수 있는 간결한 한국어 보고서를 작성하라. "
-                "구성: '## 목표 요약' / '## 핵심 발견'(불릿) / '## 권고 조치'(불릿) / '## 다음 단계'. "
-                "수집 결과에 없는 수치를 지어내지 마라. 마크다운(##, -) 사용.\n\n"
-                f"목표: {goal}\n\n수집 결과:\n{material}"
-            )
-            resp = _gemini_generate(client, model="gemini-2.5-flash", contents=prompt)
-            text = (resp.text or "").strip()
-            if text:
-                return {
-                    "title": f"{goal} — 업무 자동화 결과 보고서",
-                    "content": text,
-                    "backend": "GEMINI",
-                }
-        except Exception:
-            pass
+    if material.strip():
+        prompt = (
+            "너는 도로 유지보수·시설점검 업무지원 플랫폼의 업무 자동화 에이전트다. "
+            "아래는 사용자 목표를 처리하며 각 단계에서 수집한 결과다. 이를 종합해 "
+            "실무자가 바로 쓸 수 있는 간결한 한국어 보고서를 작성하라. "
+            "구성: '## 목표 요약' / '## 핵심 발견'(불릿) / '## 권고 조치'(불릿) / '## 다음 단계'. "
+            "수집 결과에 없는 수치를 지어내지 마라. 마크다운(##, -) 사용.\n\n"
+            f"목표: {goal}\n\n수집 결과:\n{material}"
+        )
+        text = _ai_text(prompt)
+        if text:
+            return {
+                "title": f"{goal} — 업무 자동화 결과 보고서",
+                "content": text,
+                "backend": _ai_backend() or "GEMINI",
+            }
 
     # 템플릿 폴백 — 수집 결과를 그대로 구조화한다.
     lines = [f"## 목표\n{goal}", ""]

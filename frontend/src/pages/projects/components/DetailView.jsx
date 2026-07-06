@@ -4,7 +4,15 @@ const REVIEW_TONE = { 대기: 'wait', 승인: 'ok', 반려: 'no' }
 
 // ── 상세(소스 + 검수) ──
 // canReview: 관리자(상사)일 때만 승인·반려·대기 버튼을 노출. 일반 사용자는 상태만 본다.
-export default function DetailView({ project, onBack, onEnter, onAddSource, onReview, canReview }) {
+export default function DetailView({
+  project,
+  onBack,
+  onEnter,
+  onAddSource,
+  onReview,
+  canReview,
+  editable,
+}) {
   const p = project
   return (
     <section className="pj-detail">
@@ -12,9 +20,15 @@ export default function DetailView({ project, onBack, onEnter, onAddSource, onRe
         <button className="pj-back" type="button" onClick={onBack}>
           ← 프로젝트 목록
         </button>
-        <button className="btn primary pj-enter" type="button" onClick={() => onEnter(p)}>
-          이 프로젝트로 들어가기 →
-        </button>
+        {editable ? (
+          <button className="btn primary pj-enter" type="button" onClick={() => onEnter(p)}>
+            이 프로젝트로 들어가기 →
+          </button>
+        ) : (
+          <span className="pj-viewonly" title="내 프로젝트가 아니라 소스 검수만 가능합니다">
+            👁 열람·검수 전용
+          </span>
+        )}
       </div>
       <div className="pj-detail-head">
         <div className="pj-detail-title">
@@ -40,9 +54,11 @@ export default function DetailView({ project, onBack, onEnter, onAddSource, onRe
       </div>
       <div className="pj-src-toolbar">
         <h3>소스 · 검수</h3>
-        <button className="btn primary pj-add-src" type="button" onClick={onAddSource}>
-          + 소스 추가
-        </button>
+        {editable && (
+          <button className="btn primary pj-add-src" type="button" onClick={onAddSource}>
+            + 소스 추가
+          </button>
+        )}
       </div>
       <div className="pj-src-list">
         {(p.sources || []).length === 0 ? (

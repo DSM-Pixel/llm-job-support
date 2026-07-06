@@ -1,18 +1,27 @@
-// 갤러리 카드 — 프로젝트 한 개(진입/삭제/소스·검수 이동).
-export default function ProjectCard({ project: p, onEnter, onDelete, onOpen }) {
+// 갤러리 카드 — 프로젝트 한 개.
+// editable=true(내 프로젝트): 카드 클릭 = 작업공간 진입 + 삭제 가능.
+// editable=false(열람만): 카드 클릭 = 소스·검수 상세만(작업공간 진입·삭제 없음).
+export default function ProjectCard({ project: p, editable, onEnter, onDelete, onOpen }) {
   const isTeam = (p.visibility || 'team') === 'team'
+  const handleCard = () => (editable ? onEnter(p) : onOpen(p.id))
   return (
-    <article className="pj-card" title="이 프로젝트로 들어가기" onClick={() => onEnter(p)}>
-      <button
-        className="pj-card-del"
-        title="프로젝트 삭제"
-        onClick={(e) => {
-          e.stopPropagation()
-          onDelete(p.id)
-        }}
-      >
-        ✕
-      </button>
+    <article
+      className="pj-card"
+      title={editable ? '이 프로젝트로 들어가기' : '소스·검수 열람'}
+      onClick={handleCard}
+    >
+      {editable && (
+        <button
+          className="pj-card-del"
+          title="프로젝트 삭제"
+          onClick={(e) => {
+            e.stopPropagation()
+            onDelete(p.id)
+          }}
+        >
+          ✕
+        </button>
+      )}
       <div className="pj-card-emoji">{p.emoji}</div>
       <b className="pj-card-name">{p.name}</b>
       <div className="pj-card-tags">

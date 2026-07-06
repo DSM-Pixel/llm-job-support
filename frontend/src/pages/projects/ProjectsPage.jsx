@@ -75,6 +75,11 @@ export default function ProjectsPage() {
   // 프로젝트로 '진입' — 현재 프로젝트로 설정하고 작업 공간(대시보드)으로.
   const enterProject = (p) => {
     if (!p) return
+    // 내 프로젝트만 작업공간 진입 — 남의(열람만) 프로젝트는 소스 검수만.
+    if (!p.mine) {
+      toast('내 프로젝트만 작업공간에 들어갈 수 있어요 (소스 검수만 가능)')
+      return
+    }
     setProject({ id: p.id, name: p.name, emoji: p.emoji })
     toast(`‘${p.name}’ 프로젝트로 전환`)
     location.href = 'dashboard.html'
@@ -218,20 +223,47 @@ export default function ProjectsPage() {
                 질의·검색·라벨링·보고서·기록이 따로 관리됩니다.
               </p>
             </div>
+            <h3 className="pj-group-title">✏️ 내가 편집할 수 있는 프로젝트</h3>
             <div className="pj-grid">
               <button className="pj-card pj-new" onClick={() => setModal({ kind: 'new' })}>
                 <span className="pj-new-plus">+</span>새 프로젝트 만들기
               </button>
-              {gallery.projects.map((p) => (
-                <ProjectCard
-                  key={p.id}
-                  project={p}
-                  onEnter={enterProject}
-                  onDelete={(pid) => setModal({ kind: 'delete', pid })}
-                  onOpen={openProject}
-                />
-              ))}
+              {gallery.projects
+                .filter((p) => p.mine)
+                .map((p) => (
+                  <ProjectCard
+                    key={p.id}
+                    project={p}
+                    editable
+                    onEnter={enterProject}
+                    onDelete={(pid) => setModal({ kind: 'delete', pid })}
+                    onOpen={openProject}
+                  />
+                ))}
             </div>
+            {gallery.projects.some((p) => !p.mine) && (
+              <>
+                <h3 className="pj-group-title">👁 열람만 가능한 프로젝트 · 소스 검수</h3>
+                <p className="pj-group-sub">
+                  다른 팀원이 만든(팀 공유) 프로젝트입니다. 작업공간에는 들어갈 수 없고, 소스
+                  검수만 할 수 있습니다.
+                </p>
+                <div className="pj-grid">
+                  {gallery.projects
+                    .filter((p) => !p.mine)
+                    .map((p) => (
+                      <ProjectCard
+                        key={p.id}
+                        project={p}
+                        editable={false}
+                        onEnter={enterProject}
+                        onDelete={(pid) => setModal({ kind: 'delete', pid })}
+                        onOpen={openProject}
+                      />
+                    ))}
+                </div>
+              </>
+            )}
             <Pager
               page={gallery.page}
               pages={gallery.pages}
@@ -242,7 +274,8 @@ export default function ProjectsPage() {
           </section>
         ) : (
           detail && <DetailView project={detail} onBack={showGallery} onEnter={enterProject}
-            onAddSource={() => setModal({ kind: 'source' })} onReview={setReview} canReview={canReview} />
+            onAddSource={() => setModal({ kind: 'source' })} onReview={setReview}
+            canReview={canReview} editable={!!detail.mine} />
         )}
       </main>
 

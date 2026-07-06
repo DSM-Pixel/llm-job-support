@@ -159,6 +159,10 @@ def list_projects(page: int = 1, page_size: int = 24, viewer: dict | None = None
     with _lock, _connect() as conn:
         rows = conn.execute("SELECT * FROM projects ORDER BY created DESC").fetchall()
         visible = [r for r in rows if _can_see(r, viewer)]
+        # 내가 만든(편집 가능) 프로젝트를 앞으로 — 갤러리의 '편집 가능/열람만' 구분용.
+        # (정렬은 안정적이라 각 그룹 안에서는 created DESC 유지.)
+        vid = (viewer or {}).get("id") or ""
+        visible.sort(key=lambda r: 0 if (r["owner_id"] or "") == vid else 1)
         total = len(visible)
         start = (page - 1) * page_size
         page_rows = visible[start : start + page_size]
