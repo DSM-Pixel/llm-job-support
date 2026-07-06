@@ -75,9 +75,9 @@ export default function ProjectsPage() {
   // 프로젝트로 '진입' — 현재 프로젝트로 설정하고 작업 공간(대시보드)으로.
   const enterProject = (p) => {
     if (!p) return
-    // 내 프로젝트만 작업공간 진입 — 남의(열람만) 프로젝트는 소스 검수만.
-    if (!p.mine) {
-      toast('내 프로젝트만 작업공간에 들어갈 수 있어요 (소스 검수만 가능)')
+    // 편집 가능(내 개인·우리 팀 공유)만 작업공간 진입 — 그 외는 소스 검수만.
+    if (!p.editable) {
+      toast('내 팀 프로젝트만 작업공간에 들어갈 수 있어요 (소스 검수만 가능)')
       return
     }
     setProject({ id: p.id, name: p.name, emoji: p.emoji })
@@ -229,7 +229,7 @@ export default function ProjectsPage() {
                 <span className="pj-new-plus">+</span>새 프로젝트 만들기
               </button>
               {gallery.projects
-                .filter((p) => p.mine)
+                .filter((p) => p.editable)
                 .map((p) => (
                   <ProjectCard
                     key={p.id}
@@ -241,16 +241,16 @@ export default function ProjectsPage() {
                   />
                 ))}
             </div>
-            {gallery.projects.some((p) => !p.mine) && (
+            {gallery.projects.some((p) => !p.editable) && (
               <>
                 <h3 className="pj-group-title">👁 열람만 가능한 프로젝트 · 소스 검수</h3>
                 <p className="pj-group-sub">
-                  다른 팀원이 만든(팀 공유) 프로젝트입니다. 작업공간에는 들어갈 수 없고, 소스
-                  검수만 할 수 있습니다.
+                  내 팀이 아닌 프로젝트입니다. 작업공간에는 들어갈 수 없고, 소스 검수만 할 수
+                  있습니다.
                 </p>
                 <div className="pj-grid">
                   {gallery.projects
-                    .filter((p) => !p.mine)
+                    .filter((p) => !p.editable)
                     .map((p) => (
                       <ProjectCard
                         key={p.id}
@@ -275,7 +275,7 @@ export default function ProjectsPage() {
         ) : (
           detail && <DetailView project={detail} onBack={showGallery} onEnter={enterProject}
             onAddSource={() => setModal({ kind: 'source' })} onReview={setReview}
-            canReview={canReview} editable={!!detail.mine} />
+            canReview={canReview} editable={!!detail.editable} />
         )}
       </main>
 

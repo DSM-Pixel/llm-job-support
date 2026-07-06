@@ -10,7 +10,7 @@ export default function ProjectCard({ project: p, editable, onEnter, onDelete, o
       title={editable ? '이 프로젝트로 들어가기' : '소스·검수 열람'}
       onClick={handleCard}
     >
-      {editable && (
+      {p.mine && (
         <button
           className="pj-card-del"
           title="프로젝트 삭제"
