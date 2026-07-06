@@ -16,6 +16,7 @@ import os
 from pathlib import Path
 
 from fastapi import FastAPI, File, Form, UploadFile
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -682,6 +683,14 @@ def datasets() -> dict:
 @app.post("/api/datasets/upload")
 def datasets_upload(body: UploadIn) -> dict:
     return services.upload_dataset(body.name)
+
+
+# ── 레거시 URL 호환: 예전 바닐라 /pages/xxx.html → 새 구조 /xxx.html ──
+# React 컷오버로 페이지가 /pages/ 하위에서 루트로 옮겨졌다. 기존 북마크·이력·
+# 캐시가 /pages/* 를 치면 404 나던 문제를 리다이렉트로 흡수한다.
+@app.get("/pages/{fname:path}")
+def _legacy_pages_redirect(fname: str) -> RedirectResponse:
+    return RedirectResponse(url=f"/{fname}", status_code=302)
 
 
 # ── 정적 프론트엔드 (반드시 API 라우트 등록 이후에 마운트) ──────────────
