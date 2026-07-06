@@ -3,7 +3,8 @@ import { relTime } from '../../../lib/time.js'
 const REVIEW_TONE = { 대기: 'wait', 승인: 'ok', 반려: 'no' }
 
 // ── 상세(소스 + 검수) ──
-export default function DetailView({ project, onBack, onEnter, onAddSource, onReview }) {
+// canReview: 관리자(상사)일 때만 승인·반려·대기 버튼을 노출. 일반 사용자는 상태만 본다.
+export default function DetailView({ project, onBack, onEnter, onAddSource, onReview, canReview }) {
   const p = project
   return (
     <section className="pj-detail">
@@ -58,11 +59,17 @@ export default function DetailView({ project, onBack, onEnter, onAddSource, onRe
                   <small>검수자 {who}</small>
                 </div>
                 <span className={`pj-badge ${tone}`}>{s.review}</span>
-                <div className="pj-rv-btns">
-                  {rvBtn('승인', '승인', 'ok')}
-                  {rvBtn('반려', '반려', 'no')}
-                  {rvBtn('대기', '대기', 'wait')}
-                </div>
+                {canReview ? (
+                  <div className="pj-rv-btns">
+                    {rvBtn('승인', '승인', 'ok')}
+                    {rvBtn('반려', '반려', 'no')}
+                    {rvBtn('대기', '대기', 'wait')}
+                  </div>
+                ) : (
+                  <span className="pj-rv-locked" title="검수는 관리자(상사)만 할 수 있습니다">
+                    🔒 관리자 검수
+                  </span>
+                )}
               </div>
             )
           })

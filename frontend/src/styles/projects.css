@@ -353,6 +353,17 @@
   gap: 4px;
   flex-shrink: 0;
 }
+/* 일반 사용자용 — 검수 버튼 대신 '관리자 검수' 잠금 표시. */
+.pj-rv-locked {
+  flex-shrink: 0;
+  padding: 5px 10px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
 .pj-rv-btn {
   padding: 5px 10px;
   border: 1px solid var(--line);

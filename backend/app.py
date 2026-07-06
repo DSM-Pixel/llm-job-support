@@ -172,6 +172,7 @@ class SourceAddIn(BaseModel):
 
 
 class ReviewIn(BaseModel):
+    token: str = ""
     source_id: str = ""
     status: str = "대기"
     reviewer: str = ""
@@ -687,8 +688,19 @@ def projects_add_source(pid: str, body: SourceAddIn) -> dict:
 
 @app.post("/api/review")
 def review_set(body: ReviewIn) -> dict:
-    """소스 검수 상태 변경(대기/승인/반려) + 검수자·시각 기록."""
-    return projects.set_review(body.source_id, body.status, body.reviewer) or {"error": "invalid"}
+    """소스 검수 상태 변경(대기/승인/반려) — 관리자(상사)만 가능.
+
+    검수는 상사 권한이므로 로그인 세션이 관리자(is_admin/is_super)일 때만 허용하고,
+    검수자 이름은 클라이언트 값이 아니라 서버 세션의 실제 이름을 기록한다(신뢰 가능).
+    """
+    actor = auth.session_user(body.token)
+    if not actor or not actor.get("active"):
+        return {"error": "로그인이 필요합니다.", "code": "unauthorized"}
+    if not (actor.get("is_admin") or actor.get("is_super")):
+        return {"error": "검수(승인·반려)는 관리자만 할 수 있습니다.", "code": "forbidden"}
+    return projects.set_review(body.source_id, body.status, actor.get("name") or "관리자") or {
+        "error": "invalid"
+    }
 
 
 @app.get("/api/datasets")

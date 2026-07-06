@@ -11,7 +11,14 @@ import SettingsModal from '../../shell/SettingsModal.jsx'
 const PAGE_SIZE = 24
 const EMOJIS = ['📁', '🛣️', '🏗️', '📹', '📊', '🚧', '🧭', '🗂️']
 
-const reviewer = () => getSettings().name || '검수자'
+// 로그인 세션 토큰(검수 등 권한 필요한 요청에 첨부).
+const authToken = () => {
+  try {
+    return (JSON.parse(localStorage.getItem('gnsoft.auth') || 'null') || {}).token || ''
+  } catch {
+    return ''
+  }
+}
 
 export default function ProjectsPage() {
   const [view, setView] = useState('gallery') // 'gallery' | 'detail'
@@ -89,10 +96,15 @@ export default function ProjectsPage() {
     }
   }
 
+  // 검수(승인·반려·대기) — 관리자만 가능. 서버가 토큰으로 권한을 재검증한다.
   const setReview = async (sourceId, status) => {
     try {
-      const p = await api('/api/review', { source_id: sourceId, status, reviewer: reviewer() })
-      if (!p.error) setDetail(p)
+      const p = await api('/api/review', { token: authToken(), source_id: sourceId, status })
+      if (p.error) {
+        toast(p.error)
+        return
+      }
+      setDetail(p)
     } catch {
       /* toast */
     }
@@ -213,7 +225,7 @@ export default function ProjectsPage() {
           </section>
         ) : (
           detail && <DetailView project={detail} onBack={showGallery} onEnter={enterProject}
-            onAddSource={() => setModal({ kind: 'source' })} onReview={setReview} />
+            onAddSource={() => setModal({ kind: 'source' })} onReview={setReview} canReview={adminLink} />
         )}
       </main>
 
