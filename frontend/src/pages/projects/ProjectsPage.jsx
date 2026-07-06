@@ -6,6 +6,7 @@ import { Pager } from '../../components/Pager.jsx'
 import { ConfirmModal, InputModal } from '../../components/Modal.jsx'
 import ProjectCard from './components/ProjectCard.jsx'
 import DetailView from './components/DetailView.jsx'
+import SettingsModal from '../../shell/SettingsModal.jsx'
 
 const PAGE_SIZE = 24
 const EMOJIS = ['📁', '🛣️', '🏗️', '📹', '📊', '🚧', '🧭', '🗂️']
@@ -19,6 +20,8 @@ export default function ProjectsPage() {
   const [detail, setDetail] = useState(null) // 상세 프로젝트(소스 포함)
   const [modal, setModal] = useState(null) // { kind: 'new' | 'source' | 'delete', pid? }
   const [adminLink, setAdminLink] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [, bumpProfile] = useState(0) // 설정 저장 후 아바타 이니셜 갱신용 리렌더
 
   // ── 갤러리 로드(페이지네이션) ──
   const loadGallery = useCallback(async (page = 1) => {
@@ -162,7 +165,13 @@ export default function ProjectsPage() {
               title="내 프로필"
               role="button"
               tabIndex={0}
-              onClick={() => toast('프로필 설정은 이후 단계에서 이관됩니다')}
+              onClick={() => setSettingsOpen(true)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  setSettingsOpen(true)
+                }
+              }}
             >
               {(getSettings().name || '사용자').slice(-2)}
             </span>
@@ -237,6 +246,11 @@ export default function ProjectsPage() {
           onClose={() => setModal(null)}
         />
       )}
+      <SettingsModal
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        onSaved={() => bumpProfile((v) => v + 1)}
+      />
     </div>
   )
 }

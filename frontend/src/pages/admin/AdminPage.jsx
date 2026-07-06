@@ -7,6 +7,7 @@ import { SummaryChips } from './components/SummaryChips.jsx'
 import { RequestList } from './components/RequestList.jsx'
 import { MemberTable } from './components/MemberTable.jsx'
 import { MemberDetailModal } from './components/MemberDetailModal.jsx'
+import SettingsModal from '../../shell/SettingsModal.jsx'
 import {
   fetchMembers,
   fetchRequests,
@@ -25,6 +26,8 @@ export default function AdminPage() {
   const [requests, setRequests] = useState(null) // 슈퍼 전용 승인 대기(null=숨김)
   const [detail, setDetail] = useState(null) // 상세 모달 응답
   const [confirmUid, setConfirmUid] = useState(null) // 비활성화 확인 대상
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [, bumpProfile] = useState(0) // 설정 저장 후 아바타 갱신용 리렌더
   const pageRef = useRef(1) // 현재 페이지(토글/승인 후 같은 페이지 유지)
 
   const isSuper = !!data?.is_super
@@ -152,7 +155,13 @@ export default function AdminPage() {
               title="내 프로필"
               role="button"
               tabIndex={0}
-              onClick={() => toast('프로필 설정은 이후 단계에서 이관됩니다')}
+              onClick={() => setSettingsOpen(true)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  setSettingsOpen(true)
+                }
+              }}
             >
               {(getSettings().name || '사용자').slice(-2)}
             </span>
@@ -213,6 +222,11 @@ export default function AdminPage() {
           onClose={() => setConfirmUid(null)}
         />
       )}
+      <SettingsModal
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        onSaved={() => bumpProfile((v) => v + 1)}
+      />
     </div>
   )
 }
