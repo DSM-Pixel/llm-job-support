@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from '../../lib/toast.js'
+import { saveArtifact } from '../../lib/activity.js'
 import { buildReportHtml, buildItemsHtml } from './reportRender.js'
 import { getReportText } from './reportText.js'
 
@@ -55,6 +56,16 @@ export function useReportDoc() {
       page.innerHTML = buildReportHtml(r)
       renderItemsIntoReport() // 재생성 시에도 첨부 자료 유지
       addSectionControls() // 섹션 삭제 버튼 부착
+      // 생성된 보고서를 산출물(아티팩트)로 저장 — 기록 관리에서 DOCX 재다운로드용.
+      // 빈/플레이스홀더 렌더는 저장하지 않는다(sections 가 실제로 있을 때만).
+      if (Array.isArray(r?.sections) && r.sections.length) {
+        saveArtifact({
+          kind: 'report',
+          id: 'report-' + Date.now(),
+          title: r.title || '보고서',
+          report: r,
+        })
+      }
     },
     [renderItemsIntoReport, addSectionControls],
   )

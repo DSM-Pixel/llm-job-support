@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { getActivity, getArtifacts, deleteActivities, deleteArtifacts } from '../lib/activity.js'
+import { downloadDocx } from '../lib/reportDocx.js'
 import { relTime } from '../lib/time.js'
 import { toast } from '../lib/toast.js'
 
@@ -24,13 +25,16 @@ const buildRows = () => {
     title: a.type + (a.label ? ` — ${a.label}` : ''),
     image: '',
   }))
+  const artCat = (k) => (k === 'rag' ? 'RAG 결과' : k === 'report' ? '보고서 문서' : '이미지 작업')
   const arts = getArtifacts().map((a) => ({
     kind: 'art',
     ts: a.ts,
     page: a.page,
-    cat: a.kind === 'rag' ? 'RAG 결과' : '이미지 작업',
+    cat: artCat(a.kind),
     title: a.title || a.question || a.caption || '작업 결과',
     image: a.image || '',
+    // 보고서 문서면 원본 데이터를 실어 DOCX 재다운로드에 사용.
+    report: a.kind === 'report' ? a.report : null,
   }))
   return [...acts, ...arts].sort((x, y) => y.ts - x.ts)
 }
@@ -73,6 +77,16 @@ export default function HistoryModal({ open, onClose }) {
       else next.add(key)
       return next
     })
+
+  // 보고서 문서 산출물을 저장된 원본 데이터로 DOCX 재다운로드.
+  const downloadReport = async (r) => {
+    try {
+      const ok = await downloadDocx(r.report)
+      toast(ok ? 'DOCX 파일을 내려받았습니다' : '보고서 데이터가 없습니다')
+    } catch {
+      toast('DOCX 생성에 실패했습니다')
+    }
+  }
 
   const allChecked = rows.length > 0 && selected.size === rows.length
   const toggleAll = (checked) => {
@@ -139,7 +153,7 @@ export default function HistoryModal({ open, onClose }) {
               ) : (
                 rows.map((r) => {
                   const key = keyOf(r)
-                  const ic = HIST_ICON[r.cat] || (r.kind === 'art' ? '◫' : '•')
+                  const ic = r.report ? '📄' : HIST_ICON[r.cat] || (r.kind === 'art' ? '◫' : '•')
                   return (
                     <li
                       className="hist-row"
@@ -149,6 +163,7 @@ export default function HistoryModal({ open, onClose }) {
                           setLightbox(r.image)
                           return
                         }
+                        if (e.target.closest('.hist-docx')) return
                         if (e.target.closest('input')) return
                         toggle(key)
                       }}
@@ -169,6 +184,15 @@ export default function HistoryModal({ open, onClose }) {
                           {r.cat} · {r.page || ''} · {relTime(r.ts)}
                         </small>
                       </div>
+                      {r.report && (
+                        <button
+                          className="btn hist-docx"
+                          type="button"
+                          onClick={() => downloadReport(r)}
+                        >
+                          DOCX
+                        </button>
+                      )}
                       {r.image && <img className="hist-thumb" src={r.image} alt="" />}
                     </li>
                   )

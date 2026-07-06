@@ -1,5 +1,5 @@
 import { toast } from '../../../lib/toast.js'
-import { downloadDocx } from '../reportDocx.js'
+import { downloadDocx } from '../../../lib/reportDocx.js'
 
 // 초기 로딩 상태 — 바닐라 report.html 의 .report-loading 마크업 그대로.
 // 모듈 상수(참조 고정)로 두어 React 가 이후 명령형 innerHTML 조작을 덮어쓰지 않게 한다.

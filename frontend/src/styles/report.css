@@ -76,6 +76,13 @@
   font-size: 22px;
 }
 
+/* 양식 업로드로 채우기 — 생성 버튼 아래 구분선으로 별도 기능임을 표시. */
+.template-upload {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line, #e3e8f0);
+}
+
 /* 섹션 제목 — 위쪽 여백을 넉넉히 줘서 기능별로 구분되게 한다. */
 .report-form h3 {
   margin: 28px 0 12px;

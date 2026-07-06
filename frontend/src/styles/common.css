@@ -1223,6 +1223,13 @@ textarea {
   cursor: zoom-in;
 }
 
+/* 보고서 문서 산출물의 DOCX 재다운로드 버튼(작게) */
+.hist-docx {
+  flex: none;
+  padding: 4px 10px;
+  font-size: 11px;
+}
+
 /* 사진 크게 보기(라이트박스) */
 .lightbox-overlay {
   z-index: 200;
