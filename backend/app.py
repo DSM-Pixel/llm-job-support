@@ -608,6 +608,22 @@ def report_activity(body: ReportActivityIn) -> dict:
     )
 
 
+@app.post("/api/report/from-template")
+async def report_from_template(
+    file: UploadFile = File(...),
+    period: str = Form(""),
+    include_chart: bool = Form(True),
+) -> dict:
+    """업로드한 양식(서식) 파일을 분석해 같은 구조로 채운 보고서를 생성.
+
+    pdf·이미지는 Gemini 멀티모달로, docx·hwpx·hwp·txt 는 텍스트 추출 후 전달.
+    """
+    data = await file.read()
+    return services.generate_report_from_template(
+        data, file.filename or "", file.content_type or "", period, include_chart
+    )
+
+
 @app.post("/api/report/revise")
 def report_revise(body: ReportReviseIn) -> dict:
     """AI 대화로 현재 보고서를 수정(예: 서론·본론·결론 분리)하거나 질문에 답한다."""

@@ -213,8 +213,11 @@ export default function ReportPage() {
             onRemoveThumb={removeThumb}
             onGenerate={() => generateActivity(true)}
             busy={busy}
+            period={period}
+            includeChart={includeChart}
+            onTemplateRender={renderReport}
           />
-          <ReportDocument docRef={docRef} readText={doc.readText} />
+          <ReportDocument docRef={docRef} readText={doc.readText} getReport={() => lastReportRef.current} />
         </section>
       </AppShell>
 

@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import ArtifactPicker from './ArtifactPicker.jsx'
+import TemplateUpload from './TemplateUpload.jsx'
 import { TYPES } from '../reportTypes.js'
 
 // 왼쪽 '보고서 구성' 패널 — 유형·기간·차트 토글·자료 첨부·생성 버튼.
@@ -20,6 +21,9 @@ export default function ReportControls({
   onRemoveThumb,
   onGenerate,
   busy,
+  period,
+  includeChart,
+  onTemplateRender,
 }) {
   const imgInput = useRef(null)
   const stagedCount = reportItems.length
@@ -125,6 +129,7 @@ export default function ReportControls({
       >
         {busy.active ? busy.text : '✣ 보고서 생성'}
       </button>
+      <TemplateUpload period={period} includeChart={includeChart} onRender={onTemplateRender} />
     </aside>
   )
 }

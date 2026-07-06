@@ -13,3 +13,13 @@ export const genFromRag = (body) => api('/api/report/from-rag', body)
 
 // AI 대화 패널(보고서 편집기) — 수정 지시/질문 처리.
 export const reviseReport = (body) => api('/api/report/revise', body)
+
+// 양식 파일 업로드 → AI가 구조를 분석해 채운 보고서 생성.
+// 파일 업로드라 api()(JSON) 를 못 쓰고 FormData 로 직접 fetch. 응답은 /api/report/web 과 동일 스키마.
+export const genFromTemplate = (file, period = '', includeChart = true) => {
+  const fd = new FormData()
+  fd.append('file', file)
+  fd.append('period', period)
+  fd.append('include_chart', includeChart ? 'true' : 'false')
+  return fetch('/api/report/from-template', { method: 'POST', body: fd }).then((r) => r.json())
+}

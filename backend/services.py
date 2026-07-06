@@ -834,7 +834,7 @@ def detect_objects_vision(image_bytes: bytes, mime: str = "image/png") -> dict:
             continue
         name = str(o.get("label") or "객체").strip() or "객체"
         conf = o.get("confidence")
-        conf = int(conf) if isinstance(conf, (int, float)) else None
+        conf = int(conf) if isinstance(conf, int | float) else None
         labels.append(
             {
                 "class_name": name,
@@ -1399,6 +1399,179 @@ def generate_report_web(
         "sections": _rich_report_sections(kind, period, focus),
         "table": _report_table(period) if include_chart else None,
         "sources": srcs or ["도로 파손 신고 현황", "도로보수 예산 현황", "Vision AI 검수 리포트"],
+    }
+
+
+# ── 양식(서식) 파일 업로드 → 분석 → 같은 구조로 채운 보고서 ────────────────
+def _docx_text(data: bytes) -> str:
+    """.docx(=zip)의 word/document.xml 에서 텍스트를 추출(문단 단위 줄바꿈)."""
+    import io
+    import zipfile
+
+    try:
+        with zipfile.ZipFile(io.BytesIO(data)) as z:
+            xml = z.read("word/document.xml").decode("utf-8", "replace")
+    except Exception:
+        return ""
+    # 문단(</w:p>) 경계를 줄바꿈으로 바꾸고, 줄마다 <w:t> 텍스트만 이어붙인다.
+    xml = xml.replace("</w:p>", "\n")
+    return re.sub(r"\n{3,}", "\n\n", _join_docx_runs(xml)).strip()
+
+
+def _join_docx_runs(xml: str) -> str:
+    out: list[str] = []
+    for chunk in xml.split("\n"):
+        runs = re.findall(r"<w:t[^>]*>(.*?)</w:t>", chunk, re.S)
+        if runs:
+            out.append("".join(runs))
+        elif chunk.strip() == "":
+            out.append("")
+    return "\n".join(out)
+
+
+def _hwpx_text(data: bytes) -> str:
+    """.hwpx(신 한글, zip+xml)의 Contents/section*.xml 텍스트 추출(best-effort)."""
+    import io
+    import zipfile
+
+    try:
+        with zipfile.ZipFile(io.BytesIO(data)) as z:
+            names = sorted(n for n in z.namelist() if "section" in n.lower() and n.endswith(".xml"))
+            out: list[str] = []
+            for n in names:
+                xml = z.read(n).decode("utf-8", "replace")
+                # hwpx 텍스트 런은 <hp:t>…</hp:t>. 없으면 태그 제거 폴백.
+                runs = re.findall(r"<hp:t>(.*?)</hp:t>", xml, re.S)
+                out.append("\n".join(runs) if runs else re.sub(r"<[^>]+>", " ", xml))
+            return re.sub(r"[ \t]{2,}", " ", "\n".join(out)).strip()
+    except Exception:
+        return ""
+
+
+def _hwp_text(data: bytes) -> str:
+    """.hwp(구 한글, OLE 바이너리) — olefile 로 PrvText(미리보기 텍스트) 추출(best-effort).
+
+    본문 완전 추출은 어렵고, 미리보기 스트림으로 '양식 구조 분석'용 텍스트만 확보한다.
+    olefile 미설치 시 빈 문자열(→ 상위에서 안내 폴백).
+    """
+    import io
+
+    try:
+        import olefile
+    except Exception:
+        return ""
+    try:
+        ole = olefile.OleFileIO(io.BytesIO(data))
+        if ole.exists("PrvText"):
+            return ole.openstream("PrvText").read().decode("utf-16-le", "replace").strip()
+    except Exception:
+        return ""
+    return ""
+
+
+def _template_payload(data: bytes, filename: str, mime: str) -> tuple[str, str]:
+    """양식 파일 → ('file', mime) 또는 ('text', 추출텍스트).
+
+    반환 (kind, value): kind=='file' 이면 value=mime(Gemini 멀티모달로 원본 전달),
+    kind=='text' 이면 value=추출한 텍스트.
+    """
+    name = (filename or "").lower()
+    m = (mime or "").lower()
+    if m.startswith("image/") or name.endswith((".png", ".jpg", ".jpeg", ".webp", ".gif")):
+        return ("file", mime or "image/png")
+    if m == "application/pdf" or name.endswith(".pdf"):
+        return ("file", "application/pdf")
+    if name.endswith(".docx"):
+        return ("text", _docx_text(data))
+    if name.endswith(".hwpx"):
+        return ("text", _hwpx_text(data))
+    if name.endswith(".hwp"):
+        return ("text", _hwp_text(data))
+    try:
+        return ("text", data.decode("utf-8", "replace"))
+    except Exception:
+        return ("text", "")
+
+
+_TEMPLATE_PROMPT = (
+    "첨부된 '양식(서식)'을 분석해, 그 문서의 구조·섹션·항목·표·말투를 최대한 그대로 따르는 "
+    "한국어 보고서를 작성해라. 양식의 빈칸/기재 항목은 도로 파손·시설물 점검·검수 업무 맥락에 "
+    "맞는 그럴듯한 예시 내용으로 채워라(실제 기관 고유정보는 지어내지 말고 일반 예시로).\n"
+    "출력 형식:\n"
+    "- 양식의 각 항목/절을 '## N. 제목' 한 줄 + 다음 줄부터 본문으로.\n"
+    "- 표·목록 형태 항목은 '- 항목명: 값' 불릿으로 재현.\n"
+    "- 머리말/맺음말/코드펜스 없이 섹션만 출력."
+)
+
+
+def generate_report_from_template(
+    data: bytes,
+    filename: str = "",
+    mime: str = "",
+    period: str = "",
+    include_chart: bool = True,
+) -> dict:
+    """업로드한 양식 파일을 분석해 같은 구조로 채운 보고서를 생성.
+
+    pdf/이미지는 Gemini 멀티모달로 원본 그대로, docx/hwpx/hwp/txt 는 텍스트 추출 후 전달.
+    키/오류/추출 실패 시 안내 메시지와 함께 폴백.
+    """
+    stem = re.sub(r"\.[^.]+$", "", filename or "양식").strip() or "양식"
+    kind, value = _template_payload(data, filename, mime)
+    key = _gemini_key()
+
+    if key and (kind == "file" or (value and value.strip())):
+        try:
+            from google import genai
+            from google.genai import types
+
+            client = genai.Client(api_key=key, http_options={"timeout": 30000})
+            if kind == "file":
+                part = types.Part.from_bytes(data=data, mime_type=value)
+                contents = [part, _TEMPLATE_PROMPT]
+            else:
+                contents = f"[양식 원문]\n{value[:12000]}\n\n{_TEMPLATE_PROMPT}"
+            resp = _gemini_generate(client, model="gemini-2.5-flash", contents=contents)
+            sections = _parse_md_sections(resp.text or "")
+            if sections:
+                return {
+                    "backend": "GEMINI_TEMPLATE",
+                    "report_type": "양식 기반",
+                    "org": "GNSOFT",
+                    "date": "2026.6.23",
+                    "period": period or "",
+                    "title": f"{stem} — 자동 작성",
+                    "subtitle": f"업로드 양식 분석 기반 · {filename or '양식'}",
+                    "sections": sections,
+                    "table": _report_table(period) if include_chart else None,
+                    "sources": [{"title": filename or "업로드 양식", "url": ""}],
+                    "template_name": filename or "",
+                }
+        except Exception:
+            pass
+
+    # 폴백: 키 없음/추출 실패(특히 .hwp olefile 미설치·본문 추출 불가).
+    hint = ""
+    if kind == "text" and not (value and value.strip()):
+        hint = " 양식에서 텍스트를 읽지 못했습니다(스캔 이미지 PDF이거나 지원이 어려운 형식). PDF로 변환해 올리면 더 잘 됩니다."
+    return {
+        "backend": "MOCK",
+        "report_type": "양식 기반",
+        "org": "GNSOFT",
+        "date": "2026.6.23",
+        "period": period or "",
+        "title": f"{stem} — 자동 작성(예시)",
+        "subtitle": f"업로드 양식 기반 · {filename or '양식'}",
+        "sections": [
+            {
+                "title": "안내",
+                "body": ("AI 양식 분석을 사용하려면 Gemini API 키가 필요합니다." + hint),
+                "bullets": [],
+            }
+        ],
+        "table": _report_table(period) if include_chart else None,
+        "sources": [{"title": filename or "업로드 양식", "url": ""}],
+        "template_name": filename or "",
     }
 
 
