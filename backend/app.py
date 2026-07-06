@@ -21,11 +21,19 @@ from pydantic import BaseModel
 
 from . import activity, admin, auth, cache, projects, services, yolo_service
 
-# 서빙할 정적 프론트 디렉터리. 기본은 바닐라 web/. 환경변수 WEB_DIR 로 교체 가능
-# (React 빌드본으로 컷오버 시 WEB_DIR=/app/webdist 처럼 지정). 존재하지 않으면 web/ 폴백.
+# 서빙할 정적 프론트 디렉터리. 우선순위:
+#   1) 환경변수 WEB_DIR (명시 지정)
+#   2) web/react/  — React 빌드본(레포에 커밋). 있으면 React 앱을 서빙(컷오버 완료 상태)
+#   3) web/        — 바닐라(폴백). web/react 를 지우면 즉시 바닐라로 롤백된다.
 _web_env = os.environ.get("WEB_DIR")
 _default_web = Path(__file__).resolve().parent.parent / "web"
-WEB_DIR = Path(_web_env) if (_web_env and Path(_web_env).is_dir()) else _default_web
+_react_build = _default_web / "react"
+if _web_env and Path(_web_env).is_dir():
+    WEB_DIR = Path(_web_env)
+elif _react_build.is_dir():
+    WEB_DIR = _react_build
+else:
+    WEB_DIR = _default_web
 
 app = FastAPI(title="GNSoft AI 플랫폼", version="0.1.0")
 
