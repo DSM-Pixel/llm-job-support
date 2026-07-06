@@ -1671,6 +1671,8 @@ def generate_report_activity(
 
     from datetime import datetime
 
+    today = datetime.now().strftime("%Y-%m-%d")
+
     # 버튼 텍스트의 아이콘(☰ 활동 통계, ▢ 상세 내역 등)을 떼고 유형만 추출.
     rtype = re.sub(r"[▥☰▢◫]", "", report_type or "활동 요약").strip() or "활동 요약"
     page_ko = {
@@ -1866,9 +1868,9 @@ def generate_report_activity(
         "backend": backend,
         "report_type": rtype,
         "org": f"GNSOFT · {rtype}",
-        "date": "2026.6.24",
+        "date": today,
         "period": period_label,
-        "title": f"내 {rtype} 보고서",
+        "title": f"내 {rtype} 보고서 ({period_label})",
         "subtitle": f"{period_label} · 총 활동 {n}건 · 활동일 {active_days}일 · 평균 {avg_per_day}건/일",
         "sections": sections,
         "table": None,

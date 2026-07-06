@@ -105,7 +105,8 @@ export const buildReportHtml = (r) => {
       <header>
         <p>${escapeHtml(r.org)} · ${escapeHtml(r.report_type)}</p>
         <h2 contenteditable="true">${escapeHtml(r.title)}</h2>
-        <span>${escapeHtml(r.subtitle)}</span>
+        ${r.subtitle ? `<span>${escapeHtml(r.subtitle)}</span>` : ''}
+        ${r.date ? `<span class="report-date">작성일 ${escapeHtml(r.date)}</span>` : ''}
       </header>
       ${sections}
       ${table}

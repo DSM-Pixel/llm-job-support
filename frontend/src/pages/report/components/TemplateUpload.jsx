@@ -3,6 +3,7 @@ import { toast } from '../../../lib/toast.js'
 import { genFromTemplate } from '../reportApi.js'
 
 // 양식 파일 업로드 → AI가 양식 구조를 분석해 채운 보고서 생성.
+// '보고서 구성' 제목 옆에 놓는 컴팩트 버튼(이전엔 패널 하단의 큰 블록이었음).
 // 응답은 /api/report/web 과 동일 스키마라, onRender(renderReport)로 기존 렌더 경로를 그대로 재사용한다.
 export default function TemplateUpload({ period, includeChart, onRender }) {
   const fileInput = useRef(null)
@@ -24,15 +25,15 @@ export default function TemplateUpload({ period, includeChart, onRender }) {
   }
 
   return (
-    <div className="template-upload">
-      <h3>양식 업로드로 채우기</h3>
+    <>
       <button
-        className={'btn wide' + (busy ? ' is-loading' : '')}
+        className={'btn tmpl-btn' + (busy ? ' is-loading' : '')}
         type="button"
         disabled={busy}
+        title="PDF·이미지·docx·hwp·hwpx·txt 양식을 올리면 AI가 구조를 분석해 채웁니다"
         onClick={() => fileInput.current?.click()}
       >
-        {busy ? '양식 분석 중…' : '⇪ 양식 파일 선택'}
+        {busy ? '분석 중…' : '⇪ 양식 삽입'}
       </button>
       <input
         type="file"
@@ -41,9 +42,6 @@ export default function TemplateUpload({ period, includeChart, onRender }) {
         accept=".pdf,.docx,.hwp,.hwpx,.txt,.md,image/*"
         onChange={(e) => onPick(e.target.files?.[0])}
       />
-      <p className="report-hint">
-        PDF·이미지·docx·hwp·hwpx·txt 지원. AI가 양식 구조를 분석해 채웁니다.
-      </p>
-    </div>
+    </>
   )
 }

@@ -30,7 +30,10 @@ export default function ReportControls({
 
   return (
     <aside className="report-form">
-      <h2>◫ 보고서 구성</h2>
+      <div className="report-form-head">
+        <h2>◫ 보고서 구성</h2>
+        <TemplateUpload period={period} includeChart={includeChart} onRender={onTemplateRender} />
+      </div>
       <p className="report-hint">
         내가 웹에서 한 활동(질의·검색·이미지 분석·라벨·업로드)을 분석·통계 내어 보고서를 만듭니다.
       </p>
@@ -129,7 +132,6 @@ export default function ReportControls({
       >
         {busy.active ? busy.text : '✣ 보고서 생성'}
       </button>
-      <TemplateUpload period={period} includeChart={includeChart} onRender={onTemplateRender} />
     </aside>
   )
 }

@@ -54,6 +54,7 @@ export async function downloadDocx(r) {
   const children = []
   children.push(new Paragraph({ text: r.title || '보고서', heading: HeadingLevel.TITLE }))
   if (r.subtitle) children.push(new Paragraph({ text: r.subtitle }))
+  if (r.date) children.push(new Paragraph({ text: `작성일 ${r.date}` }))
 
   for (const s of r.sections || []) {
     children.push(new Paragraph({ text: s.heading || s.title || '', heading: HeadingLevel.HEADING_1 }))

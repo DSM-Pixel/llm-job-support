@@ -72,15 +72,27 @@
 }
 
 .report-form h2 {
-  margin: 0 0 16px;
+  margin: 0;
   font-size: 22px;
 }
 
-/* 양식 업로드로 채우기 — 생성 버튼 아래 구분선으로 별도 기능임을 표시. */
-.template-upload {
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid var(--line, #e3e8f0);
+/* 제목('보고서 구성')과 '양식 삽입' 버튼을 한 줄에 양끝 정렬. */
+.report-form-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 0 16px;
+}
+
+/* 양식 삽입 — 제목 옆 컴팩트 버튼(이전엔 패널 하단의 큰 블록). */
+.tmpl-btn {
+  flex: none;
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 /* 섹션 제목 — 위쪽 여백을 넉넉히 줘서 기능별로 구분되게 한다. */
@@ -563,7 +575,16 @@
 }
 
 .report-page header span {
+  display: block;
   color: #aebee0;
+}
+
+/* 작성일 — 부제 아래 한 줄, 살짝 더 옅게. */
+.report-page header .report-date {
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #8ea3ce;
 }
 
 /* 헤더는 어두운 배경 — 편집 시 흰 글자가 흰 배경에 묻히지 않도록 반투명 처리 */
