@@ -155,7 +155,13 @@ def _openai_chat(messages, *, max_tokens=2048):
             if e.code == 429:
                 _gemini_usage["rate_limited"] = True  # 한도 소진 관측
                 if attempt < 2:
-                    time.sleep(2 * (attempt + 1))  # 2s → 4s 백오프
+                    try:
+                        ra = float(e.headers.get("retry-after") or 0)
+                    except (TypeError, ValueError):
+                        ra = 0.0
+                    time.sleep(
+                        min(max(ra, 2 * (attempt + 1)), 10)
+                    )  # Retry-After 존중, 2→4s, 최대 10s
                     continue
             return None
         except Exception:
@@ -1183,12 +1189,15 @@ def detect_objects_vision(image_bytes: bytes, mime: str = "image/png") -> dict:
             f"box 는 픽셀 정수 — x 는 0~{w}, y 는 0~{h}. "
             "label 은 짧은 한국어 명사, confidence 는 0~100 정수."
         )
-        text = _ai_vision(prompt, img_b, img_mime)
-        if text:
-            data = _extract_json(text)
-            if data and isinstance(data.get("objects"), list) and data["objects"]:
-                objects = data["objects"]
-                backend = _ai_backend() or "MOCK"
+        # GPT 비결정성(빈/깨진 JSON) 대비 최대 2회 재시도 — AI_FAIL 로 떨어지는 빈도↓.
+        for _ in range(2):
+            text = _ai_vision(prompt, img_b, img_mime)
+            if text:
+                data = _extract_json(text)
+                if data and isinstance(data.get("objects"), list) and data["objects"]:
+                    objects = data["objects"]
+                    backend = _ai_backend() or "MOCK"
+                    break
     if objects is None:
         # 키가 있는데도 실패(한도·오류·무응답)면 가짜 박스 대신 정직한 빈 결과.
         if _ai_backend():
