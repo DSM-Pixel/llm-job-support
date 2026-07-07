@@ -97,8 +97,8 @@ export default function SignupModal({ open, onClose }) {
     try {
       const r = await api('/api/auth/email/send', { email: verifyEmail })
       if (!r.ok) return setVerifyAlert({ msg: r.error || '재전송에 실패했습니다' })
-      setDevCode(r.dev_code || '')
-      setVerifyAlert({ msg: '인증 코드를 다시 보냈습니다.', ok: true })
+      if (r.dev_code) setDevCode(r.dev_code) // 쿨다운이면 기존 코드 유지
+      setVerifyAlert({ msg: r.message || '인증 코드를 다시 보냈습니다.', ok: true })
     } catch {
       setVerifyAlert({ msg: '서버 연결에 실패했습니다' })
     }

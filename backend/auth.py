@@ -476,19 +476,37 @@ def resend_code(email: str) -> dict:
 
 # ── 이메일 단독 인증(가입 폼 '인증하기' 버튼 → 모달) ──────────────────
 _EMAIL_VERIFIED_TTL = 3600  # 인증 완료 후 이 시간 안에 가입을 마쳐야 유효(1시간)
+_EMAIL_CODE_COOLDOWN = 60  # 같은 이메일 재발송 최소 간격(초) — 메일 스팸 방지
 
 
 def request_email_code(email: str) -> dict:
-    """가입 폼에서 이메일 인증 코드 발송(계정·다른 입력 없이 이메일만)."""
+    """가입 폼에서 이메일 인증 코드 발송(계정·다른 입력 없이 이메일만).
+
+    같은 이메일로 60초(쿨다운) 안에 이미 보냈으면 **새 메일을 보내지 않고** 기존 코드를
+    유지한다 — 한 주소로 인증 메일이 쌓이는 것(스팸)을 막는다.
+    """
     email = (email or "").strip().lower()
     if not _EMAIL_RE.match(email):
         return {"ok": False, "error": "올바른 이메일 주소를 입력해주세요."}
     now = time.time()
-    code = _gen_code()
     with _lock, _connect() as conn:
         _init(conn)
         if conn.execute("SELECT 1 FROM users WHERE email = ?", (email,)).fetchone():
             return {"ok": False, "error": "이미 가입된 이메일입니다. 로그인해주세요."}
+        prev = conn.execute("SELECT expires FROM email_verify WHERE email = ?", (email,)).fetchone()
+        # 직전 발송(= expires - TTL)이 쿨다운 이내이고 아직 유효하면 재발송하지 않는다.
+        if (
+            prev
+            and prev["expires"] > now
+            and (now - (prev["expires"] - _VERIFY_TTL)) < _EMAIL_CODE_COOLDOWN
+        ):
+            return {
+                "ok": True,
+                "email": email,
+                "resent": False,
+                "message": "이미 인증 코드를 보냈습니다. 메일함(스팸함 포함)을 확인해주세요.",
+            }
+        code = _gen_code()
         conn.execute("DELETE FROM email_verify WHERE expires < ? AND verified_at = 0", (now,))
         conn.execute(
             "INSERT OR REPLACE INTO email_verify(email, code, expires, attempts, verified_at) "
