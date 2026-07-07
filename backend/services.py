@@ -20,6 +20,7 @@ import base64
 import json
 import os
 import re
+import struct
 import time
 import urllib.error
 import urllib.request
@@ -269,13 +270,20 @@ def _ai_text(prompt: str) -> str | None:
     return None
 
 
-def _ai_vision(prompt: str, image_bytes: bytes, mime: str) -> str | None:
-    """이미지+프롬프트 → 답변 문자열. OpenAI 비전 우선, 없으면 Gemini 멀티모달. 실패 시 None."""
+def _ai_vision(prompt: str, image_bytes: bytes, mime: str, detail: str = "high") -> str | None:
+    """이미지+프롬프트 → 답변 문자열. OpenAI 비전 우선, 없으면 Gemini 멀티모달. 실패 시 None.
+
+    detail="high" 는 OpenAI 가 이미지를 저해상도(512px)로 줄이지 않고 원본 격자로
+    보게 해 박스 좌표 정확도를 크게 올린다(위치/크기 어긋남 방지). 토큰은 조금 더 든다.
+    """
     if _openai_key():
         b64 = base64.b64encode(image_bytes).decode("ascii")
         content = [
             {"type": "text", "text": prompt},
-            {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{b64}"}},
+            {
+                "type": "image_url",
+                "image_url": {"url": f"data:{mime};base64,{b64}", "detail": detail},
+            },
         ]
         text = _openai_chat([{"role": "user", "content": content}])
         return text.strip() if text else None
@@ -1019,24 +1027,116 @@ _MOCK_OBJECTS = [
 ]
 
 
+def _image_size(data: bytes) -> tuple[int, int] | None:
+    """이미지 바이트에서 (width, height) 픽셀 크기를 stdlib만으로 추출.
+
+    PNG·JPEG·GIF·BMP·WEBP 헤더를 직접 파싱(추가 의존성 없음). 실패 시 None.
+    VLM에 '실제 픽셀 크기'를 알려줘 픽셀 좌표로 박스를 받기 위한 용도.
+    """
+    if not data or len(data) < 24:
+        return None
+    try:
+        # PNG — IHDR 청크에 width/height.
+        if data[:8] == b"\x89PNG\r\n\x1a\n":
+            w, h = struct.unpack(">II", data[16:24])
+            return int(w), int(h)
+        # GIF — 리틀엔디언 논리 화면 크기.
+        if data[:6] in (b"GIF87a", b"GIF89a"):
+            w, h = struct.unpack("<HH", data[6:10])
+            return int(w), int(h)
+        # BMP — DIB 헤더 width/height(음수 가능).
+        if data[:2] == b"BM":
+            w, h = struct.unpack("<ii", data[18:26])
+            return abs(int(w)), abs(int(h))
+        # WEBP — RIFF 컨테이너의 VP8/VP8L/VP8X.
+        if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+            fmt = data[12:16]
+            if fmt == b"VP8 ":
+                w = struct.unpack("<H", data[26:28])[0] & 0x3FFF
+                h = struct.unpack("<H", data[28:30])[0] & 0x3FFF
+                return int(w), int(h)
+            if fmt == b"VP8L":
+                b0, b1, b2, b3 = data[21], data[22], data[23], data[24]
+                w = ((b1 & 0x3F) << 8 | b0) + 1
+                h = ((b3 & 0x0F) << 10 | b2 << 2 | (b1 & 0xC0) >> 6) + 1
+                return int(w), int(h)
+            if fmt == b"VP8X":
+                w = (data[24] | data[25] << 8 | data[26] << 16) + 1
+                h = (data[27] | data[28] << 8 | data[29] << 16) + 1
+                return int(w), int(h)
+        # JPEG — SOFn 프레임 헤더 마커에서 크기.
+        if data[:2] == b"\xff\xd8":
+            i, n = 2, len(data)
+            while i + 9 < n:
+                if data[i] != 0xFF:
+                    i += 1
+                    continue
+                marker = data[i + 1]
+                if marker in (0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7,
+                              0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF):  # fmt: skip
+                    h, w = struct.unpack(">HH", data[i + 5 : i + 9])
+                    return int(w), int(h)
+                if marker in (0xD8, 0xD9) or 0xD0 <= marker <= 0xD7:
+                    i += 2
+                    continue
+                seg = struct.unpack(">H", data[i + 2 : i + 4])[0]
+                i += 2 + seg
+    except (struct.error, IndexError):
+        return None
+    return None
+
+
+def _norm_box_px(raw, w: int, h: int) -> list[int] | None:
+    """VLM의 [x1,y1,x2,y2] 픽셀 좌표 → 0~1000 정규화 [ymin,xmin,ymax,xmax].
+
+    프론트 규약(box_2d 0~1000 [ymin,xmin,ymax,xmax])은 그대로 두고, 모델이 준
+    픽셀 좌표를 실제 이미지 크기로 나눠 정규화한다. 좌표 뒤집힘·0~1 비율 표기도 방어.
+    """
+    if not (isinstance(raw, list) and len(raw) == 4) or w <= 0 or h <= 0:
+        return None
+    try:
+        x1, y1, x2, y2 = (float(v) for v in raw)
+    except (TypeError, ValueError):
+        return None
+    # 0~1 비율로 준 경우 픽셀로 환산.
+    if max(abs(x1), abs(y1), abs(x2), abs(y2)) <= 1.5:
+        x1, x2, y1, y2 = x1 * w, x2 * w, y1 * h, y2 * h
+    if x2 < x1:
+        x1, x2 = x2, x1
+    if y2 < y1:
+        y1, y2 = y2, y1
+    nx = lambda px: max(0, min(1000, round(px / w * 1000)))  # noqa: E731
+    ny = lambda px: max(0, min(1000, round(px / h * 1000)))  # noqa: E731
+    return [ny(y1), nx(x1), ny(y2), nx(x2)]
+
+
 def detect_objects_vision(image_bytes: bytes, mime: str = "image/png") -> dict:
-    """이미지 속 '모든' 객체를 Gemini Vision으로 탐지(박스+클래스).
+    """이미지 속 '모든' 객체를 VLM(GPT 비전)으로 탐지(박스+클래스).
 
     포트홀·균열 같은 파손뿐 아니라 차량·보행자·표지판·맨홀·차선 등 도로 위
     모든 객체를 돌려준다. 프론트는 클래스별로 묶어 필터 후 선택만 라벨링한다.
     키/오류 시 다중 클래스 MOCK 폴백. 좌표 규약은 box_2d 0~1000 [ymin,xmin,ymax,xmax].
+
+    ⚠ 박스 정확도: 모델에 '실제 픽셀 크기(W×H)'를 알려주고 픽셀 좌표 [x1,y1,x2,y2]로
+    받는다. 추상적인 0~1000 격자보다 위치·크기가 훨씬 잘 맞는다. 받은 픽셀 좌표를
+    _norm_box_px 로 0~1000 정규화해 기존 프론트 규약을 유지한다.
     """
     objects: list[dict] | None = None
     backend = "MOCK"
+    size = _image_size(image_bytes) if image_bytes else None
+    w, h = size if size else (1000, 1000)
     if image_bytes:
         prompt = (
+            f"이미지 크기는 정확히 가로 {w}픽셀 × 세로 {h}픽셀이다. 좌상단이 (0,0). "
             "이 도로 이미지에 보이는 모든 객체를 탐지하라. 포트홀·균열 같은 노면 파손뿐 "
             "아니라 차량, 보행자, 표지판, 신호등, 차선, 맨홀, 가드레일, 가로수, 건물 등 "
             "화면에 보이는 모든 것을 포함한다. 같은 종류가 여러 개면 각각 따로. "
+            "각 객체를 '딱 맞게' 감싸는 최소 경계 사각형을 실제 픽셀 좌표로 답하라"
+            "(객체 주변 여백 없이, 객체가 잘리지도 않게). "
             "반드시 아래 JSON만 출력(코드펜스·설명 금지):\n"
-            '{"objects":[{"label":"포트홀","box_2d":[ymin,xmin,ymax,xmax],"confidence":87}]}\n'
-            "box_2d 는 0~1000 정규화 정수. label 은 짧은 한국어 명사. "
-            "confidence 는 0~100 정수."
+            '{"objects":[{"label":"포트홀","box":[x1,y1,x2,y2],"confidence":87}]}\n'
+            f"box 는 [왼쪽x, 위쪽y, 오른쪽x, 아래쪽y] 픽셀 정수 — x 는 0~{w}, y 는 0~{h}. "
+            "label 은 짧은 한국어 명사, confidence 는 0~100 정수."
         )
         text = _ai_vision(prompt, image_bytes, mime or "image/png")
         if text:
@@ -1046,15 +1146,22 @@ def detect_objects_vision(image_bytes: bytes, mime: str = "image/png") -> dict:
                 backend = _ai_backend() or "MOCK"
     if objects is None:
         objects = _MOCK_OBJECTS
+        w = h = 1000  # MOCK 은 이미 0~1000 정규화 좌표
 
     labels: list[dict] = []
     for o in objects[:40]:  # 과탐 방어
-        box = o.get("box_2d")
-        if not (isinstance(box, list) and len(box) == 4):
-            continue
-        try:
-            box = [max(0, min(1000, int(v))) for v in box]
-        except (TypeError, ValueError):
+        # 신규 규약: box=[x1,y1,x2,y2] 픽셀. 폴백: box_2d(0~1000 정규화, MOCK/구모델).
+        raw = o.get("box")
+        if isinstance(raw, list):
+            box = _norm_box_px(raw, w, h)
+        else:
+            legacy = o.get("box_2d")
+            box = (
+                [max(0, min(1000, int(v))) for v in legacy]
+                if isinstance(legacy, list) and len(legacy) == 4
+                else None
+            )
+        if not box:
             continue
         name = str(o.get("label") or "객체").strip() or "객체"
         conf = o.get("confidence")
