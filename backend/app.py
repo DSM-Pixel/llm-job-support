@@ -326,6 +326,35 @@ def auth_resend_code(body: ResendIn) -> dict:
     return auth.resend_code(body.email)
 
 
+@app.post("/api/auth/email/send")
+def auth_email_send(body: ResendIn) -> dict:
+    """가입 폼 '인증하기' — 이메일로 인증 코드 발송(이메일만 필요)."""
+    return auth.request_email_code(body.email)
+
+
+@app.post("/api/auth/email/confirm")
+def auth_email_confirm(body: VerifyIn) -> dict:
+    """인증 모달 — 코드 확인 후 이메일을 '인증됨'으로 표시."""
+    return auth.confirm_email_code(body.email, body.code)
+
+
+@app.post("/api/auth/register")
+def auth_register(body: SignupIn) -> dict:
+    """최종 회원가입 — 이메일 인증이 끝난 경우에만 계정 생성 + 자동 로그인."""
+    return auth.register(
+        body.email,
+        body.password,
+        body.name,
+        body.company,
+        body.team,
+        body.agree_terms,
+        body.agree_privacy,
+        body.agree_marketing,
+        body.company_id,
+        body.admin_request,
+    )
+
+
 @app.get("/api/companies")
 def companies(q: str = "") -> dict:
     """등록된 회사 검색 — 직원 회원가입 시 선택 목록(오타 방지)."""

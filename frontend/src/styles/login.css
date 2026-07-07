@@ -193,6 +193,33 @@
   background: color-mix(in srgb, var(--text) 8%, transparent);
 }
 
+/* 이메일 입력 + '인증하기' 버튼 한 줄 */
+.lg-email-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.lg-email-row input {
+  flex: 1;
+  min-width: 0;
+}
+.lg-verify-btn {
+  flex: none;
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.lg-verify-btn.done {
+  border-color: var(--green);
+  color: var(--green);
+  background: color-mix(in srgb, var(--green) 10%, transparent);
+}
+/* 인증 모달은 회원가입 모달 위에 뜨도록 */
+.lg-verify-overlay {
+  z-index: 1200;
+}
+
 .req {
   color: var(--red);
 }

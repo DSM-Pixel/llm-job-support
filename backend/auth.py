@@ -64,6 +64,13 @@ def _init(conn: sqlite3.Connection) -> None:
         "admin_request INTEGER DEFAULT 0, code TEXT NOT NULL, expires REAL NOT NULL, "
         "attempts INTEGER DEFAULT 0)"
     )
+    # 이메일 단독 인증(가입 폼의 '인증하기' 버튼) — 코드 발송·확인 상태를 이메일별로 보관.
+    # verified_at>0 이고 최근이면 '인증된 이메일'로 보고 register 에서 계정 생성을 허용한다.
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS email_verify ("
+        "email TEXT PRIMARY KEY, code TEXT NOT NULL, expires REAL NOT NULL, "
+        "attempts INTEGER DEFAULT 0, verified_at REAL DEFAULT 0)"
+    )
     # 회사 레지스트리 — name_norm(공백제거·소문자)으로 오타·띄어쓰기 흡수.
     conn.execute(
         "CREATE TABLE IF NOT EXISTS companies ("
@@ -465,6 +472,156 @@ def resend_code(email: str) -> dict:
     if not sent:
         resp["dev_code"] = code
     return resp
+
+
+# ── 이메일 단독 인증(가입 폼 '인증하기' 버튼 → 모달) ──────────────────
+_EMAIL_VERIFIED_TTL = 3600  # 인증 완료 후 이 시간 안에 가입을 마쳐야 유효(1시간)
+
+
+def request_email_code(email: str) -> dict:
+    """가입 폼에서 이메일 인증 코드 발송(계정·다른 입력 없이 이메일만)."""
+    email = (email or "").strip().lower()
+    if not _EMAIL_RE.match(email):
+        return {"ok": False, "error": "올바른 이메일 주소를 입력해주세요."}
+    now = time.time()
+    code = _gen_code()
+    with _lock, _connect() as conn:
+        _init(conn)
+        if conn.execute("SELECT 1 FROM users WHERE email = ?", (email,)).fetchone():
+            return {"ok": False, "error": "이미 가입된 이메일입니다. 로그인해주세요."}
+        conn.execute("DELETE FROM email_verify WHERE expires < ? AND verified_at = 0", (now,))
+        conn.execute(
+            "INSERT OR REPLACE INTO email_verify(email, code, expires, attempts, verified_at) "
+            "VALUES (?,?,?,0,0)",
+            (email, code, now + _VERIFY_TTL),
+        )
+    sent = _send_email(
+        email,
+        "GNSoft 이메일 인증 코드",
+        f"GNSoft AI 플랫폼 회원가입 인증 코드입니다.\n\n    인증 코드: {code}\n\n"
+        f"10분 안에 입력해주세요. 본인이 요청하지 않았다면 무시하셔도 됩니다.",
+    )
+    resp = {"ok": True, "email": email, "message": "인증 코드를 이메일로 보냈습니다."}
+    if not sent:
+        resp["dev_code"] = code  # SMTP 미설정/실패 시 데모 폴백
+    return resp
+
+
+def confirm_email_code(email: str, code: str) -> dict:
+    """이메일 인증 코드 확인 — 맞으면 해당 이메일을 '인증됨'으로 표시(계정은 아직 안 만듦)."""
+    email = (email or "").strip().lower()
+    now = time.time()
+    with _lock, _connect() as conn:
+        _init(conn)
+        r = conn.execute("SELECT * FROM email_verify WHERE email = ?", (email,)).fetchone()
+        if not r or r["expires"] < now:
+            return {"ok": False, "error": "인증 코드가 만료되었거나 없습니다. 다시 받아주세요."}
+        if r["attempts"] >= 5:
+            return {"ok": False, "error": "시도 횟수를 초과했습니다. 코드를 다시 받아주세요."}
+        if not secrets.compare_digest(str(code or "").strip(), r["code"]):
+            conn.execute(
+                "UPDATE email_verify SET attempts = attempts + 1 WHERE email = ?", (email,)
+            )
+            return {"ok": False, "error": "인증 코드가 올바르지 않습니다."}
+        conn.execute("UPDATE email_verify SET verified_at = ? WHERE email = ?", (now, email))
+    return {"ok": True, "message": "이메일 인증 완료!"}
+
+
+def _email_verified(conn: sqlite3.Connection, email: str) -> bool:
+    """이메일이 최근(1시간 내) 인증되었는가."""
+    r = conn.execute("SELECT verified_at FROM email_verify WHERE email = ?", (email,)).fetchone()
+    return bool(r and r["verified_at"] and (time.time() - r["verified_at"]) < _EMAIL_VERIFIED_TTL)
+
+
+def register(
+    email: str,
+    password: str,
+    name: str,
+    company: str = "",
+    team: str = "",
+    agree_terms: bool = False,
+    agree_privacy: bool = False,
+    agree_marketing: bool = False,
+    company_id: str = "",
+    admin_request: bool = False,
+) -> dict:
+    """최종 회원가입 — 이메일이 이미 인증(confirm_email_code)된 경우에만 계정 생성 + 자동 로그인."""
+    email = (email or "").strip().lower()
+    name = (name or "").strip()
+    if not _EMAIL_RE.match(email):
+        return {"ok": False, "error": "올바른 이메일 주소를 입력해주세요."}
+    if len(password or "") < 8:
+        return {"ok": False, "error": "비밀번호는 8자 이상이어야 합니다."}
+    if not name:
+        return {"ok": False, "error": "이름을 입력해주세요."}
+    if not (agree_terms and agree_privacy):
+        return {
+            "ok": False,
+            "error": "필수 약관(이용약관·개인정보 수집이용)에 동의해야 가입할 수 있습니다.",
+        }
+    if admin_request and not _norm_company(company):
+        return {"ok": False, "error": "관리자 신청 시 회사·기관명을 입력해주세요."}
+    now = time.time()
+    with _lock, _connect() as conn:
+        _init(conn)
+        if not _email_verified(conn, email):
+            return {
+                "ok": False,
+                "code": "email_unverified",
+                "error": "이메일 인증을 먼저 완료해주세요.",
+            }
+        if conn.execute("SELECT 1 FROM users WHERE email = ?", (email,)).fetchone():
+            return {"ok": False, "error": "이미 가입된 이메일입니다. 로그인해주세요."}
+        if (
+            not admin_request
+            and company_id
+            and not conn.execute("SELECT 1 FROM companies WHERE id = ?", (company_id,)).fetchone()
+        ):
+            return {
+                "ok": False,
+                "error": "선택한 회사를 찾을 수 없습니다. 목록에서 다시 선택해주세요.",
+            }
+        company = (company or "").strip()
+        if admin_request:
+            cid = _find_or_create_company(conn, company)
+        elif company_id:
+            found = conn.execute(
+                "SELECT id, name FROM companies WHERE id = ?", (company_id,)
+            ).fetchone()
+            cid = found["id"] if found else None
+            if found:
+                company = found["name"]
+        else:
+            cid = None
+        uid = secrets.token_hex(8)
+        conn.execute(
+            "INSERT INTO users(id, email, pw, name, company, team, marketing, "
+            "terms_at, privacy_at, created, company_id, admin_requested) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+            (
+                uid,
+                email,
+                _hash_pw(password),
+                name,
+                company,
+                (team or "").strip(),
+                1 if agree_marketing else 0,
+                now,
+                now,
+                now,
+                cid,
+                1 if admin_request else 0,
+            ),
+        )
+        conn.execute("DELETE FROM email_verify WHERE email = ?", (email,))
+        token = _issue_session(conn, uid)
+        row = conn.execute("SELECT * FROM users WHERE id = ?", (uid,)).fetchone()
+    msg = (
+        "가입 완료! 관리자 신청은 슈퍼 관리자 승인 후 활성화됩니다."
+        if admin_request
+        else "가입이 완료되었습니다."
+    )
+    return {"ok": True, "token": token, "user": _user_payload(row), "message": msg}
 
 
 def login(email: str, password: str) -> dict:
