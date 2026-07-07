@@ -39,8 +39,11 @@ function LabelingContent() {
     let totalNew = 0
     let failed = 0
     const merges = {}
+    // AI 사용량 한도(분당 요청 수)에 걸리지 않게 이미지 사이 간격을 둔다.
+    const gap = (ms) => new Promise((r) => setTimeout(r, ms))
     for (let k = 0; k < targets.length; k += 1) {
       const { im, i } = targets[k]
+      if (k > 0) await gap(4000)
       setBatchBusy(`라벨링 중 ${k + 1}/${targets.length}`)
       try {
         const result = await detectImage(im.file, im.name)
