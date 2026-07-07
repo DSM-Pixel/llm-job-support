@@ -192,12 +192,6 @@
   padding: 6px;
   border-radius: 8px;
 }
-.pw-toggle:hover {
-  color: var(--text);
-}
-.pw-toggle:hover {
-  background: color-mix(in srgb, var(--text) 8%, transparent);
-}
 
 /* 이메일 입력 + '인증하기' 버튼 한 줄 */
 .lg-email-row {
