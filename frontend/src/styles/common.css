@@ -1023,6 +1023,42 @@ textarea {
   font-weight: 700;
 }
 
+/* 회원 탈퇴 영역(설정 모달 하단) */
+.settings-danger {
+  margin-top: 6px;
+  padding: 0 18px 6px;
+  text-align: right;
+}
+.settings-withdraw {
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12.5px;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 4px;
+}
+.settings-withdraw:hover {
+  color: var(--red);
+}
+.settings-withdraw-confirm {
+  text-align: left;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--red) 40%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--red) 6%, transparent);
+}
+.settings-withdraw-confirm p {
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--text);
+}
+.settings-withdraw-btns {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 .modal-foot {
   display: flex;
   justify-content: flex-end;

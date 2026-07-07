@@ -16,6 +16,7 @@ export default function SettingsModal({ open, onClose, onSaved }) {
   const [team, setTeam] = useState('')
   const [teamList, setTeamList] = useState([]) // 회사 팀 목록(선택지)
   const [theme, setTheme] = useState('light')
+  const [confirmWithdraw, setConfirmWithdraw] = useState(false) // 회원 탈퇴 확인
 
   // 열 때마다 폼을 채운다 — 팀은 로컬 표시값이 아니라 '계정' 값(스코프 기준)으로.
   useEffect(() => {
@@ -26,6 +27,7 @@ export default function SettingsModal({ open, onClose, onSaved }) {
     setName(a.name || s.name || '')
     setTeam(a.team || '')
     setTheme(s.theme || 'light')
+    setConfirmWithdraw(false)
     // 회사 팀 목록을 불러와 datalist 선택지로(오타·불일치 방지).
     setTeamList([])
     if (!a.is_super && a.token) {
@@ -63,6 +65,28 @@ export default function SettingsModal({ open, onClose, onSaved }) {
     localStorage.removeItem('gnsoft.auth')
     clearProject()
     location.replace('login.html')
+  }
+
+  // 회원 탈퇴 — 계정+세션 영구 삭제 후 로그인 화면으로.
+  const withdraw = async () => {
+    const a = getAuth() || {}
+    try {
+      const res = await fetch('/api/auth/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: a.token }),
+      })
+      const d = await res.json().catch(() => ({}))
+      if (!d.ok) {
+        toast(d.error || '탈퇴에 실패했습니다')
+        return
+      }
+      localStorage.removeItem('gnsoft.auth')
+      clearProject()
+      location.replace('login.html')
+    } catch {
+      toast('서버 연결에 실패했습니다')
+    }
   }
 
   const save = async () => {
@@ -164,6 +188,35 @@ export default function SettingsModal({ open, onClose, onSaved }) {
               </select>
             </label>
           </div>
+          {!isSuper && (
+            <div className="settings-danger">
+              {!confirmWithdraw ? (
+                <button
+                  type="button"
+                  className="settings-withdraw"
+                  onClick={() => setConfirmWithdraw(true)}
+                >
+                  회원 탈퇴
+                </button>
+              ) : (
+                <div className="settings-withdraw-confirm">
+                  <p>정말 탈퇴하시겠어요? 계정이 영구 삭제되며 되돌릴 수 없습니다.</p>
+                  <div className="settings-withdraw-btns">
+                    <button
+                      type="button"
+                      className="btn"
+                      onClick={() => setConfirmWithdraw(false)}
+                    >
+                      취소
+                    </button>
+                    <button type="button" className="btn danger" onClick={withdraw}>
+                      탈퇴하기
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
         <div className="modal-foot settings-foot">
           <button

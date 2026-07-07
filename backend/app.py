@@ -395,6 +395,12 @@ def auth_logout(body: TokenIn) -> dict:
     return auth.logout(body.token)
 
 
+@app.post("/api/auth/delete")
+def auth_delete(body: TokenIn) -> dict:
+    """회원 탈퇴 — 본인 계정+세션 삭제(슈퍼 관리자 제외)."""
+    return auth.delete_account(body.token)
+
+
 @app.post("/api/auth/reset-request")
 def auth_reset_request(body: ResetRequestIn) -> dict:
     """비밀번호 재설정 링크 요청 — 계정 열거 방지를 위해 존재 여부와 무관하게 동일 응답."""

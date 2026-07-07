@@ -850,6 +850,29 @@ def logout(token: str) -> dict:
     return {"ok": True, "message": "로그아웃되었습니다."}
 
 
+def delete_account(token: str) -> dict:
+    """본인 계정 탈퇴 — 사용자 계정 + 모든 세션 삭제. 슈퍼 관리자는 탈퇴 불가.
+
+    (본인이 만든 프로젝트는 지우지 않는다 — 팀 공유물은 다른 팀원이 쓸 수 있어서.)
+    """
+    with _lock, _connect() as conn:
+        _init(conn)
+        s = conn.execute(
+            "SELECT user_id, expires FROM sessions WHERE token = ?", (token or "",)
+        ).fetchone()
+        if not s or s["expires"] < time.time():
+            return {"ok": False, "error": "세션이 만료되었습니다. 다시 로그인해주세요."}
+        uid = s["user_id"]
+        row = conn.execute("SELECT is_super FROM users WHERE id = ?", (uid,)).fetchone()
+        if not row:
+            return {"ok": False, "error": "사용자를 찾을 수 없습니다."}
+        if row["is_super"]:
+            return {"ok": False, "error": "슈퍼 관리자 계정은 탈퇴할 수 없습니다."}
+        conn.execute("DELETE FROM sessions WHERE user_id = ?", (uid,))
+        conn.execute("DELETE FROM users WHERE id = ?", (uid,))
+    return {"ok": True, "message": "회원 탈퇴가 완료되었습니다."}
+
+
 # ── 비밀번호 재설정 ──────────────────────────────────────────────────
 def request_reset(email: str) -> dict:
     """재설정 링크 요청. 계정 열거(enumeration) 방지를 위해 가입 여부와 관계없이

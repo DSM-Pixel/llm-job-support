@@ -87,10 +87,10 @@ export default function LoginPage() {
             <label className="field">
               이메일
               <input
-                type="email"
+                type="text"
                 name="email"
                 placeholder="you@example.com"
-                autoComplete="email"
+                autoComplete="username"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
