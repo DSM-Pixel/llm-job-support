@@ -54,9 +54,17 @@ export default function TeamCombobox({ companyId, value, onChange, label = '부�
       <div className="lg-combo" ref={boxRef}>
         <input
           type="text"
-          name="team"
+          name="gnsoft-team"
           placeholder={hasCompany ? '회사 팀을 고르거나 새로 입력' : '예: 점검분석팀'}
           autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          data-lpignore="true"
+          data-1p-ignore="true"
+          data-form-type="other"
+          role="combobox"
+          aria-autocomplete="list"
           value={value}
           onChange={(e) => {
             onChange(e.target.value)

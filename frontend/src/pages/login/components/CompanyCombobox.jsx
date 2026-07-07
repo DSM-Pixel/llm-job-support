@@ -93,9 +93,17 @@ export default function CompanyCombobox({ onSelectExisting, onSelectNew, onClear
       <div className="lg-combo" ref={comboRef}>
         <input
           type="text"
-          name="company_search"
+          name="gnsoft-search"
           placeholder="회사 이름을 검색하세요"
           autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          spellCheck={false}
+          data-lpignore="true"
+          data-1p-ignore="true"
+          data-form-type="other"
+          role="combobox"
+          aria-autocomplete="list"
           value={compQuery}
           onChange={(e) => onCompInput(e.target.value)}
           onFocus={() => hintMode !== 'selected' && runSearch(compQuery)}

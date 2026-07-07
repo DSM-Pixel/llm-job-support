@@ -123,18 +123,48 @@
   color: var(--text);
 }
 
-.lg-form .field input {
+.lg-form .field input,
+.lg-verify .field input {
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 9px;
   background: var(--bg);
   color: var(--text);
   font-size: 14px;
+  width: 100%;
 }
 
-.lg-form .field input:focus {
+.lg-form .field input:focus,
+.lg-verify .field input:focus {
   outline: none;
   border-color: var(--blue);
+}
+
+/* 인증(코드 입력) 패널 — 요소 간 간격 확보(예전엔 패딩이 없어 붙어 보였음). */
+.lg-verify {
+  display: grid;
+  gap: 14px;
+}
+.lg-verify .field {
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+/* 6자리 코드 입력 — OTP 스타일(가운데 정렬·큰 글씨·자간). */
+.lg-verify .field input[name='verify_code'] {
+  text-align: center;
+  font-size: 22px;
+  letter-spacing: 10px;
+  font-weight: 800;
+  padding: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.lg-verify .field input[name='verify_code']::placeholder {
+  letter-spacing: normal;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 /* 비밀번호 보기 토글(눈 아이콘) — 입력칸 오른쪽에 겹쳐 배치. */

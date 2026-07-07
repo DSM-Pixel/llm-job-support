@@ -48,7 +48,7 @@ export default function VerifyPanel({
         data-role="verify-btn"
         onClick={onSubmit}
       >
-        인증하고 가입 완료
+        인증 완료
       </button>
       <p className="lg-hint">
         <button className="lg-switch" type="button" data-role="resend" onClick={onResend}>
