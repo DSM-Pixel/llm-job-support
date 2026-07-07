@@ -181,13 +181,19 @@
   right: 6px;
   top: 50%;
   transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   border: 0;
   background: transparent;
+  color: var(--muted);
   cursor: pointer;
-  font-size: 16px;
   line-height: 1;
   padding: 6px;
   border-radius: 8px;
+}
+.pw-toggle:hover {
+  color: var(--text);
 }
 .pw-toggle:hover {
   background: color-mix(in srgb, var(--text) 8%, transparent);
