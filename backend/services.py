@@ -627,37 +627,42 @@ _gemini_key.mtime = None  # type: ignore[attr-defined]
 _gemini_key.value = None  # type: ignore[attr-defined]
 
 
-def _openai_key() -> str | None:
-    """prototypes/api-test/.env 의 OPENAI_API_KEY 를 읽는다.
-
-    .env 가 바뀌면(키 교체) 자동으로 다시 읽어 서버 재시작 없이 적용한다.
-    (_gemini_key 와 동일한 파일+mtime 캐시 + 환경변수 폴백 구조.)
-    """
-    from pathlib import Path
-
-    env = Path(__file__).resolve().parent.parent / "prototypes" / "api-test" / ".env"
-    try:
-        mtime = env.stat().st_mtime
-    except OSError:
-        mtime = 0.0
-
-    if mtime != _openai_key.mtime:  # type: ignore[attr-defined]
-        _openai_key.mtime = mtime  # type: ignore[attr-defined]
-        value = None
+def _read_env_key(name: str, files: list) -> str | None:
+    """여러 .env 후보 파일에서 name= 값을 찾고, 없으면 환경변수로 폴백."""
+    for f in files:
         try:
-            for line in env.read_text(encoding="utf-8").splitlines():
+            for line in f.read_text(encoding="utf-8").splitlines():
                 s = line.strip()
                 if s.startswith("#") or "=" not in s:
                     continue
                 k, v = s.split("=", 1)
-                if k.strip() == "OPENAI_API_KEY":
-                    value = v.strip().strip('"').strip("'") or None
-                    break
+                if k.strip() == name:
+                    val = v.strip().strip('"').strip("'") or None
+                    if val:
+                        return val
         except OSError:
             pass
-        if value is None:  # 파일에 없으면 환경변수 폴백
-            value = os.getenv("OPENAI_API_KEY")
-        _openai_key.value = value  # type: ignore[attr-defined]
+    return os.getenv(name)
+
+
+def _openai_key() -> str | None:
+    """OPENAI_API_KEY 를 읽는다 — 서버 루트 .env(배포 시 컨테이너에 마운트) 또는
+    prototypes/api-test/.env(로컬), 없으면 환경변수. 파일이 바뀌면 재시작 없이 반영.
+
+    → 서버에서는 `/home/dsm/llm-job-support/.env` 에 `OPENAI_API_KEY=...` 한 줄이면 된다.
+    """
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+    files = [root / ".env", root / "prototypes" / "api-test" / ".env"]
+    mtime = 0.0
+    for f in files:
+        if f.exists():
+            mtime = max(mtime, f.stat().st_mtime)
+
+    if mtime != _openai_key.mtime:  # type: ignore[attr-defined]
+        _openai_key.mtime = mtime  # type: ignore[attr-defined]
+        _openai_key.value = _read_env_key("OPENAI_API_KEY", files)  # type: ignore[attr-defined]
     return _openai_key.value  # type: ignore[attr-defined]
 
 
@@ -1112,7 +1117,7 @@ def generate_report(
         "date": _today(),
         "period": period,
         "title": f"도로 파손 {kind} 보고서",
-        "subtitle": f"생성일 {_today()} · 소스 {len(srcs) or 3}개 · {period}",
+        "subtitle": f"소스 {len(srcs) or 3}개 · {period}",
         "sections": _report_sections(kind, period, srcs),
         "table": _report_table(period) if include_chart else None,
         "sources": srcs or ["도로 파손 신고 현황", "도로보수 예산 현황", "Vision AI 검수 리포트"],
@@ -1499,7 +1504,7 @@ def generate_report_web(
             "period": period,
             "query": topic,
             "title": f"도로 파손 {kind} 보고서",
-            "subtitle": f"생성일 {_today()} · 웹 검색 기반 · {period} · 소스 {len(srcs) or 3}개",
+            "subtitle": f"웹 검색 기반 · {period} · 소스 {len(srcs) or 3}개",
             "sections": sections,
             "table": _report_table(period) if include_chart else None,
             "sources": sources or [{"title": "Google 검색", "url": "https://www.google.com"}],
@@ -1512,7 +1517,7 @@ def generate_report_web(
         "date": _today(),
         "period": period,
         "title": f"도로 파손 {kind} 보고서",
-        "subtitle": f"생성일 {_today()} · 예시(웹 검색 불가) · {period} · 소스 {len(srcs) or 3}개",
+        "subtitle": f"예시(웹 검색 불가) · {period} · 소스 {len(srcs) or 3}개",
         "sections": _rich_report_sections(kind, period, focus),
         "table": _report_table(period) if include_chart else None,
         "sources": srcs or ["도로 파손 신고 현황", "도로보수 예산 현황", "Vision AI 검수 리포트"],
@@ -1726,7 +1731,7 @@ def generate_report_from_rag(
                     "period": period,
                     "query": question,
                     "title": question.strip() or f"{kind} 보고서",
-                    "subtitle": f"생성일 {_today()} · RAG 검색 결과 기반 · 근거 {len(file_names)}건",
+                    "subtitle": f"RAG 검색 결과 기반 · 근거 {len(file_names)}건",
                     "sections": sections,
                     "table": None,
                     "sources": file_names or ["RAG 근거 문서"],
@@ -1753,7 +1758,7 @@ def generate_report_from_rag(
         "period": period,
         "query": question,
         "title": question.strip() or f"{kind} 보고서",
-        "subtitle": f"생성일 {_today()} · RAG 검색 결과 기반(예시) · 근거 {len(file_names)}건",
+        "subtitle": f"RAG 검색 결과 기반(예시) · 근거 {len(file_names)}건",
         "sections": sections,
         "table": None,
         "sources": file_names or ["RAG 근거 문서"],
