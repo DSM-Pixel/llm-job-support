@@ -173,6 +173,75 @@ def _openai_chat(messages, *, max_tokens=2048):
     return content
 
 
+def _openai_web_search(prompt: str, *, max_tokens=2048):
+    """OpenAI Responses API + web_search 툴로 '실시간 웹 근거' 답변을 만든다.
+
+    성공 시 (text, sources[{title,url}]) — 실패/미지원 시 None(호출부가 일반 생성으로 폴백).
+    사용량은 _openai_chat 과 동일하게 _gemini_usage 카운터에 기록.
+    """
+    key = _openai_key()
+    if not key:
+        return None
+    body = json.dumps(
+        {
+            "model": os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+            "tools": [{"type": "web_search"}],
+            "input": prompt,
+            "max_output_tokens": max_tokens,
+        }
+    ).encode("utf-8")
+    req = urllib.request.Request(
+        "https://api.openai.com/v1/responses",
+        data=body,
+        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+        method="POST",
+    )
+    _gemini_usage["requests"] += 1
+    call = {"ts": time.time(), "tok": 0}
+    _gemini_calls.append(call)
+    try:
+        with urllib.request.urlopen(req, timeout=45) as r:
+            data = json.loads(r.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        if e.code == 429:
+            _gemini_usage["rate_limited"] = True
+        return None
+    except Exception:
+        return None
+    # 응답(output)에서 텍스트 + url 인용(출처) 추출.
+    text_parts: list[str] = []
+    sources: list[dict] = []
+    seen: set[str] = set()
+    for item in data.get("output") or []:
+        if item.get("type") != "message":
+            continue
+        for c in item.get("content") or []:
+            if c.get("type") in ("output_text", "text"):
+                text_parts.append(c.get("text") or "")
+                for ann in c.get("annotations") or []:
+                    if ann.get("type") == "url_citation":
+                        url = ann.get("url")
+                        title = ann.get("title") or url
+                        if url and url not in seen:
+                            seen.add(url)
+                            sources.append({"title": title, "url": url})
+    text = "".join(text_parts).strip()
+    if not text:
+        return None
+    _gemini_usage["rate_limited"] = False
+    _gemini_usage["success"] += 1
+    _gemini_usage["last_success_at"] = time.time()
+    _save_gemini_state()
+    try:
+        total = int((data.get("usage") or {}).get("total_tokens") or 0)
+    except (TypeError, ValueError):
+        total = 0
+    if total:
+        _gemini_usage["tokens"] += total
+    call["tok"] = total
+    return (text, sources)
+
+
 def _ai_backend() -> str | None:
     """현재 활성 AI 제공자 라벨. OpenAI 키 우선, 없으면 Gemini, 둘 다 없으면 None."""
     if _openai_key():
@@ -1371,7 +1440,10 @@ def _web_answer(question: str) -> tuple[str, list[dict], str]:
         f"'- ' 불릿으로 정리해도 좋다.\n\n질문: {q}"
     )
     if _openai_key():
-        # OpenAI 는 실시간 웹 그라운딩이 없어 일반 답변만(출처 없음).
+        # GPT 웹 검색(web_search 툴)으로 실시간 근거+출처. 미지원/실패 시 일반 생성.
+        ws = _openai_web_search(prompt)
+        if ws and ws[0]:
+            return (ws[0], ws[1], "OPENAI_WEB")
         text = _ai_text(prompt)
         if text:
             return (text, [], "OPENAI")
@@ -1472,11 +1544,17 @@ def generate_report_web(
     sources: list[dict] = []
     backend = ""
     if _openai_key():
-        # OpenAI 는 실시간 웹 그라운딩이 없어 일반 생성 + 대체 출처로 폴백.
-        text = _ai_text(prompt)
-        if text:
-            sections = _parse_md_sections(text)
-            backend = "OPENAI"
+        # GPT 웹 검색(web_search 툴)으로 실시간 근거+출처. 미지원/실패 시 일반 생성.
+        ws = _openai_web_search(prompt)
+        if ws and ws[0]:
+            sections = _parse_md_sections(ws[0])
+            sources = ws[1]
+            backend = "OPENAI_WEB"
+        else:
+            text = _ai_text(prompt)
+            if text:
+                sections = _parse_md_sections(text)
+                backend = "OPENAI"
     elif _gemini_key():
         try:
             from google import genai
