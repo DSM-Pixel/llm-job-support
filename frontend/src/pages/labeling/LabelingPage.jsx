@@ -21,17 +21,14 @@ const SAMPLE_RESULT = {
   confClass: 'status gray',
 }
 
-// 설정의 vision 모델을 모델 칩에 반영 — 바닐라 applyModel(data-model="vision").
-const MODEL_LABEL = { Gemini: 'gemini-2.5-flash', 'YOLO-World': 'yolo-world' }
-
 function LabelingContent() {
   const { settings, openSettings } = useShell()
   const lab = useLabeling(SAMPLE_NAME, SAMPLE_RESULT)
   const [modeTab, setModeTab] = useState(0)
   const [batchBusy, setBatchBusy] = useState(false)
 
-  const modelName = MODEL_LABEL[settings.engine] || settings.engine
-  const modelSuffix = settings.engine === 'YOLO-World' ? ' · 탐지' : ' · 멀티모달'
+  const modelName = 'gpt-4o'
+  const modelSuffix = ' · 멀티모달 비전'
 
   // 폴더 전체 AI 라벨링 — 업로드한 모든 사진을 차례로 YOLO 탐지해 박스를 채운다(중복 제외).
   const onBatch = async () => {

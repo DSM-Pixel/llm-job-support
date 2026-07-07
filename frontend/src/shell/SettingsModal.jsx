@@ -1,17 +1,13 @@
 import { useEffect, useState } from 'react'
-import { getSettings, getProject, saveSettings, clearProject, getAuth } from '../lib/storage.js'
+import { getSettings, saveSettings, clearProject, getAuth } from '../lib/storage.js'
 import { toast } from '../lib/toast.js'
 import TeamCombo from '../components/TeamCombo.jsx'
 
-// 설정 모달 — 기존 common.js buildSettingsModal/openSettings/저장 로직 이식.
-// 이미지 탐지 모델은 프로젝트 안(작업 화면)에서만 노출, 슈퍼 어드민은 소속·직함 숨김.
+// 설정 모달 — 이름·팀·테마·회원탈퇴. (AI는 전부 GPT라 모델 선택은 없앴다.)
 export default function SettingsModal({ open, onClose, onSaved }) {
-  // 프로젝트 안일 때만 모델 선택 노출(바닐라 _needsProject 게이트와 동일한 의미).
-  const showModel = !!getProject()
   // 슈퍼 어드민(순수 운영자)은 소속·직함이 없다.
   const isSuper = !!(getAuth() || {}).is_super
 
-  const [engine, setEngine] = useState('Gemini')
   const [name, setName] = useState('')
   const [team, setTeam] = useState('')
   const [teamList, setTeamList] = useState([]) // 회사 팀 목록(선택지)
@@ -23,7 +19,6 @@ export default function SettingsModal({ open, onClose, onSaved }) {
     if (!open) return
     const s = getSettings()
     const a = getAuth() || {}
-    setEngine(s.engine)
     setName(a.name || s.name || '')
     setTeam(a.team || '')
     setTheme(s.theme || 'light')
@@ -118,7 +113,6 @@ export default function SettingsModal({ open, onClose, onSaved }) {
       ? ''
       : [user?.company ?? a.company, (user?.team ?? team).trim()].filter(Boolean).join(' · ')
     const merged = saveSettings({
-      ...(showModel ? { engine } : {}),
       name: user?.name || name.trim() || '사용자',
       ...(isSuper ? {} : { team: displayTeam }),
       theme,
@@ -144,18 +138,6 @@ export default function SettingsModal({ open, onClose, onSaved }) {
         </header>
         <div className="modal-body">
           <div className="modal-form">
-            {showModel && (
-              <label className="field">
-                이미지 탐지 모델
-                <select name="engine" value={engine} onChange={(e) => setEngine(e.target.value)}>
-                  <option value="Gemini">gemini-2.5-flash · 멀티모달 VLM</option>
-                  <option value="YOLO-World">yolo-world · 탐지 전용</option>
-                </select>
-                <small className="field-hint">
-                  자연어 질의·RAG·보고서는 항상 gemini-2.5-flash(LLM)를 사용합니다.
-                </small>
-              </label>
-            )}
             <label className="field">
               이름
               <input

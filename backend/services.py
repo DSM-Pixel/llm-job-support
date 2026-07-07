@@ -132,7 +132,7 @@ def _openai_chat(messages, *, max_tokens=2048):
     _gemini_calls.append(call)
     body = json.dumps(
         {
-            "model": os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+            "model": os.getenv("OPENAI_MODEL", "gpt-4o"),
             "messages": messages,
             "max_tokens": max_tokens,
         }
@@ -184,7 +184,7 @@ def _openai_web_search(prompt: str, *, max_tokens=2048):
         return None
     body = json.dumps(
         {
-            "model": os.getenv("OPENAI_MODEL", "gpt-4o-mini"),
+            "model": os.getenv("OPENAI_MODEL", "gpt-4o"),
             "tools": [{"type": "web_search"}],
             "input": prompt,
             "max_output_tokens": max_tokens,
@@ -292,6 +292,15 @@ def _ai_vision(prompt: str, image_bytes: bytes, mime: str) -> str | None:
         except Exception:
             return None
     return None
+
+
+def _engine_name() -> str:
+    """현재 비전/AI 엔진 표시명(라벨링 응답의 engine 필드용)."""
+    if _openai_key():
+        return os.getenv("OPENAI_MODEL", "gpt-4o")
+    if _gemini_key():
+        return "gemini-2.5-flash"
+    return "mock"
 
 
 # ────────────────────────────────────────────────────────────────────
@@ -412,7 +421,7 @@ def real_model_status(yolo_ok: bool) -> list[dict]:
             "tone": "green" if yolo_ok else "gray",
         },
         {
-            "name": f"{os.getenv('OPENAI_MODEL', 'gpt-4o-mini')} · GPT"
+            "name": f"{os.getenv('OPENAI_MODEL', 'gpt-4o')} · GPT"
             if _openai_key()
             else "gemini-2.5-flash",
             "kind": f"VLM·생성 · 요청 {u['requests']}/{_GEMINI_RPD}",
@@ -971,7 +980,7 @@ def labeling_detect(
 
     return {
         "backend": BACKEND,
-        "engine": "gemini-2.5-flash",
+        "engine": _engine_name(),
         "preset": preset,
         "image_name": image_name,
         "confidence": 0.91,
@@ -1034,7 +1043,7 @@ def detect_objects_vision(image_bytes: bytes, mime: str = "image/png") -> dict:
             data = _extract_json(text)
             if data and isinstance(data.get("objects"), list) and data["objects"]:
                 objects = data["objects"]
-                backend = _ai_backend() or "GEMINI"
+                backend = _ai_backend() or "MOCK"
     if objects is None:
         objects = _MOCK_OBJECTS
 
@@ -1060,7 +1069,7 @@ def detect_objects_vision(image_bytes: bytes, mime: str = "image/png") -> dict:
                 "confidence": conf,
             }
         )
-    return {"backend": backend, "engine": "gemini-2.5-flash", "labels": labels}
+    return {"backend": backend, "engine": _engine_name(), "labels": labels}
 
 
 # 설명 분석(설명형) 프리셋별 프롬프트.
