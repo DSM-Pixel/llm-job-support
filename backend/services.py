@@ -1110,6 +1110,38 @@ def _norm_box_px(raw, w: int, h: int) -> list[int] | None:
     return [ny(y1), nx(x1), ny(y2), nx(x2)]
 
 
+def _prep_vision_image(data: bytes, mime: str) -> tuple[bytes, str, int, int]:
+    """비전 입력 이미지 전처리 — EXIF 회전을 픽셀에 반영하고 과대 이미지를 축소.
+
+    폰 사진은 저장 픽셀 방향과 EXIF 표시 방향이 달라, 모델·브라우저가 보는 방향과
+    헤더에서 읽은 W×H가 어긋난다 → 박스가 회전·이탈. exif_transpose 로 방향을
+    픽셀에 확정하고, 실제로 모델에 보내는 이미지 기준 (bytes, mime, w, h)를 돌려줘
+    프롬프트에 넘기는 크기와 모델이 보는 좌표계를 일치시킨다.
+    PIL 불가/실패 시 원본 + 헤더 크기로 폴백(_image_size).
+    """
+    try:
+        import io
+
+        from PIL import Image, ImageOps
+
+        im = Image.open(io.BytesIO(data))
+        im = ImageOps.exif_transpose(im)  # EXIF 방향을 실제 픽셀에 반영
+        if im.mode != "RGB":
+            im = im.convert("RGB")
+        max_side = 1280  # 과대 이미지는 축소(토큰↓, 타일링으로 인한 좌표 흔들림↓)
+        w0, h0 = im.size
+        if max(w0, h0) > max_side:
+            s = max_side / max(w0, h0)
+            im = im.resize((max(1, round(w0 * s)), max(1, round(h0 * s))))
+        buf = io.BytesIO()
+        im.save(buf, format="JPEG", quality=90)
+        return buf.getvalue(), "image/jpeg", im.size[0], im.size[1]
+    except Exception:
+        size = _image_size(data)
+        w, h = size if size else (1000, 1000)
+        return data, mime, w, h
+
+
 def detect_objects_vision(image_bytes: bytes, mime: str = "image/png") -> dict:
     """이미지 속 '모든' 객체를 VLM(GPT 비전)으로 탐지(박스+클래스).
 
@@ -1123,9 +1155,10 @@ def detect_objects_vision(image_bytes: bytes, mime: str = "image/png") -> dict:
     """
     objects: list[dict] | None = None
     backend = "MOCK"
-    size = _image_size(image_bytes) if image_bytes else None
-    w, h = size if size else (1000, 1000)
+    w, h = 1000, 1000
     if image_bytes:
+        # EXIF 회전 반영 + 축소 후, 모델이 실제로 보는 이미지·크기로 좌표계를 맞춘다.
+        img_b, img_mime, w, h = _prep_vision_image(image_bytes, mime or "image/png")
         prompt = (
             f"이미지 크기는 정확히 가로 {w}픽셀 × 세로 {h}픽셀이다. 좌상단이 (0,0). "
             "이 도로 이미지에 보이는 모든 객체를 탐지하라. 포트홀·균열 같은 노면 파손뿐 "
@@ -1138,7 +1171,7 @@ def detect_objects_vision(image_bytes: bytes, mime: str = "image/png") -> dict:
             f"box 는 [왼쪽x, 위쪽y, 오른쪽x, 아래쪽y] 픽셀 정수 — x 는 0~{w}, y 는 0~{h}. "
             "label 은 짧은 한국어 명사, confidence 는 0~100 정수."
         )
-        text = _ai_vision(prompt, image_bytes, mime or "image/png")
+        text = _ai_vision(prompt, img_b, img_mime)
         if text:
             data = _extract_json(text)
             if data and isinstance(data.get("objects"), list) and data["objects"]:
