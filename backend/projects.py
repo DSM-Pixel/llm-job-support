@@ -76,7 +76,8 @@ def _can_see(row: sqlite3.Row, viewer: dict | None) -> bool:
     """
     owner = row["owner_id"] or ""
     if not owner:
-        return True  # 레거시(소유자 없는 예전 전역 프로젝트) — 로그인 누구나
+        # 레거시(소유자 없는 옛 테스트 프로젝트)는 일반 사용자에게 숨긴다(슈퍼만).
+        return bool(viewer and viewer.get("is_super"))
     if not viewer:
         return False
     if viewer.get("is_super"):
@@ -104,7 +105,7 @@ def _can_edit(row: sqlite3.Row, viewer: dict | None) -> bool:
     """
     owner = row["owner_id"] or ""
     if not owner:
-        return True  # 레거시(전역) 프로젝트는 편집 허용(하위호환)
+        return bool(viewer and viewer.get("is_super"))  # 레거시는 일반 사용자에게 숨김
     if not viewer:
         return False
     if viewer.get("id") == owner:
@@ -118,10 +119,10 @@ def _can_edit(row: sqlite3.Row, viewer: dict | None) -> bool:
 
 
 def _can_delete(row: sqlite3.Row, viewer: dict | None) -> bool:
-    """삭제는 만든 본인·회사 대표·슈퍼만(레거시는 로그인 누구나)."""
+    """삭제는 만든 본인·회사 대표·슈퍼만(레거시는 슈퍼만)."""
     owner = row["owner_id"] or ""
     if not owner:
-        return True
+        return bool(viewer and viewer.get("is_super"))
     if not viewer:
         return False
     if viewer.get("is_super") or viewer.get("id") == owner:
