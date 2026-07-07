@@ -127,9 +127,12 @@ export function useModalEditor({
     setDetectBusy(true)
     try {
       const result = await detectImage(active.file, active.name)
+      if (result.backend === 'AI_FAIL') {
+        return toast('AI 사용량 한도로 잠시 실패했어요. 잠시 후 다시 시도해주세요')
+      }
       const { merged, added, dup } = mergeUnique(boxes, labelsToBoxes(result))
       setBoxes(merged)
-      const engine = result.backend === 'YOLO' ? 'YOLO' : 'MOCK'
+      const engine = result.backend === 'YOLO' ? 'YOLO' : result.backend === 'OPENAI' ? 'GPT' : 'MOCK'
       toast(
         added
           ? `${engine} 탐지: ${added}건 추가${dup ? `, 중복 ${dup}건 제외` : ''}`
@@ -149,6 +152,10 @@ export function useModalEditor({
     setDetectAllBusy(true)
     try {
       const result = await detectObjects(active.file)
+      if (result.backend === 'AI_FAIL') {
+        setFilter((f) => ({ ...f, visible: false }))
+        return toast('AI 사용량 한도로 잠시 실패했어요. 잠시 후 다시 시도해주세요')
+      }
       const pending = labelsToBoxes(result)
       if (!pending.length) {
         setFilter((f) => ({ ...f, visible: false }))

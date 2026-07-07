@@ -606,9 +606,11 @@ async def labeling_detect_image(image: UploadFile = File(...)) -> dict:
     """업로드 이미지 박스 탐지 — YOLO(best.pt) 우선, 없으면 Gemini 비전으로 폴백."""
     data = await image.read()
     res = yolo_service.detect_boxes(data)
-    if res.get("backend") == "MOCK":  # 서버에 YOLO 없음 → Gemini 비전으로 실제 박스 탐지
+    if res.get("backend") == "MOCK":  # 서버에 YOLO 없음 → GPT 비전으로 실제 박스 탐지
         vis = services.detect_objects_vision(data, image.content_type or "image/png")
-        if vis.get("backend") != "MOCK" and vis.get("labels"):
+        # 키가 있으면 vis 는 OPENAI(박스) 또는 AI_FAIL(빈 결과) — 어느 쪽이든 신뢰.
+        # 키가 없을 때만(vis=MOCK) 데모용 yolo mock(res)로 폴백. 가짜 박스 노출 방지.
+        if vis.get("backend") != "MOCK":
             return vis
     return res
 

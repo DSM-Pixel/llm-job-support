@@ -44,6 +44,10 @@ function LabelingContent() {
       setBatchBusy(`라벨링 중 ${k + 1}/${targets.length}`)
       try {
         const result = await detectImage(im.file, im.name)
+        if (result.backend === 'AI_FAIL') {
+          failed += 1
+          continue
+        }
         const merged = im.savedBoxes.slice()
         labelsToBoxes(result).forEach((b) => {
           if (!merged.some((e) => sameBox(e, b))) {

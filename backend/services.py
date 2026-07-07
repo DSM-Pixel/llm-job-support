@@ -138,20 +138,29 @@ def _openai_chat(messages, *, max_tokens=2048):
             "max_tokens": max_tokens,
         }
     ).encode("utf-8")
-    req = urllib.request.Request(
-        "https://api.openai.com/v1/chat/completions",
-        data=body,
-        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=30) as r:
-            data = json.loads(r.read().decode("utf-8"))
-    except urllib.error.HTTPError as e:
-        if e.code == 429:
-            _gemini_usage["rate_limited"] = True  # 한도 소진 관측
-        return None
-    except Exception:
+    # 429(한도)면 짧게 백오프 후 재시도 — 배치/연속 호출이 가짜 박스로 떨어지지 않게.
+    data = None
+    for attempt in range(3):
+        req = urllib.request.Request(
+            "https://api.openai.com/v1/chat/completions",
+            data=body,
+            headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                data = json.loads(r.read().decode("utf-8"))
+            break
+        except urllib.error.HTTPError as e:
+            if e.code == 429:
+                _gemini_usage["rate_limited"] = True  # 한도 소진 관측
+                if attempt < 2:
+                    time.sleep(2 * (attempt + 1))  # 2s → 4s 백오프
+                    continue
+            return None
+        except Exception:
+            return None
+    if data is None:
         return None
     try:
         content = data["choices"][0]["message"]["content"]
@@ -1160,15 +1169,18 @@ def detect_objects_vision(image_bytes: bytes, mime: str = "image/png") -> dict:
         # EXIF 회전 반영 + 축소 후, 모델이 실제로 보는 이미지·크기로 좌표계를 맞춘다.
         img_b, img_mime, w, h = _prep_vision_image(image_bytes, mime or "image/png")
         prompt = (
-            f"이미지 크기는 정확히 가로 {w}픽셀 × 세로 {h}픽셀이다. 좌상단이 (0,0). "
+            f"이미지 크기는 정확히 가로 {w}픽셀 × 세로 {h}픽셀이다. "
+            "좌상단이 (0,0), 오른쪽으로 x 증가, 아래로 y 증가. "
             "이 도로 이미지에 보이는 모든 객체를 탐지하라. 포트홀·균열 같은 노면 파손뿐 "
             "아니라 차량, 보행자, 표지판, 신호등, 차선, 맨홀, 가드레일, 가로수, 건물 등 "
             "화면에 보이는 모든 것을 포함한다. 같은 종류가 여러 개면 각각 따로. "
-            "각 객체를 '딱 맞게' 감싸는 최소 경계 사각형을 실제 픽셀 좌표로 답하라"
-            "(객체 주변 여백 없이, 객체가 잘리지도 않게). "
+            "각 객체마다 그 객체의 가장 왼쪽 끝 픽셀 x1, 가장 위쪽 끝 y1, 가장 오른쪽 끝 x2, "
+            "가장 아래쪽 끝 y2 를 실제로 찾아 [x1,y1,x2,y2] 로 답하라. 박스는 객체 전체"
+            "(포트홀이면 갈라진 가장자리까지 구멍 전체)를 빠짐없이 감싸야 하고, 박스 중심이 "
+            "객체 중심과 일치해야 한다. 너무 작게 잡지 마라. "
             "반드시 아래 JSON만 출력(코드펜스·설명 금지):\n"
             '{"objects":[{"label":"포트홀","box":[x1,y1,x2,y2],"confidence":87}]}\n'
-            f"box 는 [왼쪽x, 위쪽y, 오른쪽x, 아래쪽y] 픽셀 정수 — x 는 0~{w}, y 는 0~{h}. "
+            f"box 는 픽셀 정수 — x 는 0~{w}, y 는 0~{h}. "
             "label 은 짧은 한국어 명사, confidence 는 0~100 정수."
         )
         text = _ai_vision(prompt, img_b, img_mime)
@@ -1178,7 +1190,10 @@ def detect_objects_vision(image_bytes: bytes, mime: str = "image/png") -> dict:
                 objects = data["objects"]
                 backend = _ai_backend() or "MOCK"
     if objects is None:
-        objects = _MOCK_OBJECTS
+        # 키가 있는데도 실패(한도·오류·무응답)면 가짜 박스 대신 정직한 빈 결과.
+        if _ai_backend():
+            return {"backend": "AI_FAIL", "engine": _engine_name(), "labels": []}
+        objects = _MOCK_OBJECTS  # 키 자체가 없을 때만 데모용 예시 박스
         w = h = 1000  # MOCK 은 이미 0~1000 정규화 좌표
 
     labels: list[dict] = []
