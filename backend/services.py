@@ -118,22 +118,25 @@ def _gemini_generate(client, **kwargs):
     return resp
 
 
-def _openai_chat(messages, *, max_tokens=2048):
-    """OpenAI Chat Completions REST 호출(stdlib urllib, 추가 의존성 없음).
+def _openai_chat(messages, *, max_tokens=2048, base=None, key=None, model=None, timeout=30):
+    """OpenAI 호환 Chat Completions REST 호출(stdlib urllib, 추가 의존성 없음).
 
+    base/key/model 을 넘기면 임의의 OpenAI 호환 엔드포인트(예: vm2 llama.cpp)로 보낸다.
+    안 넘기면 실제 OpenAI(api.openai.com + OPENAI_API_KEY + OPENAI_MODEL) 를 쓴다.
     성공 시 choices[0].message.content(str), 실패/오류 시 None.
-    사용량은 대시보드가 이미 쓰는 _gemini_usage/_gemini_calls 에 그대로 기록해
-    기존 대시보드 로직(사용률 막대 등)이 OpenAI 호출도 똑같이 반영하게 한다.
+    사용량은 대시보드가 이미 쓰는 _gemini_usage/_gemini_calls 에 그대로 기록한다.
     """
-    key = _openai_key()
+    key = key or _openai_key()
     if not key:
         return None
+    model = model or os.getenv("OPENAI_MODEL", "gpt-4o")
+    url = (base or "https://api.openai.com/v1").rstrip("/") + "/chat/completions"
     _gemini_usage["requests"] += 1
     call = {"ts": time.time(), "tok": 0}  # 분당/일일 사용률 집계용
     _gemini_calls.append(call)
     body = json.dumps(
         {
-            "model": os.getenv("OPENAI_MODEL", "gpt-4o"),
+            "model": model,
             "messages": messages,
             "max_tokens": max_tokens,
         }
@@ -142,13 +145,13 @@ def _openai_chat(messages, *, max_tokens=2048):
     data = None
     for attempt in range(3):
         req = urllib.request.Request(
-            "https://api.openai.com/v1/chat/completions",
+            url,
             data=body,
             headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
             method="POST",
         )
         try:
-            with urllib.request.urlopen(req, timeout=30) as r:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
                 data = json.loads(r.read().decode("utf-8"))
             break
         except urllib.error.HTTPError as e:
@@ -259,7 +262,10 @@ def _openai_web_search(prompt: str, *, max_tokens=2048):
 
 
 def _ai_backend() -> str | None:
-    """현재 활성 AI 제공자 라벨. OpenAI 키 우선, 없으면 Gemini, 둘 다 없으면 None."""
+    """현재 활성 '비전/일반' AI 제공자 라벨. OpenAI 키 우선, 없으면 Gemini, 둘 다 없으면 None.
+
+    (비전·라벨링용. 텍스트 제공자 라벨은 _text_backend 를 쓴다.)
+    """
     if _openai_key():
         return "OPENAI"
     if _gemini_key():
@@ -267,8 +273,32 @@ def _ai_backend() -> str | None:
     return None
 
 
+def _text_backend() -> str | None:
+    """현재 텍스트 생성에 실제로 쓰이는 제공자 라벨. 로컬 LLM(vm2 등) 우선."""
+    if _local_llm():
+        return "LOCAL"
+    return _ai_backend()
+
+
 def _ai_text(prompt: str) -> str | None:
-    """텍스트 프롬프트 → 답변 문자열. OpenAI 우선, 없으면 Gemini. 실패 시 None."""
+    """텍스트 프롬프트 → 답변 문자열. 로컬 LLM(vm2) 우선, 없으면 OpenAI, 없으면 Gemini.
+
+    로컬 LLM은 reasoning 모델이라 느리고(수십 초) reasoning 토큰을 먼저 쓰므로
+    타임아웃·max_tokens 를 넉넉히 준다. 로컬 실패 시 OpenAI/Gemini 로 폴백.
+    """
+    loc = _local_llm()
+    if loc:
+        text = _openai_chat(
+            [{"role": "user", "content": prompt}],
+            base=loc["base"],
+            key=loc["key"],
+            model=loc["model"],
+            max_tokens=4096,
+            timeout=180,
+        )
+        if text:
+            return text.strip()
+        # 로컬이 죽었거나 비었으면 아래로 폴백.
     if _openai_key():
         text = _openai_chat([{"role": "user", "content": prompt}])
         return text.strip() if text else None
@@ -435,7 +465,7 @@ def real_model_status(yolo_ok: bool) -> list[dict]:
             }
         )
     # 실제 존재하는 모델만 노출한다(하드코딩된 가짜 모델 SAM·파인튜닝 제거).
-    return [
+    cards = [
         {
             "name": "도로파손 탐지(YOLO)",
             "kind": "탐지 · best.pt",
@@ -454,6 +484,26 @@ def real_model_status(yolo_ok: bool) -> list[dict]:
             "detail": g_detail,
         },
     ]
+    # 로컬 LLM(vm2 등)이 설정돼 있으면 '텍스트 생성' 담당 모델로 표시.
+    loc = _local_llm()
+    if loc:
+        short = loc["model"].replace(".gguf", "")
+        if len(short) > 28:
+            short = short[:26] + "…"
+        cards.append(
+            {
+                "name": f"{short} · 로컬",
+                "kind": "텍스트 생성(보고서·질의·RAG)",
+                "load": 100,
+                "state": "운영",
+                "tone": "green",
+                "detail": [
+                    {"k": "엔드포인트", "v": loc["base"]},
+                    {"k": "용도", "v": "텍스트 전용 · 비전(라벨링)은 GPT-4o"},
+                ],
+            }
+        )
+    return cards
 
 
 # ────────────────────────────────────────────────────────────────────
@@ -771,6 +821,27 @@ _openai_key.mtime = None  # type: ignore[attr-defined]
 _openai_key.value = None  # type: ignore[attr-defined]
 
 
+def _local_llm() -> dict | None:
+    """로컬/커스텀 OpenAI 호환 LLM 설정(텍스트 전용). base+model 있으면 dict, 없으면 None.
+
+    서버 .env 에 아래를 넣으면 텍스트 작업(보고서·질의·RAG·요약·에이전트)이
+    이 엔드포인트로 간다. 비전(이미지 라벨링)은 이 모델을 쓰지 않는다(OpenAI 유지).
+        LOCAL_LLM_BASE_URL=http://vm2.gyungdal.cc:15080/v1
+        LOCAL_LLM_MODEL=GPT-OSS-20B-Uncensored-HauhauCS-MXFP4-Aggressive.gguf
+        LOCAL_LLM_API_KEY=llmtest3
+    """
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent
+    files = [root / ".env", root / "prototypes" / "api-test" / ".env"]
+    base = _read_env_key("LOCAL_LLM_BASE_URL", files)
+    model = _read_env_key("LOCAL_LLM_MODEL", files)
+    if not base or not model:
+        return None
+    key = _read_env_key("LOCAL_LLM_API_KEY", files) or "sk-noauth"
+    return {"base": base.rstrip("/"), "model": model, "key": key}
+
+
 def _generate_answer(query: str, hits: list[dict]) -> tuple[str, str]:
     """근거(hits) 기반 답변 생성. Gemini 우선, 실패/무키 시 템플릿. (answer, backend)"""
     context = "\n".join(f"- ({h['source']}) {h['text']}" for h in hits)
@@ -783,7 +854,7 @@ def _generate_answer(query: str, hits: list[dict]) -> tuple[str, str]:
         )
         text = _ai_text(prompt)  # 한도/네트워크 오류 시 None → 템플릿 폴백
         if text:
-            return text, _ai_backend() or "GEMINI"
+            return text, _text_backend() or "GEMINI"
     # 폴백: 질문 + 최상위 근거로 구성(질문에 따라 달라짐).
     if hits:
         top = hits[0]
