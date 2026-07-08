@@ -1621,7 +1621,7 @@ def revise_report(content: str, instruction: str) -> dict:
         )
         text = _ai_text(prompt)
         if text:
-            be = _ai_backend() or "GEMINI"
+            be = _text_backend() or "GEMINI"
             text = text.strip("`")
             if text.upper().startswith("ANSWER:"):
                 return {
@@ -1736,7 +1736,7 @@ def ask_about_text(context: str, question: str) -> dict:
     )
     text = _ai_text(prompt)
     if text:
-        return {"backend": _ai_backend() or "GEMINI", "answer": text}
+        return {"backend": _text_backend() or "GEMINI", "answer": text}
     return {
         "backend": "MOCK",
         "answer": "AI 사용량(토큰)이 일시적으로 소진되었습니다. 회복되거나 API 키 교체 시 자동으로 답변이 표시됩니다.",
@@ -1976,7 +1976,7 @@ def generate_report_from_template(
             sections = _parse_md_sections(text)
             if sections:
                 return {
-                    "backend": "OPENAI" if _openai_key() else "GEMINI_TEMPLATE",
+                    "backend": _text_backend() or "GEMINI_TEMPLATE",
                     "report_type": "양식 기반",
                     "org": "GNSOFT",
                     "date": _today(),
@@ -2046,7 +2046,7 @@ def generate_report_from_rag(
             sections = _parse_md_sections(text)
             if sections:
                 return {
-                    "backend": "OPENAI" if _openai_key() else "GEMINI_RAG",
+                    "backend": _text_backend() or "GEMINI_RAG",
                     "report_type": kind,
                     "org": "GNSOFT · RAG 검색 보고서",
                     "date": _today(),
@@ -2286,7 +2286,7 @@ def generate_report_activity(
             parsed = _parse_md_sections(text)
             if parsed:
                 sections = parsed
-                backend = _ai_backend() or "GEMINI"
+                backend = _text_backend() or "GEMINI"
 
     return {
         "backend": backend,
@@ -2502,7 +2502,7 @@ def _summarize_pubdata(kw: str, domain: str, stats: dict) -> tuple[str, str]:
     )
     text = _ai_text(prompt)
     if text:
-        return text, _ai_backend() or "GEMINI"
+        return text, _text_backend() or "GEMINI"
     return (
         f"‘{kw}’ 관련 {domain} 데이터를 보면, {labels[peak_i]}({stats['unit']} {values[peak_i]})에 "
         f"가장 높고 {labels[low_i]}에 가장 낮습니다. 합계 {sum(values)}{stats['unit']}, "
@@ -2691,7 +2691,7 @@ def _agent_synthesize(goal: str, findings: list[tuple[str, str]]) -> dict:
             return {
                 "title": f"{goal} — 업무 자동화 결과 보고서",
                 "content": text,
-                "backend": _ai_backend() or "GEMINI",
+                "backend": _text_backend() or "GEMINI",
             }
 
     # 템플릿 폴백 — 수집 결과를 그대로 구조화한다.
