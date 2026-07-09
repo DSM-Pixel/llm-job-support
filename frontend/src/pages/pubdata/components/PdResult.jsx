@@ -1,31 +1,9 @@
-// 검색 결과 — AI 요약 + 막대차트 + 관련 데이터셋(바닐라 render/renderBars/renderDatasets 재현).
+// 검색 결과 — AI 요약 + 관련 데이터셋(바닐라 render/renderDatasets 재현).
+// (막대차트는 실데이터 미연계로 가짜 수치라 제거 — 실제 데이터셋 링크만 남긴다.)
 // React 가 텍스트를 자동 이스케이프하므로 바닐라의 escapeHtml 은 불필요.
 import { isRealAI } from '../../../lib/aiBackend.js'
 
-// 값 배열 → CSS 막대. 최고값을 100%로 정규화(바닐라 renderBars 동일).
-function Bars({ stats }) {
-  const max = Math.max(1, ...stats.values)
-  return (
-    <div className="pd-bars">
-      {stats.labels.map((label, i) => {
-        const v = stats.values[i]
-        const pct = Math.round((v / max) * 100)
-        const hot = v === max ? ' hot' : ''
-        return (
-          <div className="pd-bar-col" key={i} title={`${label}: ${v}${stats.unit}`}>
-            <span className="pd-bar-val">{v}</span>
-            <div className={'pd-bar' + hot} style={{ height: `${Math.max(4, pct)}%` }}></div>
-            <span className="pd-bar-label">{label}</span>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
 export default function PdResult({ data, onToReport }) {
-  const { stats } = data
-
   return (
     <div className="pd-result">
       <div className="pd-summary card">
@@ -56,21 +34,6 @@ export default function PdResult({ data, onToReport }) {
           </a>
         </div>
       </div>
-
-      {stats && Array.isArray(stats.values) && (
-        <div className="pd-chart card">
-          <h3 className="pd-chart-title">{stats.title}</h3>
-          <p className="pd-chart-src">
-            출처: {stats.dataset || ''}{' '}
-            {stats.sample ? (
-              <span className="pd-badge sample">샘플 통계</span>
-            ) : (
-              <span className="pd-badge live">실데이터(data.go.kr)</span>
-            )}
-          </p>
-          <Bars stats={stats} />
-        </div>
-      )}
 
       <div className="pd-datasets">
         <h2 className="section-title">

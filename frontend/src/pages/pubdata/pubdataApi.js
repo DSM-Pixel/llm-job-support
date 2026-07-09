@@ -28,7 +28,7 @@ export function sendToReport(data) {
     question: `${data.keyword} 관련 공공데이터 통계`,
     answer: data.summary,
     source: data.datasets[0]?.title || 'data.go.kr',
-    snippet: data.stats.title,
+    snippet: (data.insights && data.insights[0]) || `${data.domain} 관련 공공데이터`,
   })
   toast('보고서 자료로 저장했습니다')
   window.setTimeout(() => (location.href = 'report.html'), 500)
