@@ -246,6 +246,7 @@ export function useModalEditor({
         if (thumb) {
           saveArtifact({
             kind: 'image',
+            cat: '라벨',
             id: active.name,
             title: `라벨링 · ${active.name}`,
             image: thumb,

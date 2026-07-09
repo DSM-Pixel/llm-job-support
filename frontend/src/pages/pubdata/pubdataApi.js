@@ -24,6 +24,7 @@ export function sendToReport(data) {
   if (!data) return
   saveArtifact({
     kind: 'rag',
+    cat: '공공데이터',
     title: `공공데이터 · ${data.domain}`,
     question: `${data.keyword} 관련 공공데이터 통계`,
     answer: data.summary,

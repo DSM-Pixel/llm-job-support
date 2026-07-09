@@ -54,6 +54,7 @@ export default function AnalyzePanel({ active, activeIdx, onResult }) {
           if (thumb) {
             saveArtifact({
               kind: 'image',
+              cat: '원본',
               id: active.name,
               title: `이미지 분석 · ${preset}`,
               image: thumb,

@@ -61,6 +61,7 @@ export function useReportDoc() {
       if (Array.isArray(r?.sections) && r.sections.length) {
         saveArtifact({
           kind: 'report',
+          cat: '문서',
           id: 'report-' + Date.now(),
           title: r.title || '보고서',
           report: r,

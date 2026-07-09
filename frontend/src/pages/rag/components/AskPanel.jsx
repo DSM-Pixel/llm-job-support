@@ -51,6 +51,7 @@ export default function AskPanel() {
         const top = res.sources?.[0] || {}
         saveArtifact({
           kind: 'rag',
+          cat: '문서',
           title: 'RAG 검색 결과',
           question: q,
           answer: String(res.answer || '')
