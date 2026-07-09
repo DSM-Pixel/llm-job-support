@@ -32,7 +32,6 @@ export default function AppShell({ title, activeNav, children, askHandler = null
         <main className="main">
           <header className="topbar">
             <h1>{title}</h1>
-            <span className="live">LIVE</span>
             <div className="top-actions">
               <span>?</span>
               <span>♧</span>
