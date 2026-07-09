@@ -11,19 +11,11 @@ import ResultPanel from './components/ResultPanel.jsx'
 import LabelingModal from './components/LabelingModal.jsx'
 
 const SAMPLE_NAME = 'road_2026Q1_0142.jpg'
-// 샘플의 초기 분석 결과(정적 HTML) — 바닐라 finding-list 초기 마크업.
-const SAMPLE_RESULT = {
-  html:
-    '<li><span class="badge red">상</span>포트홀 — 좌측 하단. 지름 약 35cm, 깊이 추정 6cm. 즉시 보수 대상.</li>' +
-    '<li><span class="badge orange">중</span>포트홀 — 중앙. 지름 약 18cm. 차량 손상 우려, 7일 이내 보수.</li>' +
-    '<li><span class="badge orange">중</span>선형 균열 — 우측 상단으로 진행. 표면 실링 권장.</li>',
-  confText: '신뢰도 0.91',
-  confClass: 'status gray',
-}
 
 function LabelingContent() {
   const { settings, openSettings } = useShell()
-  const lab = useLabeling(SAMPLE_NAME, SAMPLE_RESULT)
+  // 초기 분석 결과는 비워 둔다(가짜 미리보기 findings 제거) — 실제 '분석하기' 전까진 빈 상태.
+  const lab = useLabeling(SAMPLE_NAME, null)
   const [modeTab, setModeTab] = useState(0)
   const [batchBusy, setBatchBusy] = useState(false)
 
