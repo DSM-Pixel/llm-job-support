@@ -8,7 +8,6 @@ export default function DetailView({
   project,
   onBack,
   onEnter,
-  onAddSource,
   onReview,
   canReview,
   editable,
@@ -54,15 +53,10 @@ export default function DetailView({
       </div>
       <div className="pj-src-toolbar">
         <h3>소스 · 검수</h3>
-        {editable && (
-          <button className="btn primary pj-add-src" type="button" onClick={onAddSource}>
-            + 소스 추가
-          </button>
-        )}
       </div>
       <div className="pj-src-list">
         {(p.sources || []).length === 0 ? (
-          <p className="pj-empty">아직 소스가 없습니다. ‘+ 소스 추가’로 데이터를 넣어보세요.</p>
+          <p className="pj-empty">아직 소스가 없습니다.</p>
         ) : (
           p.sources.map((s) => {
             const tone = REVIEW_TONE[s.review] || 'wait'

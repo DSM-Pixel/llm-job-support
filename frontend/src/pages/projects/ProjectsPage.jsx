@@ -109,16 +109,6 @@ export default function ProjectsPage() {
     }
   }
 
-  const addSource = async ({ name, kind }) => {
-    setModal(null)
-    if (!name || !detail) return
-    const p = await api(`/api/projects/${detail.id}/sources`, { name, kind })
-    if (!p.error) {
-      toast('소스를 추가했습니다 (검수 대기)')
-      setDetail(p)
-    }
-  }
-
   // 검수(승인·반려·대기) — 관리자만 가능. 서버가 토큰으로 권한을 재검증한다.
   const setReview = async (sourceId, status) => {
     try {
@@ -291,7 +281,7 @@ export default function ProjectsPage() {
           </section>
         ) : (
           detail && <DetailView project={detail} onBack={showGallery} onEnter={enterProject}
-            onAddSource={() => setModal({ kind: 'source' })} onReview={setReview}
+            onReview={setReview}
             canReview={canReview} editable={!!detail.editable} />
         )}
       </main>
@@ -310,17 +300,6 @@ export default function ProjectsPage() {
             },
           ]}
           onSubmit={createProject}
-          onClose={() => setModal(null)}
-        />
-      )}
-      {modal?.kind === 'source' && (
-        <InputModal
-          title="소스 추가"
-          fields={[
-            { name: 'name', label: '소스 이름', placeholder: '예: 2026Q3 포트홀 이미지셋', autoFocus: true },
-            { name: 'kind', label: '유형', type: 'select', options: ['이미지셋', '문서', '공공데이터', '보고서'] },
-          ]}
-          onSubmit={addSource}
           onClose={() => setModal(null)}
         />
       )}
