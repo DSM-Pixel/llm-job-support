@@ -33,14 +33,16 @@ export function usePubdata() {
     }
   }
 
-  // 최초: 카탈로그 로드 + ?q=(없으면 기본 입력값)으로 자동 검색.
+  // 최초: 카탈로그 안내만 로드. 통계 조회는 사용자가 '→ 통계 보기'를 눌러야 실행한다.
+  // (첫 로드 자동 검색 제거 — 버튼 없이 통계가 뜨지 않게. 단, 외부에서 ?q=키워드 로
+  //  들어온 경우에만 그 키워드로 자동 조회.)
   useEffect(() => {
     fetchCatalog()
       .then((c) => setCatalog(catalogText(c)))
       .catch(() => {})
     const q = new URLSearchParams(location.search).get('q')
-    search(q || INITIAL_KEYWORD)
-    // 최초 1회만 실행(바닐라 DOMContentLoaded 동일) — search 는 의존성에서 제외.
+    if (q) search(q)
+    // 최초 1회만 실행 — search 는 의존성에서 제외.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

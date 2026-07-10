@@ -34,9 +34,8 @@ export default function PdSearch({ keyword, setKeyword, busy, catalog, onSearch 
         ))}
       </div>
       <p className="pd-help">
-        자연어로 주제를 입력하면 <b>공공데이터포털(data.go.kr)</b> 관련 데이터셋과 통계를 찾아
-        시각화합니다. <span className="pd-badge sample">샘플 통계</span> 표시는 발표용 예시
-        수치입니다.
+        자연어로 주제를 입력하고 <b>‘→ 통계 보기’</b>를 누르면{' '}
+        <b>공공데이터포털(data.go.kr)</b> 관련 데이터셋과 AI 요약을 찾아줍니다.
       </p>
       <p className="pd-catalog">{catalog}</p>
     </div>
