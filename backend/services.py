@@ -1258,11 +1258,22 @@ def _gemini_detect(image_bytes: bytes, mime: str) -> list[dict] | None:
 
         client = genai.Client(api_key=key, http_options={"timeout": 30000})
         part = types.Part.from_bytes(data=image_bytes, mime_type=mime or "image/jpeg")
-        # config kwarg 없이(구버전 SDK 호환) 호출. JSON 강제는 프롬프트+_extract_json.
+        # thinking OFF(탐지엔 불필요) — 켜두면 추론이 출력예산을 다 먹어 resp.text 가 비고,
+        # 토큰도 호출당 수백씩 낭비된다. 출력 상한도 건다. 구버전 SDK 대비 방어적으로 구성.
+        cfg = None
+        try:
+            cfg = types.GenerateContentConfig(
+                thinking_config=types.ThinkingConfig(thinking_budget=0),
+                max_output_tokens=1024,
+                temperature=0.0,
+            )
+        except Exception:
+            cfg = None
+        kwargs = {"model": "gemini-2.5-flash", "contents": [part, prompt], "hard_timeout": 60}
+        if cfg is not None:
+            kwargs["config"] = cfg
         # 비전 탐지는 텍스트보다 느려 15s 전역 타임아웃으론 부족 → 호출별 60s.
-        resp = _gemini_generate(
-            client, model="gemini-2.5-flash", contents=[part, prompt], hard_timeout=60
-        )
+        resp = _gemini_generate(client, **kwargs)
         text = (resp.text or "").strip()
     except Exception:
         return None
