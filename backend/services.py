@@ -1228,8 +1228,70 @@ def _prep_vision_image(data: bytes, mime: str) -> tuple[bytes, str, int, int]:
         return data, mime, w, h
 
 
+def _gemini_detect(image_bytes: bytes, mime: str) -> list[dict] | None:
+    """Gemini 네이티브 객체 탐지 → box_2d [ymin,xmin,ymax,xmax] 0~1000.
+
+    Gemini는 구글이 grounding(객체탐지)용으로 학습해 박스 좌표 정확도가 GPT-4o보다
+    훨씬 높다. 프론트 규약과 동일한 0~1000 정규화 [ymin,xmin,ymax,xmax]를 네이티브로
+    내므로 픽셀 환산 없이 그대로 쓴다. 무키/실패/한도 시 None → 호출부가 GPT로 폴백.
+    """
+    key = _gemini_key()
+    if not key:
+        return None
+    prompt = (
+        "이 도로 이미지에 보이는 모든 객체를 탐지하라. 포트홀·균열 같은 노면 파손뿐 "
+        "아니라 차량·보행자·표지판·신호등·차선·맨홀·가드레일·가로수·건물 등 화면에 "
+        "보이는 모든 것을 포함한다. 같은 종류가 여러 개면 각각 따로. 박스는 객체 전체를 "
+        "빈틈없이 감싸되 배경까지 넓게 잡지 말고 객체에 딱 맞춰라.\n"
+        "반드시 이 JSON만 출력(코드펜스·설명 금지): "
+        '{"objects":[{"label":"포트홀","box_2d":[ymin,xmin,ymax,xmax],"confidence":87}]}\n'
+        "box_2d 는 0~1000 정규화 정수 [ymin,xmin,ymax,xmax] "
+        "(좌상단 0,0 · 우하단 1000,1000, y=위→아래, x=왼→오른). "
+        "label 은 짧은 한국어 명사, confidence 는 0~100 정수."
+    )
+    try:
+        from google import genai
+        from google.genai import types
+
+        client = genai.Client(api_key=key, http_options={"timeout": 30000})
+        part = types.Part.from_bytes(data=image_bytes, mime_type=mime or "image/jpeg")
+        resp = _gemini_generate(
+            client,
+            model="gemini-2.5-flash",
+            contents=[part, prompt],
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json", temperature=0.0
+            ),
+        )
+        text = (resp.text or "").strip()
+    except Exception:
+        return None
+    data = _extract_json(text)
+    if not (isinstance(data, dict) and isinstance(data.get("objects"), list)):
+        return None
+    out: list[dict] = []
+    for o in data["objects"]:
+        if not isinstance(o, dict):
+            continue
+        raw = o.get("box_2d") or o.get("box")
+        if not (isinstance(raw, list) and len(raw) == 4):
+            continue
+        try:
+            box = [max(0, min(1000, round(float(v)))) for v in raw]
+        except (TypeError, ValueError):
+            continue
+        if box[2] < box[0]:  # ymax<ymin 뒤집힘 방어
+            box[0], box[2] = box[2], box[0]
+        if box[3] < box[1]:  # xmax<xmin 뒤집힘 방어
+            box[1], box[3] = box[3], box[1]
+        out.append(
+            {"label": o.get("label") or "객체", "box_2d": box, "confidence": o.get("confidence")}
+        )
+    return out or None
+
+
 def detect_objects_vision(image_bytes: bytes, mime: str = "image/png") -> dict:
-    """이미지 속 '모든' 객체를 VLM(GPT 비전)으로 탐지(박스+클래스).
+    """이미지 속 '모든' 객체를 VLM으로 탐지(박스+클래스). 박스는 Gemini grounding 우선.
 
     포트홀·균열 같은 파손뿐 아니라 차량·보행자·표지판·맨홀·차선 등 도로 위
     모든 객체를 돌려준다. 프론트는 클래스별로 묶어 필터 후 선택만 라벨링한다.
@@ -1241,10 +1303,18 @@ def detect_objects_vision(image_bytes: bytes, mime: str = "image/png") -> dict:
     """
     objects: list[dict] | None = None
     backend = "MOCK"
+    engine = _engine_name()
     w, h = 1000, 1000
     if image_bytes:
         # EXIF 회전 반영 + 축소 후, 모델이 실제로 보는 이미지·크기로 좌표계를 맞춘다.
         img_b, img_mime, w, h = _prep_vision_image(image_bytes, mime or "image/png")
+        # 1순위: Gemini 네이티브 grounding — 박스 좌표 정확도가 GPT-4o보다 훨씬 높다.
+        gem = _gemini_detect(img_b, img_mime)
+        if gem:
+            objects, backend, engine = gem, "GEMINI", "gemini-2.5-flash"
+            w = h = 1000  # Gemini objects 는 이미 0~1000 정규화 box_2d
+    if objects is None and image_bytes:
+        # 폴백(무Gemini키·한도·실패): GPT 비전에 실제 픽셀 크기를 주고 픽셀 좌표로 받는다.
         prompt = (
             f"이미지 크기는 정확히 가로 {w}픽셀 × 세로 {h}픽셀이다. "
             "좌상단이 (0,0), 오른쪽으로 x 증가, 아래로 y 증가. "
@@ -1272,7 +1342,7 @@ def detect_objects_vision(image_bytes: bytes, mime: str = "image/png") -> dict:
     if objects is None:
         # 키가 있는데도 실패(한도·오류·무응답)면 가짜 박스 대신 정직한 빈 결과.
         if _ai_backend():
-            return {"backend": "AI_FAIL", "engine": _engine_name(), "labels": []}
+            return {"backend": "AI_FAIL", "engine": engine, "labels": []}
         objects = _MOCK_OBJECTS  # 키 자체가 없을 때만 데모용 예시 박스
         w = h = 1000  # MOCK 은 이미 0~1000 정규화 좌표
 
@@ -1304,7 +1374,7 @@ def detect_objects_vision(image_bytes: bytes, mime: str = "image/png") -> dict:
                 "confidence": conf,
             }
         )
-    return {"backend": backend, "engine": _engine_name(), "labels": labels}
+    return {"backend": backend, "engine": engine, "labels": labels}
 
 
 # 설명 분석(설명형) 프리셋별 프롬프트.
