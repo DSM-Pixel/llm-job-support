@@ -81,18 +81,19 @@ def _save_gemini_state() -> None:
 _load_gemini_state()
 
 
-def _gemini_generate(client, **kwargs):
+def _gemini_generate(client, *, hard_timeout=None, **kwargs):
     """client.models.generate_content 를 하드 타임아웃으로 감싼다.
 
     초과 시 TimeoutError 를 던져 호출부 except 가 MOCK 폴백을 타게 한다.
     요청 수·성공 수·사용 토큰·한도소진(429) 여부를 실제로 추적한다.
+    hard_timeout 로 호출별 타임아웃을 늘릴 수 있다(비전 탐지는 텍스트보다 느림).
     """
     _gemini_usage["requests"] += 1
     call = {"ts": time.time(), "tok": 0}  # 분당/일일 사용률 집계용
     _gemini_calls.append(call)
     try:
         fut = _GEMINI_POOL.submit(lambda: client.models.generate_content(**kwargs))
-        resp = fut.result(timeout=_GEMINI_TIMEOUT_S)
+        resp = fut.result(timeout=hard_timeout or _GEMINI_TIMEOUT_S)
     except Exception as e:
         msg = str(e).lower()
         if any(k in msg for k in ("429", "resource_exhausted", "quota", "rate limit", "ratelimit")):
@@ -1255,9 +1256,11 @@ def _gemini_detect(image_bytes: bytes, mime: str) -> list[dict] | None:
 
         client = genai.Client(api_key=key, http_options={"timeout": 30000})
         part = types.Part.from_bytes(data=image_bytes, mime_type=mime or "image/jpeg")
-        # 검증된 _ai_vision Gemini 호출과 동일 시그니처(config kwarg 없음 — 구버전 SDK 호환).
-        # JSON 강제는 프롬프트 + 관대한 _extract_json 으로 처리한다.
-        resp = _gemini_generate(client, model="gemini-2.5-flash", contents=[part, prompt])
+        # config kwarg 없이(구버전 SDK 호환) 호출. JSON 강제는 프롬프트+_extract_json.
+        # 비전 탐지는 텍스트보다 느려 15s 전역 타임아웃으론 부족 → 호출별 60s.
+        resp = _gemini_generate(
+            client, model="gemini-2.5-flash", contents=[part, prompt], hard_timeout=60
+        )
         text = (resp.text or "").strip()
     except Exception:
         return None
@@ -1310,6 +1313,7 @@ def gemini_detect_probe(image_bytes: bytes, mime: str = "image/png") -> dict:
                 part,
                 '이 이미지의 객체를 JSON {"objects":[{"label":"..","box_2d":[y,x,y,x]}]} 로만 답하라.',
             ],
+            hard_timeout=60,
         )
     except Exception as e:
         return {"stage": "call", "err": f"{type(e).__name__}: {e}"[:400]}
