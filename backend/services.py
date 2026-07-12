@@ -1285,6 +1285,42 @@ def _gemini_detect(image_bytes: bytes, mime: str) -> list[dict] | None:
     return out or None
 
 
+def gemini_detect_probe(image_bytes: bytes, mime: str = "image/png") -> dict:
+    """[임시 진단] _gemini_detect 가 서버에서 어느 단계에서 죽는지 실제 예외를 노출.
+
+    문제 진단 후 이 함수와 라우트는 제거한다.
+    """
+    img_b, img_mime, w, h = _prep_vision_image(image_bytes, mime or "image/png")
+    key = _gemini_key()
+    if not key:
+        return {"stage": "no_key"}
+    try:
+        from google import genai
+        from google.genai import types
+
+        client = genai.Client(api_key=key, http_options={"timeout": 30000})
+        part = types.Part.from_bytes(data=img_b, mime_type=img_mime)
+    except Exception as e:
+        return {"stage": "setup", "err": f"{type(e).__name__}: {e}"[:400]}
+    try:
+        resp = _gemini_generate(
+            client,
+            model="gemini-2.5-flash",
+            contents=[
+                part,
+                '이 이미지의 객체를 JSON {"objects":[{"label":"..","box_2d":[y,x,y,x]}]} 로만 답하라.',
+            ],
+        )
+    except Exception as e:
+        return {"stage": "call", "err": f"{type(e).__name__}: {e}"[:400]}
+    try:
+        text = resp.text or ""
+    except Exception as e:
+        return {"stage": "text", "err": f"{type(e).__name__}: {e}"[:400]}
+    parsed = _extract_json(text)
+    return {"stage": "ok", "raw": text[:600], "parsed_ok": bool(parsed)}
+
+
 def detect_objects_vision(image_bytes: bytes, mime: str = "image/png") -> dict:
     """이미지 속 '모든' 객체를 VLM으로 탐지(박스+클래스). 박스는 Gemini grounding 우선.
 
