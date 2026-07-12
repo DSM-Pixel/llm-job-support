@@ -1229,64 +1229,6 @@ def _prep_vision_image(data: bytes, mime: str) -> tuple[bytes, str, int, int]:
         return data, mime, w, h
 
 
-def gemini_detect_probe(image_bytes: bytes, mime: str = "image/png") -> dict:
-    """[임시 진단] Gemini 원응답(raw·finish_reason·usage·thinking_config 지원여부) 노출."""
-    img_b, img_mime, w, h = _prep_vision_image(image_bytes, mime or "image/png")
-    key = _gemini_key()
-    if not key:
-        return {"stage": "no_key"}
-    from google import genai
-    from google.genai import types
-
-    has_thinking = hasattr(types, "ThinkingConfig")
-    client = genai.Client(api_key=key, http_options={"timeout": 30000})
-    part = types.Part.from_bytes(data=img_b, mime_type=img_mime)
-    cfg = None
-    if has_thinking:
-        try:
-            cfg = types.GenerateContentConfig(
-                thinking_config=types.ThinkingConfig(thinking_budget=0),
-                max_output_tokens=1024,
-                temperature=0.0,
-            )
-        except Exception as e:
-            cfg = f"cfg_err: {type(e).__name__}: {e}"[:200]
-    kwargs = {
-        "model": "gemini-2.5-flash",
-        "contents": [part, "이 이미지의 객체를 JSON 배열로."],
-        "hard_timeout": 60,
-    }
-    if isinstance(cfg, object) and cfg is not None and not isinstance(cfg, str):
-        kwargs["config"] = cfg
-    try:
-        resp = _gemini_generate(client, **kwargs)
-    except Exception as e:
-        return {
-            "stage": "call",
-            "has_thinking": has_thinking,
-            "err": f"{type(e).__name__}: {e}"[:300],
-        }
-    out = {"stage": "ok", "has_thinking": has_thinking, "cfg": str(cfg)[:80]}
-    try:
-        out["text_len"] = len(resp.text or "")
-        out["raw"] = (resp.text or "")[:400]
-    except Exception as e:
-        out["text_err"] = f"{type(e).__name__}: {e}"[:200]
-    try:
-        c0 = resp.candidates[0]
-        out["finish"] = str(getattr(c0, "finish_reason", None))
-        um = resp.usage_metadata
-        out["usage"] = {
-            "prompt": getattr(um, "prompt_token_count", None),
-            "cand": getattr(um, "candidates_token_count", None),
-            "thoughts": getattr(um, "thoughts_token_count", None),
-            "total": getattr(um, "total_token_count", None),
-        }
-    except Exception as e:
-        out["meta_err"] = f"{type(e).__name__}: {e}"[:200]
-    return out
-
-
 def _gemini_detect(image_bytes: bytes, mime: str) -> list[dict] | None:
     """Gemini 네이티브 객체 탐지 → box_2d [ymin,xmin,ymax,xmax] 0~1000.
 

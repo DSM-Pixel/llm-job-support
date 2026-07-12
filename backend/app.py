@@ -615,13 +615,6 @@ async def labeling_detect_image(image: UploadFile = File(...)) -> dict:
     return res
 
 
-@app.post("/api/labeling/_gemdiag")
-async def labeling_gemdiag(image: UploadFile = File(...)) -> dict:
-    """[임시 진단] Gemini 원응답 확인용. 진단 후 제거."""
-    data = await image.read()
-    return services.gemini_detect_probe(data, image.content_type or "image/png")
-
-
 @app.post("/api/labeling/analyze-image")
 async def labeling_analyze_image(
     image: UploadFile = File(...),
