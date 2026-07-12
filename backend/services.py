@@ -1255,14 +1255,9 @@ def _gemini_detect(image_bytes: bytes, mime: str) -> list[dict] | None:
 
         client = genai.Client(api_key=key, http_options={"timeout": 30000})
         part = types.Part.from_bytes(data=image_bytes, mime_type=mime or "image/jpeg")
-        resp = _gemini_generate(
-            client,
-            model="gemini-2.5-flash",
-            contents=[part, prompt],
-            config=types.GenerateContentConfig(
-                response_mime_type="application/json", temperature=0.0
-            ),
-        )
+        # 검증된 _ai_vision Gemini 호출과 동일 시그니처(config kwarg 없음 — 구버전 SDK 호환).
+        # JSON 강제는 프롬프트 + 관대한 _extract_json 으로 처리한다.
+        resp = _gemini_generate(client, model="gemini-2.5-flash", contents=[part, prompt])
         text = (resp.text or "").strip()
     except Exception:
         return None
