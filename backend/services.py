@@ -1240,10 +1240,12 @@ def _gemini_detect(image_bytes: bytes, mime: str) -> list[dict] | None:
     if not key:
         return None
     prompt = (
-        "이 도로 이미지에 보이는 모든 객체를 탐지하라. 포트홀·균열 같은 노면 파손뿐 "
-        "아니라 차량·보행자·표지판·신호등·차선·맨홀·가드레일·가로수·건물 등 화면에 "
-        "보이는 모든 것을 포함한다. 같은 종류가 여러 개면 각각 따로. 박스는 객체 전체를 "
-        "빈틈없이 감싸되 배경까지 넓게 잡지 말고 객체에 딱 맞춰라.\n"
+        "이 도로 이미지에서 노면 파손(포트홀·균열·패임·침하)과 도로 위 뚜렷한 객체"
+        "(차량·보행자·표지판·신호등·맨홀·차선)를 탐지하라. 확실한 것만, 최대 15개.\n"
+        "각 박스는 대상에 '딱 맞게' 타이트하게 감싼다(불필요한 배경 여백 금지). "
+        "하늘·구름·깨끗한 노면·먼 숲처럼 뚜렷한 대상이 아닌 넓은 배경 영역은 박스 치지 마라. "
+        "포트홀은 갈라진 가장자리를 포함한 구멍 전체만 정확히 감싼다. "
+        "애매하면 제외한다. 같은 종류가 여러 개면 각각 따로.\n"
         "반드시 이 JSON만 출력(코드펜스·설명 금지): "
         '{"objects":[{"label":"포트홀","box_2d":[ymin,xmin,ymax,xmax],"confidence":87}]}\n'
         "box_2d 는 0~1000 정규화 정수 [ymin,xmin,ymax,xmax] "
@@ -1286,43 +1288,6 @@ def _gemini_detect(image_bytes: bytes, mime: str) -> list[dict] | None:
             {"label": o.get("label") or "객체", "box_2d": box, "confidence": o.get("confidence")}
         )
     return out or None
-
-
-def gemini_detect_probe(image_bytes: bytes, mime: str = "image/png") -> dict:
-    """[임시 진단] _gemini_detect 가 서버에서 어느 단계에서 죽는지 실제 예외를 노출.
-
-    문제 진단 후 이 함수와 라우트는 제거한다.
-    """
-    img_b, img_mime, w, h = _prep_vision_image(image_bytes, mime or "image/png")
-    key = _gemini_key()
-    if not key:
-        return {"stage": "no_key"}
-    try:
-        from google import genai
-        from google.genai import types
-
-        client = genai.Client(api_key=key, http_options={"timeout": 30000})
-        part = types.Part.from_bytes(data=img_b, mime_type=img_mime)
-    except Exception as e:
-        return {"stage": "setup", "err": f"{type(e).__name__}: {e}"[:400]}
-    try:
-        resp = _gemini_generate(
-            client,
-            model="gemini-2.5-flash",
-            contents=[
-                part,
-                '이 이미지의 객체를 JSON {"objects":[{"label":"..","box_2d":[y,x,y,x]}]} 로만 답하라.',
-            ],
-            hard_timeout=60,
-        )
-    except Exception as e:
-        return {"stage": "call", "err": f"{type(e).__name__}: {e}"[:400]}
-    try:
-        text = resp.text or ""
-    except Exception as e:
-        return {"stage": "text", "err": f"{type(e).__name__}: {e}"[:400]}
-    parsed = _extract_json(text)
-    return {"stage": "ok", "raw": text[:600], "parsed_ok": bool(parsed)}
 
 
 def detect_objects_vision(image_bytes: bytes, mime: str = "image/png") -> dict:
