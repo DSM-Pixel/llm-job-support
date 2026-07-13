@@ -1022,6 +1022,54 @@ textarea {
   color: var(--blue);
   font-weight: 700;
 }
+/* 현재 선택된 항목 강조(커스텀 셀렉트 드롭다운) */
+.field-combo-item.is-sel {
+  background: color-mix(in srgb, var(--blue) 10%, transparent);
+  color: var(--blue);
+  font-weight: 700;
+}
+
+/* 커스텀 셀렉트 트리거 — 네이티브 <select> 자리를 대신하는 버튼. 입력칸과 동일한 박스. */
+.field-select {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+.field-select:hover {
+  border-color: color-mix(in srgb, var(--blue) 45%, var(--line));
+}
+.field-select > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.field-select-caret {
+  flex: none;
+  color: var(--muted);
+  transition: transform 0.15s ease;
+}
+.field-select[aria-expanded="true"] .field-select-caret {
+  transform: rotate(180deg);
+}
+
+/* 입력 모달은 짧은 폼 → 커스텀 셀렉트 드롭다운이 잘리지 않게 overflow 허용.
+   (자식 배경이 투명이라 .modal 의 둥근 모서리는 그대로 유지된다) */
+.modal.input-modal,
+.modal.input-modal .modal-body {
+  overflow: visible;
+}
 
 /* 회원 탈퇴 영역(설정 모달 하단) */
 .settings-danger {
