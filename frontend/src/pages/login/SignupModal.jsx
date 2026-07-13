@@ -146,12 +146,7 @@ export default function SignupModal({ open, onClose }) {
 
   return (
     <>
-      <div
-        className="modal-overlay"
-        id="signup-modal"
-        hidden={!open}
-        onClick={(e) => e.target === e.currentTarget && onClose()}
-      >
+      <div className="modal-overlay" id="signup-modal" hidden={!open}>
         <div className="modal lg-signup-modal" role="dialog" aria-modal="true">
           <header className="modal-head">
             <h3>회원가입</h3>

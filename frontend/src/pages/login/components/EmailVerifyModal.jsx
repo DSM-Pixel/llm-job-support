@@ -12,10 +12,7 @@ export default function EmailVerifyModal({
 }) {
   if (!open) return null
   return (
-    <div
-      className="modal-overlay lg-verify-overlay"
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-    >
+    <div className="modal-overlay lg-verify-overlay">
       <div className="modal" role="dialog" aria-modal="true">
         <header className="modal-head">
           <h3>이메일 인증</h3>
