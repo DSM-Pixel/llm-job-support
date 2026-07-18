@@ -6,10 +6,21 @@ import { searchPubdata, fetchCatalog, catalogText } from './pubdataApi.js'
 // 최초 입력값 — 바닐라 .pd-input value 기본값과 동일.
 const INITIAL_KEYWORD = '포트홀 도로 파손'
 
+// 마지막 검색 결과 저장 키 — 다른 메뉴 갔다 와도 직전 결과를 다시 볼 수 있게.
+const LAST_KEY = 'gnsoft.pubdata.last'
+const loadLast = () => {
+  try {
+    return JSON.parse(localStorage.getItem(LAST_KEY) || 'null')
+  } catch {
+    return null
+  }
+}
+
 // 공공데이터 페이지 상태·데이터 로직 — 바닐라 pubdata.js 의 search/loadCatalog/DOMContentLoaded 재현.
 export function usePubdata() {
-  const [keyword, setKeyword] = useState(INITIAL_KEYWORD) // .pd-input value
-  const [data, setData] = useState(null) // 마지막 검색 결과(null이면 결과 숨김)
+  const last = loadLast() // 직전 검색 결과(있으면 재진입 시 복원)
+  const [keyword, setKeyword] = useState(last?.keyword || INITIAL_KEYWORD) // .pd-input value
+  const [data, setData] = useState(last?.data || null) // 마지막 검색 결과(null이면 결과 숨김)
   const [busy, setBusy] = useState(false) // .pd-go 로딩 상태
   const [catalog, setCatalog] = useState('') // .pd-catalog 안내 문구
 
@@ -25,6 +36,11 @@ export function usePubdata() {
     try {
       const d = await searchPubdata(q)
       setData(d)
+      try {
+        localStorage.setItem(LAST_KEY, JSON.stringify({ keyword: q, data: d }))
+      } catch {
+        /* 저장 불가 시 무시 */
+      }
       logActivity('공공데이터 연계', q)
     } catch {
       /* api() 가 이미 토스트 */
