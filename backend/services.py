@@ -281,13 +281,14 @@ def _text_backend() -> str | None:
     return _ai_backend()
 
 
-def _ai_text(prompt: str) -> str | None:
+def _ai_text(prompt: str, *, fast: bool = False) -> str | None:
     """텍스트 프롬프트 → 답변 문자열. 로컬 LLM(vm2) 우선, 없으면 OpenAI, 없으면 Gemini.
 
     로컬 LLM은 reasoning 모델이라 느리고(수십 초) reasoning 토큰을 먼저 쓰므로
     타임아웃·max_tokens 를 넉넉히 준다. 로컬 실패 시 OpenAI/Gemini 로 폴백.
+    fast=True 면 느린 vm2 를 건너뛰고 바로 OpenAI/Gemini 로 간다(대화형·지연 민감 기능용).
     """
-    loc = _local_llm()
+    loc = None if fast else _local_llm()
     if loc:
         text = _openai_chat(
             [{"role": "user", "content": prompt}],
@@ -2719,7 +2720,7 @@ def _agent_plan_gemini(goal: str) -> dict | None:
         '"why":"이 단계가 필요한 이유","q":"검색어(query/rag/pubdata일 때만, 없으면 빈칸)"}]}\n\n'
         f"목표: {goal}"
     )
-    text = _ai_text(prompt)
+    text = _ai_text(prompt, fast=True)  # 대화형 — 느린 vm2 건너뛰고 바로 OpenAI/Gemini
     if text:
         data = _extract_json(text)
         if data and isinstance(data.get("steps"), list) and data["steps"]:
@@ -2767,12 +2768,12 @@ def _agent_synthesize(goal: str, findings: list[tuple[str, str]]) -> dict:
             "수집 결과에 없는 수치를 지어내지 마라. 마크다운(##, -) 사용.\n\n"
             f"목표: {goal}\n\n수집 결과:\n{material}"
         )
-        text = _ai_text(prompt)
+        text = _ai_text(prompt, fast=True)  # 대화형 — 느린 vm2 건너뛰고 바로 OpenAI/Gemini
         if text:
             return {
                 "title": f"{goal} — 업무 자동화 결과 보고서",
                 "content": text,
-                "backend": _text_backend() or "GEMINI",
+                "backend": _ai_backend() or "GEMINI",
             }
 
     # 템플릿 폴백 — 수집 결과를 그대로 구조화한다.
