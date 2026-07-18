@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api, enter } from './authApi.js'
 import DocModal from './DocModal.jsx'
 import CompanyCombobox from './components/CompanyCombobox.jsx'
@@ -9,6 +9,7 @@ import EmailVerifyModal from './components/EmailVerifyModal.jsx'
 // 회원가입 모달 — 이메일 옆 '인증하기'로 이메일 단독 인증(모달) 후, 나머지 입력하고 가입.
 export default function SignupModal({ open, onClose }) {
   const [signupAlert, setSignupAlert] = useState(null) // { msg, ok }
+  const alertRef = useRef(null) // 검증 메시지 노출용(긴 폼에서 스크롤 밖으로 안 사라지게)
 
   // 입력 폼 필드
   const [name, setName] = useState('')
@@ -45,6 +46,11 @@ export default function SignupModal({ open, onClose }) {
   useEffect(() => {
     if (open) setSignupAlert(null)
   }, [open])
+
+  // 검증 메시지가 뜨면(약관·회사 미선택 등) 폼 상단으로 스크롤해 확실히 보이게 한다.
+  useEffect(() => {
+    if (signupAlert) alertRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [signupAlert])
 
   // ── 동의(전체 동의 연동) ──
   const toggleAll = (v) => {
@@ -156,7 +162,11 @@ export default function SignupModal({ open, onClose }) {
           </header>
           <div className="modal-body">
             <form className="lg-form" data-form="signup" onSubmit={submitSignup}>
-              <div className={'lg-alert' + (signupAlert?.ok ? ' ok' : '')} hidden={!signupAlert}>
+              <div
+                ref={alertRef}
+                className={'lg-alert' + (signupAlert?.ok ? ' ok' : '')}
+                hidden={!signupAlert}
+              >
                 {signupAlert?.msg}
               </div>
               <div className="lg-grid">
