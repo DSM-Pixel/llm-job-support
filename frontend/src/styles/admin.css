@@ -1,3 +1,57 @@
+/* 공공데이터포털 API 키 설정(슈퍼 전용) */
+.ad-datakey {
+  padding: 18px 20px;
+  margin-bottom: 18px;
+}
+.ad-datakey-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.ad-datakey-head h3 {
+  margin: 0;
+  font-size: 15px;
+}
+.ad-key-badge {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--muted) 16%, transparent);
+  color: var(--muted);
+}
+.ad-key-badge.on {
+  background: color-mix(in srgb, var(--green, #12b76a) 16%, transparent);
+  color: var(--green, #12b76a);
+}
+.ad-datakey-desc {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.ad-datakey-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.ad-datakey-input {
+  flex: 1;
+  min-width: 220px;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+}
+.ad-datakey-input:focus {
+  outline: none;
+  border-color: var(--blue);
+}
+
 /* 어드민 — 회사 멤버 관리 화면 */
 .ad-wrap {
   width: min(1160px, 100%);

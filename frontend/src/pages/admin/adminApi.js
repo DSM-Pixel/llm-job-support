@@ -36,6 +36,16 @@ export function setMemberReviewer(userId, isReviewer) {
   })
 }
 
+// 공공데이터포털 API 키 설정 상태(슈퍼 전용) — {ok, set, preview(마스킹)}.
+export function fetchDataKey() {
+  return api('/api/admin/datakey', { token: authToken() })
+}
+
+// 공공데이터포털 API 키 저장/삭제(빈 값이면 삭제). 원문은 저장 후 서버가 마스킹만 돌려줌.
+export function saveDataKey(key) {
+  return api('/api/admin/datakey/set', { token: authToken(), key })
+}
+
 // 가입일 등 초 단위 타임스탬프 → 'YYYY.M.D'. 기존 admin.js fmtDate 이식.
 export function fmtDate(sec) {
   if (!sec) return '—'

@@ -107,6 +107,31 @@ def list_members(token: str, page: int = 1, page_size: int = 20) -> dict:
     }
 
 
+def _mask_key(key: str) -> str:
+    """API 키 마스킹 — 앞4·뒤4만 노출(원문은 응답에 절대 넣지 않는다)."""
+    k = (key or "").strip()
+    if not k:
+        return ""
+    return "•" * len(k) if len(k) <= 8 else f"{k[:4]}…{k[-4:]}"
+
+
+def get_data_key(token: str) -> dict:
+    """공공데이터포털 서비스키 설정 상태(슈퍼 전용). 원문 대신 마스킹만 반환."""
+    if not _super(token):
+        return _DENY
+    key = auth.get_setting("DATA_GO_KR_KEY")
+    return {"ok": True, "set": bool(key), "preview": _mask_key(key)}
+
+
+def set_data_key(token: str, key: str) -> dict:
+    """공공데이터포털 서비스키 저장/삭제(슈퍼 전용). 빈 값이면 삭제."""
+    if not _super(token):
+        return _DENY
+    auth.set_setting("DATA_GO_KR_KEY", (key or "").strip())
+    saved = auth.get_setting("DATA_GO_KR_KEY")
+    return {"ok": True, "set": bool(saved), "preview": _mask_key(saved)}
+
+
 def list_requests(token: str) -> dict:
     """관리자 승인 대기 목록(슈퍼 어드민 전용)."""
     if not _super(token):

@@ -5,6 +5,7 @@ import { ConfirmModal } from '../../components/Modal.jsx'
 import { Pager } from '../../components/Pager.jsx'
 import { SummaryChips } from './components/SummaryChips.jsx'
 import { RequestList } from './components/RequestList.jsx'
+import DataKeyCard from './components/DataKeyCard.jsx'
 import { MemberTable } from './components/MemberTable.jsx'
 import { MemberDetailModal } from './components/MemberDetailModal.jsx'
 import SettingsModal from '../../shell/SettingsModal.jsx'
@@ -207,6 +208,8 @@ export default function AdminPage() {
             {isSuper && requests && (
               <RequestList requests={requests} onResolve={resolveRequest} />
             )}
+
+            {isSuper && <DataKeyCard />}
 
             <MemberTable
               members={data.members}

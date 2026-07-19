@@ -77,6 +77,10 @@ def _init(conn: sqlite3.Connection) -> None:
         "id TEXT PRIMARY KEY, name TEXT NOT NULL, name_norm TEXT UNIQUE NOT NULL, "
         "created REAL NOT NULL)"
     )
+    # 앱 전역 설정(키-값) — 어드민이 입력하는 공공데이터포털 서비스키 등.
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS app_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)"
+    )
     # 권한·상태·소속 컬럼(기존 DB 마이그레이션 겸용) — 없을 때만 추가.
     cols = {r[1] for r in conn.execute("PRAGMA table_info(users)")}
     for col, ddl in (
@@ -798,6 +802,25 @@ def get_member(user_id_val: str) -> dict | None:
             f"SELECT {_MEMBER_COLS} FROM users WHERE id = ?", (user_id_val,)
         ).fetchone()
     return dict(row) if row else None
+
+
+def get_setting(key: str) -> str:
+    """앱 전역 설정값(예: DATA_GO_KR_KEY). 없으면 빈 문자열."""
+    with _lock, _connect() as conn:
+        _init(conn)
+        row = conn.execute("SELECT value FROM app_settings WHERE key = ?", (key,)).fetchone()
+    return (row["value"] if row else "") or ""
+
+
+def set_setting(key: str, value: str) -> None:
+    """앱 전역 설정값 저장(upsert)."""
+    with _lock, _connect() as conn:
+        _init(conn)
+        conn.execute(
+            "INSERT INTO app_settings(key, value) VALUES (?, ?) "
+            "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            (key, value),
+        )
 
 
 def set_admin(user_id_val: str, is_admin: bool) -> None:

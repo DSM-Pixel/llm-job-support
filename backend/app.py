@@ -290,6 +290,11 @@ class AdminReviewerIn(BaseModel):
     is_reviewer: bool = True
 
 
+class AdminDataKeyIn(BaseModel):
+    token: str = ""
+    key: str = ""
+
+
 # ── API 라우트 ───────────────────────────────────────────────────────
 @app.get("/api/health")
 def health() -> dict:
@@ -536,6 +541,18 @@ def admin_request_resolve(body: AdminRequestIn) -> dict:
 def admin_member_reviewer(body: AdminReviewerIn) -> dict:
     """검수자(팀장) 지정/해제 — 회사 대표(대빵)·슈퍼만, 동일 회사 팀원 대상."""
     return admin.set_member_reviewer(body.token, body.user_id, body.is_reviewer)
+
+
+@app.post("/api/admin/datakey")
+def admin_datakey(body: AdminTokenIn) -> dict:
+    """공공데이터포털 API 키 설정 상태(슈퍼 전용, 마스킹만)."""
+    return admin.get_data_key(body.token)
+
+
+@app.post("/api/admin/datakey/set")
+def admin_datakey_set(body: AdminDataKeyIn) -> dict:
+    """공공데이터포털 API 키 저장/삭제(슈퍼 전용)."""
+    return admin.set_data_key(body.token, body.key)
 
 
 @app.post("/api/query")

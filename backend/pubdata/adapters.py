@@ -22,8 +22,18 @@ _UA = "Mozilla/5.0 (compatible; GNSoftPubData/0.1)"
 
 
 def _service_key() -> str | None:
-    """공공데이터포털 서비스키. services._data_go_kr_key 와 동일 소스."""
+    """공공데이터포털 서비스키. 어드민이 저장한 DB 키 우선, 없으면 .env/환경변수."""
     from pathlib import Path
+
+    # 1순위: 어드민이 UI로 저장한 키(users.db app_settings).
+    try:
+        from .. import auth
+
+        db_key = auth.get_setting("DATA_GO_KR_KEY")
+        if db_key:
+            return db_key
+    except Exception:
+        pass
 
     env = Path(__file__).resolve().parents[2] / "prototypes" / "api-test" / ".env"
     try:
