@@ -3,7 +3,7 @@ import AppShell from '../../shell/AppShell.jsx'
 import { useShell } from '../../shell/ShellContext.js'
 import { toast } from '../../lib/toast.js'
 import { logActivity } from '../../lib/activity.js'
-import { registerJob } from '../../lib/aijob.js'
+import { registerJob, activeJobs } from '../../lib/aijob.js'
 import { useLabeling } from './useLabeling.js'
 import PreviewArea from './components/PreviewArea.jsx'
 import AnalyzePanel from './components/AnalyzePanel.jsx'
@@ -60,10 +60,11 @@ function LabelingContent() {
       if (!res?.job_id) throw new Error('start failed')
       registerJob(res.job_id, { kind: 'labeling_batch', label: `폴더 라벨링 ${targets.length}장` })
       logActivity('전체 AI 라벨링', `${targets.length}장 요청(백그라운드)`)
-      toast(`${targets.length}장 백그라운드 라벨링 시작 — 다른 메뉴로 이동해도 계속됩니다`)
+      // 백그라운드 진행 중임을 버튼에 유지 — 진행률/완료는 아래 useEffect 이벤트로 갱신·해제.
+      setBatchBusy(`라벨링 중 0/${targets.length}`)
+      toast(`${targets.length}장 라벨링 시작 — 다른 메뉴로 이동해도 계속됩니다`)
     } catch {
       toast('라벨링 시작에 실패했습니다')
-    } finally {
       setBatchBusy(false)
     }
   }
@@ -84,16 +85,35 @@ function LabelingContent() {
       }
       // 원본 이미지가 아직 있으면 캔버스에도 박스 반영(+ IndexedDB 저장) — 복귀 후에도 유지.
       lab.applyBatchBoxes(items)
+      setBatchBusy(false) // 완료 → 버튼 원복
+    }
+    // 진행률 → 버튼 라벨 갱신("라벨링 중 3/5"). 완료/실패 → 버튼 원복.
+    const onProgress = (e) => {
+      if (e.detail?.kind !== 'labeling_batch') return
+      const p = e.detail.progress
+      if (p && typeof p.total === 'number') setBatchBusy(`라벨링 중 ${p.done ?? 0}/${p.total}`)
+      else setBatchBusy('라벨링 중…')
+    }
+    const onError = (e) => {
+      if (e.detail?.kind !== 'labeling_batch') return
+      setBatchBusy(false)
     }
     window.addEventListener('aijob:done', onDone)
-    // 복귀 진입: 직전 폴더 라벨링 결과를 복원(같은 탭 내).
+    window.addEventListener('aijob:progress', onProgress)
+    window.addEventListener('aijob:error', onError)
+    // 복귀 진입: 직전 폴더 라벨링 결과 복원 + 아직 진행 중이면 버튼을 진행 상태로.
     try {
       const last = sessionStorage.getItem('gnsoft.labeling.lastbatch')
       if (last) setBatchResult(JSON.parse(last))
     } catch {
       /* 무시 */
     }
-    return () => window.removeEventListener('aijob:done', onDone)
+    if (activeJobs().some((j) => j.kind === 'labeling_batch')) setBatchBusy('라벨링 중…')
+    return () => {
+      window.removeEventListener('aijob:done', onDone)
+      window.removeEventListener('aijob:progress', onProgress)
+      window.removeEventListener('aijob:error', onError)
+    }
     // 마운트 1회만 — lab 은 매 렌더 새 객체라 의존성에 넣으면 재렌더 루프가 난다.
     // (applyBatchBoxes 등 lab 의 메서드는 useCallback 으로 안정적이라 초기 캡처로 충분.)
     // eslint-disable-next-line react-hooks/exhaustive-deps

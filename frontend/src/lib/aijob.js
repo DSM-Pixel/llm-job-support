@@ -81,7 +81,15 @@ export function ensurePoller() {
       } catch {
         st = null
       }
-      if (!st || st.status === 'running') continue // 다음 틱에 재시도
+      if (!st || st.status === 'running') {
+        // 진행 중이면 진행률을 알려 버튼/표시기가 상태를 갱신하게 한다.
+        if (st?.progress) {
+          window.dispatchEvent(
+            new CustomEvent('aijob:progress', { detail: { kind: j.kind, progress: st.progress } }),
+          )
+        }
+        continue // 다음 틱에 재시도
+      }
       writeActive(readActive().filter((x) => x.jobId !== j.jobId))
       if (st.status === 'done') {
         try {

@@ -1435,26 +1435,32 @@ def batch_label_images(items: list[tuple], progress_cb=None) -> dict:
 
     items: [(name, image_bytes, mime), ...]. 반환: {total, ok, items:[{name,labels,thumb,classes,count}]}.
     브라우저가 다른 메뉴로 이동해도 이 작업은 서버 job 스레드에서 끝까지 수행된다.
-    (개별 탐지 detect_objects_vision 이 내부적으로 Gemini 429 재시도를 처리한다.)
+
+    ThreadPoolExecutor(3) 은 5장이면 3장을 먼저, 끝나는 대로 나머지를 이어서 '전부' 처리한다
+    (누락 없음). 다만 동시 호출은 Gemini 분당 한도(429)에 걸려 일부가 라벨 0 으로 실패할 수
+    있어, 실패분만 순차로(간격 4s) 최대 2라운드 재시도한다 — 옛 배치의 이미지 간 간격과 동일 취지.
     """
     total = len(items)
     results: list[dict | None] = [None] * total
     done = {"n": 0}
 
+    def label_one(name: str, data: bytes, mime: str) -> dict:
+        det = detect_objects_vision(data, mime or "image/png")
+        labels = det.get("labels", [])
+        thumb = _draw_labeled_thumb(data, mime or "image/png", labels) if labels else ""
+        return {
+            "name": name,
+            "labels": labels,
+            "thumb": thumb,
+            "classes": sorted({str(lb.get("class_name") or "") for lb in labels if lb}),
+            "count": len(labels),
+            "backend": det.get("backend"),
+        }
+
     def work(pair: tuple) -> None:
         idx, (name, data, mime) = pair
         try:
-            det = detect_objects_vision(data, mime or "image/png")
-            labels = det.get("labels", [])
-            thumb = _draw_labeled_thumb(data, mime or "image/png", labels) if labels else ""
-            results[idx] = {
-                "name": name,
-                "labels": labels,
-                "thumb": thumb,
-                "classes": sorted({str(lb.get("class_name") or "") for lb in labels if lb}),
-                "count": len(labels),
-                "backend": det.get("backend"),
-            }
+            results[idx] = label_one(name, data, mime)
         except Exception as e:
             results[idx] = {
                 "name": name,
@@ -1468,8 +1474,29 @@ def batch_label_images(items: list[tuple], progress_cb=None) -> dict:
         if progress_cb:
             progress_cb(done["n"], total)
 
+    # 1차: 동시 3장.
     with ThreadPoolExecutor(max_workers=3) as ex:
         list(ex.map(work, list(enumerate(items))))
+
+    # 2차: 라벨 0 이면서 AI 호출 실패(429·오류)로 보이는 것만 순차 재시도(간격 4s, 최대 2라운드).
+    #   실제로 대상이 없어 빈 결과(backend=GEMINI/GPT)는 재시도하지 않는다(한도 낭비 방지).
+    def failed(r: dict | None) -> bool:
+        return bool(r) and r.get("count", 0) == 0 and (r.get("backend") in ("AI_FAIL", None))
+
+    for _round in range(2):
+        pending = [i for i in range(total) if failed(results[i])]
+        if not pending:
+            break
+        for i in pending:
+            time.sleep(4)  # 분당 요청 한도(429) 회피
+            name, data, mime = items[i]
+            try:
+                retry = label_one(name, data, mime)
+                if retry.get("count") or retry.get("backend") not in ("AI_FAIL", None):
+                    results[i] = retry  # 성공했거나 '진짜 빈 결과'로 확정되면 반영
+            except Exception:
+                pass  # 다음 라운드에서 다시 시도
+
     ok = sum(1 for r in results if r and r.get("count"))
     return {"total": total, "ok": ok, "items": [r for r in results if r]}
 
