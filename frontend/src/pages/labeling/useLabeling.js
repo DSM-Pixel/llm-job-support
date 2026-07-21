@@ -91,24 +91,21 @@ export function useLabeling(sampleName, sampleResult) {
     [project],
   )
 
-  // 폴더 배치 라벨링 결과(이름 매칭)를 캔버스 박스로 병합 + IndexedDB 반영.
-  const applyBatchBoxes = useCallback(
-    (items) => {
-      setImages((prev) =>
-        prev.map((image) => {
-          const it = items.find((x) => x.name === image.name)
-          if (!it || !it.labels?.length) return image
-          const merged = image.savedBoxes.slice()
-          labelsToBoxes(it).forEach((b) => {
-            if (!merged.some((e) => sameBox(e, b))) merged.push(b)
-          })
-          if (!image.sample) updateBoxes(project, image.name, merged)
-          return { ...image, savedBoxes: merged }
-        }),
-      )
-    },
-    [project],
-  )
+  // 폴더 배치 라벨링 결과(이름 매칭)를 캔버스 박스로 즉시 병합(이 페이지에 있을 때 표시용).
+  // IndexedDB 저장은 항상 떠 있는 AiJobIndicator 가 단독으로 처리한다(자리 비워도 저장되게).
+  const applyBatchBoxes = useCallback((items) => {
+    setImages((prev) =>
+      prev.map((image) => {
+        const it = items.find((x) => x.name === image.name)
+        if (!it || !it.labels?.length) return image
+        const merged = image.savedBoxes.slice()
+        labelsToBoxes(it).forEach((b) => {
+          if (!merged.some((e) => sameBox(e, b))) merged.push(b)
+        })
+        return { ...image, savedBoxes: merged }
+      }),
+    )
+  }, [])
 
   // 이미지 추가(다중 파일/폴더). 첫 실제 업로드면 샘플 placeholder는 치운다.
   // 추가에 성공하면 새 활성 인덱스를 반환(모달 열기 트리거용), 없으면 null.
