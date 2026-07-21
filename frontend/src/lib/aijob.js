@@ -39,24 +39,23 @@ export function takeJobResult(kind) {
   }
 }
 
-// AI 작업 시작 — 서버 job 으로 돌리고 job_id 를 등록. 폴링은 전역 poller 가 담당.
+// 이미 시작된 job(id)을 전역 추적에 등록 — 커스텀 시작 엔드포인트(예: 라벨링 배치 업로드)용.
 // 같은 kind 는 최신 하나만 추적한다(재요청 시 이전 추적 대체).
+export function registerJob(jobId, { kind, label } = {}) {
+  if (!jobId) return
+  const list = readActive().filter((j) => j.kind !== kind)
+  list.push({ jobId, kind: kind || 'ai', label: label || 'AI 작업', page: curPage(), ts: Date.now() })
+  writeActive(list)
+  ensurePoller()
+  window.dispatchEvent(new CustomEvent('aijob:change'))
+}
+
+// AI 작업 시작 — 서버 job 으로 돌리고 job_id 를 등록. 폴링은 전역 poller 가 담당.
 export async function startJob(path, params, { kind, label } = {}) {
   const res = await api('/api/jobs/start', { path, params })
   const jobId = res?.job_id
   if (!jobId) throw new Error(res?.error || 'job start failed')
-  const list = readActive().filter((j) => j.kind !== kind)
-  list.push({
-    jobId,
-    path,
-    kind: kind || 'ai',
-    label: label || 'AI 작업',
-    page: curPage(),
-    ts: Date.now(),
-  })
-  writeActive(list)
-  ensurePoller()
-  window.dispatchEvent(new CustomEvent('aijob:change'))
+  registerJob(jobId, { kind, label })
   return jobId
 }
 

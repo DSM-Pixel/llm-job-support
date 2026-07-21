@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import AppShell from '../../shell/AppShell.jsx'
 import { useShell } from '../../shell/ShellContext.js'
 import { toast } from '../../lib/toast.js'
-import { logActivity, saveArtifact } from '../../lib/activity.js'
-import { detectImage, labelsToBoxes, sameBox, makeLabeledThumb } from './labelingApi.js'
+import { logActivity } from '../../lib/activity.js'
+import { labelsToBoxes, sameBox } from './labelingApi.js'
+import { registerJob } from '../../lib/aijob.js'
 import { useLabeling } from './useLabeling.js'
 import PreviewArea from './components/PreviewArea.jsx'
 import AnalyzePanel from './components/AnalyzePanel.jsx'
@@ -22,69 +23,71 @@ function LabelingContent() {
   const modelName = 'gpt-4o'
   const modelSuffix = ' · 멀티모달 비전'
 
-  // 폴더 전체 AI 라벨링 — 업로드한 모든 사진을 차례로 YOLO 탐지해 박스를 채운다(중복 제외).
-  const onBatch = async () => {
-    const snapshot = lab.imagesRef.current
-    const targets = snapshot.map((im, i) => ({ im, i })).filter((x) => x.im.file)
-    if (!targets.length) return toast('폴더로 사진을 먼저 추가하세요')
-    let ok = 0
-    let totalNew = 0
-    let failed = 0
-    let saved = 0
-    const merges = {}
-    // AI 사용량 한도(분당 요청 수)에 걸리지 않게 이미지 사이 간격을 둔다.
-    const gap = (ms) => new Promise((r) => setTimeout(r, ms))
-    for (let k = 0; k < targets.length; k += 1) {
-      const { im, i } = targets[k]
-      if (k > 0) await gap(4000)
-      setBatchBusy(`라벨링 중 ${k + 1}/${targets.length}`)
-      try {
-        const result = await detectImage(im.file, im.name)
-        if (result.backend === 'AI_FAIL') {
-          failed += 1
-          continue
-        }
-        const merged = im.savedBoxes.slice()
-        labelsToBoxes(result).forEach((b) => {
-          if (!merged.some((e) => sameBox(e, b))) {
-            merged.push(b)
-            totalNew += 1
-          }
-        })
-        merges[i] = merged
-        ok += 1
-        // 폴더로 라벨링한 각 사진을 '데이터 관리'에 개별 작업물(라벨)로 남긴다.
-        // (배치라 용량 절약 위해 작은 썸네일 사용.) 박스가 있을 때만 저장.
-        if (merged.length) {
-          const thumb = await makeLabeledThumb(im.url, merged, 400)
-          if (thumb) {
-            const classes = [...new Set(merged.map((b) => b.label))].filter(Boolean).join(', ')
-            saveArtifact({
-              kind: 'image',
-              cat: '라벨',
-              id: im.name,
-              title: `라벨링 · ${im.name}`,
-              image: thumb,
-              caption: `라벨 ${merged.length}개${classes ? ` · ${classes}` : ''}`,
-            })
-            saved += 1
-          }
-        }
-      } catch {
-        failed += 1
+  // 업로드 대역폭 절약 — 큰 폰 사진은 1280px 로 줄여 올린다(탐지엔 충분, 서버도 어차피 축소).
+  const resizeForUpload = (file, max = 1280) =>
+    new Promise((resolve) => {
+      const img = new Image()
+      img.onload = () => {
+        const scale = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight))
+        if (scale === 1) return resolve(file) // 이미 작으면 원본 그대로
+        const c = document.createElement('canvas')
+        c.width = Math.round(img.naturalWidth * scale)
+        c.height = Math.round(img.naturalHeight * scale)
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height)
+        c.toBlob((b) => resolve(b || file), 'image/jpeg', 0.85)
       }
+      img.onerror = () => resolve(file)
+      img.src = URL.createObjectURL(file)
+    })
+
+  // 폴더 전체 AI 라벨링 — 서버 백그라운드 job 으로 수행. 사이드바를 옮겨도 계속 진행되고,
+  // 완료 시 전역 표시기가 결과를 데이터 관리에 저장한다(AiJobIndicator). 이 페이지에 있으면
+  // 아래 useEffect 가 캔버스에 박스도 반영한다.
+  const onBatch = async () => {
+    const targets = lab.imagesRef.current.filter((im) => im.file)
+    if (!targets.length) return toast('폴더로 사진을 먼저 추가하세요')
+    setBatchBusy(`업로드 중 ${targets.length}장…`)
+    try {
+      const fd = new FormData()
+      for (const im of targets) {
+        const blob = await resizeForUpload(im.file)
+        fd.append('images', blob, im.name)
+      }
+      const res = await fetch('/api/labeling/batch-start', { method: 'POST', body: fd }).then((r) =>
+        r.json(),
+      )
+      if (!res?.job_id) throw new Error('start failed')
+      registerJob(res.job_id, { kind: 'labeling_batch', label: `폴더 라벨링 ${targets.length}장` })
+      logActivity('전체 AI 라벨링', `${targets.length}장 요청(백그라운드)`)
+      toast(`${targets.length}장 백그라운드 라벨링 시작 — 다른 메뉴로 이동해도 계속됩니다`)
+    } catch {
+      toast('라벨링 시작에 실패했습니다')
+    } finally {
+      setBatchBusy(false)
     }
-    lab.setImages((prev) =>
-      prev.map((image, idx) => (idx in merges ? { ...image, savedBoxes: merges[idx] } : image)),
-    )
-    logActivity('전체 AI 라벨링', `${ok}장 · 박스 ${totalNew}개 · 저장 ${saved}장`)
-    setBatchBusy(false)
-    toast(
-      failed
-        ? `${ok}장 완료 · 박스 ${totalNew}개 · 데이터 관리에 ${saved}장 저장 (실패 ${failed}장)`
-        : `${ok}장 전체 라벨링 완료 · 박스 ${totalNew}개 · 데이터 관리에 ${saved}장 저장`,
-    )
   }
+
+  // 배치 완료 시(이 페이지에 있을 때) 캔버스의 각 이미지에 박스 반영. (데이터 관리 저장은
+  // 어느 페이지에서든 동작하도록 전역 AiJobIndicator 가 담당한다.)
+  useEffect(() => {
+    const onDone = (e) => {
+      if (e.detail?.kind !== 'labeling_batch') return
+      const items = e.detail.result?.items || []
+      lab.setImages((prev) =>
+        prev.map((image) => {
+          const it = items.find((x) => x.name === image.name)
+          if (!it || !it.labels?.length) return image
+          const merged = image.savedBoxes.slice()
+          labelsToBoxes(it).forEach((b) => {
+            if (!merged.some((e2) => sameBox(e2, b))) merged.push(b)
+          })
+          return { ...image, savedBoxes: merged }
+        }),
+      )
+    }
+    window.addEventListener('aijob:done', onDone)
+    return () => window.removeEventListener('aijob:done', onDone)
+  }, [lab])
 
   const openModal = () => lab.setModalOpen(true)
 

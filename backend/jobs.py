@@ -37,10 +37,19 @@ def create(kind: str) -> str:
             "status": "running",
             "result": None,
             "error": "",
+            "progress": None,
             "created": now,
             "updated": now,
         }
     return jid
+
+
+def set_progress(jid: str, progress) -> None:
+    """진행률 갱신(예: {"done": 3, "total": 10}). 폴더 라벨링 등 다건 작업용."""
+    with _lock:
+        j = _jobs.get(jid)
+        if j:
+            j.update(progress=progress, updated=time.time())
 
 
 def finish(jid: str, result) -> None:
@@ -80,6 +89,20 @@ def run_async(kind: str, fn: Callable[[], object]) -> str:
     def _worker() -> None:
         try:
             finish(jid, fn())
+        except Exception as e:
+            fail(jid, e)
+
+    threading.Thread(target=_worker, daemon=True).start()
+    return jid
+
+
+def run_async_with_id(kind: str, fn: Callable[[str], object]) -> str:
+    """run_async 와 같되 fn 이 job_id 를 인자로 받는다(진행률 갱신용)."""
+    jid = create(kind)
+
+    def _worker() -> None:
+        try:
+            finish(jid, fn(jid))
         except Exception as e:
             fail(jid, e)
 

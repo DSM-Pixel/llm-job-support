@@ -1389,6 +1389,91 @@ def detect_objects_vision(image_bytes: bytes, mime: str = "image/png") -> dict:
     return {"backend": backend, "engine": engine, "labels": labels}
 
 
+def _draw_labeled_thumb(
+    image_bytes: bytes, mime: str, labels: list[dict], max_px: int = 440
+) -> str:
+    """탐지 박스를 그려 넣은 작은 썸네일(JPEG data URI) 생성 — 데이터 관리 표시용.
+
+    라벨 좌표는 box_2d=[ymin,xmin,ymax,xmax] 0~1000 정규화. 서버가 직접 그려서
+    사용자가 페이지를 떠난 뒤 완료돼도 결과 미리보기를 남길 수 있다.
+    """
+    import io
+
+    from PIL import Image, ImageDraw, ImageOps
+
+    try:
+        im = Image.open(io.BytesIO(image_bytes))
+        im = ImageOps.exif_transpose(im).convert("RGB")
+    except Exception:
+        return ""
+    w, h = im.size
+    if not w or not h:
+        return ""
+    scale = min(1.0, max_px / max(w, h))
+    tw, th = max(1, int(w * scale)), max(1, int(h * scale))
+    im = im.resize((tw, th))
+    draw = ImageDraw.Draw(im)
+    lw = max(2, tw // 200)
+    for lb in labels:
+        box = lb.get("box_2d")
+        if not (isinstance(box, list) and len(box) == 4):
+            continue
+        ymin, xmin, ymax, xmax = box
+        x1, y1 = xmin / 1000 * tw, ymin / 1000 * th
+        x2, y2 = xmax / 1000 * tw, ymax / 1000 * th
+        draw.rectangle([x1, y1, x2, y2], outline=(239, 68, 68), width=lw)
+        name = str(lb.get("class_name") or "").strip()
+        if name:
+            draw.text((x1 + 3, max(0, y1 - 12)), name, fill=(239, 68, 68))
+    buf = io.BytesIO()
+    im.save(buf, format="JPEG", quality=72)
+    return "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
+
+
+def batch_label_images(items: list[tuple], progress_cb=None) -> dict:
+    """폴더(다건) 이미지 라벨링 — 서버에서 동시 3장씩 탐지 + 라벨 썸네일 생성.
+
+    items: [(name, image_bytes, mime), ...]. 반환: {total, ok, items:[{name,labels,thumb,classes,count}]}.
+    브라우저가 다른 메뉴로 이동해도 이 작업은 서버 job 스레드에서 끝까지 수행된다.
+    (개별 탐지 detect_objects_vision 이 내부적으로 Gemini 429 재시도를 처리한다.)
+    """
+    total = len(items)
+    results: list[dict | None] = [None] * total
+    done = {"n": 0}
+
+    def work(pair: tuple) -> None:
+        idx, (name, data, mime) = pair
+        try:
+            det = detect_objects_vision(data, mime or "image/png")
+            labels = det.get("labels", [])
+            thumb = _draw_labeled_thumb(data, mime or "image/png", labels) if labels else ""
+            results[idx] = {
+                "name": name,
+                "labels": labels,
+                "thumb": thumb,
+                "classes": sorted({str(lb.get("class_name") or "") for lb in labels if lb}),
+                "count": len(labels),
+                "backend": det.get("backend"),
+            }
+        except Exception as e:
+            results[idx] = {
+                "name": name,
+                "labels": [],
+                "thumb": "",
+                "classes": [],
+                "count": 0,
+                "error": str(e)[:120],
+            }
+        done["n"] += 1
+        if progress_cb:
+            progress_cb(done["n"], total)
+
+    with ThreadPoolExecutor(max_workers=3) as ex:
+        list(ex.map(work, list(enumerate(items))))
+    ok = sum(1 for r in results if r and r.get("count"))
+    return {"total": total, "ok": ok, "items": [r for r in results if r]}
+
+
 # 설명 분석(설명형) 프리셋별 프롬프트.
 _ANALYZE_PROMPTS = {
     "도로 파손/포트홀 찾기": "이 도로 이미지에서 포트홀·균열 등 노면 파손을 찾아 위치와 심각도를 한국어로 항목별로 설명해줘.",

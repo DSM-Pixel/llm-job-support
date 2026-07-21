@@ -841,7 +841,35 @@ def jobs_get(job_id: str) -> dict:
     j = jobs.get(job_id)
     if not j:
         return {"status": "missing"}
-    return {"status": j["status"], "result": j["result"], "error": j["error"], "kind": j["kind"]}
+    return {
+        "status": j["status"],
+        "result": j["result"],
+        "error": j["error"],
+        "kind": j["kind"],
+        "progress": j.get("progress"),
+    }
+
+
+@app.post("/api/labeling/batch-start")
+async def labeling_batch_start(images: list[UploadFile] = File(...)) -> dict:
+    """폴더(다건) 이미지 라벨링을 백그라운드 job 으로 시작 — 사이드바 이동에도 계속 수행.
+
+    업로드된 이미지들을 서버가 받아 두므로, 브라우저가 페이지를 떠나도(=이미지 소실)
+    서버가 끝까지 탐지·썸네일 생성을 진행한다. 결과는 job 으로 폴링/회수한다.
+    """
+    payload: list[tuple] = []
+    for f in images:
+        data = await f.read()
+        payload.append((f.filename or "image", data, f.content_type or "image/png"))
+    if not payload:
+        return {"error": "no_images"}
+    jid = jobs.run_async_with_id(
+        "labeling_batch",
+        lambda jid: services.batch_label_images(
+            payload, lambda d, t: jobs.set_progress(jid, {"done": d, "total": t})
+        ),
+    )
+    return {"job_id": jid}
 
 
 # ── 프로젝트(노트북) + 검수 워크플로 ─────────────────────────────────
