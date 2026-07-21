@@ -1773,3 +1773,28 @@ textarea {
 .help-dot.on {
   background: var(--blue);
 }
+
+/* 상단바 AI 백그라운드 작업 표시기 — 사이드바를 옮겨도 계속 진행 중임을 알림 */
+.ai-job-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--blue, #2563eb);
+  background: color-mix(in srgb, var(--blue, #2563eb) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--blue, #2563eb) 30%, transparent);
+  border-radius: 999px;
+  padding: 3px 10px;
+  white-space: nowrap;
+}
+.ai-job-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--blue, #2563eb);
+  animation: ai-job-pulse 1s ease-in-out infinite;
+}
+@keyframes ai-job-pulse {
+  0%, 100% { opacity: 0.35; transform: scale(0.85); }
+  50% { opacity: 1; transform: scale(1.1); }
+}

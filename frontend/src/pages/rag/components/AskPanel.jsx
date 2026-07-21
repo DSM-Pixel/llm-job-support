@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { toast } from '../../../lib/toast.js'
 import { logActivity, saveArtifact } from '../../../lib/activity.js'
-import { searchRag } from '../ragApi.js'
+import { pid } from '../ragApi.js'
+import { startJob, takeJobResult } from '../../../lib/aijob.js'
 
 // 질문하기 + AI 답변 + 검색된 근거 — 바닐라 rag.js 검색 흐름 재현.
 // 검색 전(result=null)에는 예시 답변·근거를 보여주지 않고 빈 안내 상태로 둔다.
@@ -10,19 +11,41 @@ export default function AskPanel() {
   const [result, setResult] = useState(null) // null = 검색 전(정적 화면)
   const [busy, setBusy] = useState(false)
 
+  // 검색을 서버 백그라운드 job 으로 — 사이드바를 옮겨도 안 끊긴다. 결과는 아래 useEffect 에서 수신.
   const runSearch = async (raw) => {
     const q = (raw ?? query).trim()
     if (!q) {
       toast('질문을 입력해주세요')
       return
     }
+    setQuery(q)
     setBusy(true)
     try {
-      const res = await searchRag(q)
+      sessionStorage.setItem('gnsoft.rag.lastq', q) // 완료 시 활동 로그·산출물 저장에 사용
+    } catch {
+      /* 무시 */
+    }
+    try {
+      await startJob('/api/rag/search', { query: q, project: pid() }, { kind: 'rag', label: '문서 검색' })
+    } catch {
+      setBusy(false)
+    }
+  }
+
+  // RAG job 결과 수신 — 현재 페이지에 있으면 이벤트로, 자리를 비운 사이 끝났으면 진입 시 회수.
+  useEffect(() => {
+    const applyResult = (res) => {
       setResult(res)
-      logActivity('RAG 검색', q)
+      setBusy(false)
+      let q = ''
+      try {
+        q = sessionStorage.getItem('gnsoft.rag.lastq') || ''
+      } catch {
+        /* 무시 */
+      }
+      if (q) logActivity('RAG 검색', q)
       // 근거를 찾았으면 보고서에 넣을 산출물로 저장(질문·근거파일·도출 결과).
-      if (res.found) {
+      if (res?.found) {
         const top = res.sources?.[0] || {}
         saveArtifact({
           kind: 'rag',
@@ -36,20 +59,29 @@ export default function AskPanel() {
           snippet: String(top.text || '').slice(0, 160),
         })
       }
-      toast(res.found ? '검색 결과가 갱신되었습니다' : '참고 문서에 관련 정보가 없습니다')
-    } catch {
-      /* api()가 이미 toast 표시 */
-    } finally {
-      setBusy(false)
     }
-  }
-
-  // 자연어 질의에서 ?q=로 연계돼 넘어오면 그 질문을 색인 데이터에서 바로 검색.
-  useEffect(() => {
+    const onDone = (e) => {
+      if (e.detail?.kind !== 'rag') return
+      takeJobResult('rag') // 슬롯 비움
+      applyResult(e.detail.result)
+    }
+    const onErr = (e) => {
+      if (e.detail?.kind === 'rag') setBusy(false)
+    }
+    window.addEventListener('aijob:done', onDone)
+    window.addEventListener('aijob:error', onErr)
+    // 진입 시: ?q= 로 넘어왔으면 검색 시작, 아니면 자리 비운 사이 끝난 결과 회수.
     const incomingQ = new URLSearchParams(location.search).get('q')
+    const pending = takeJobResult('rag')
     if (incomingQ) {
       setQuery(incomingQ)
       runSearch(incomingQ)
+    } else if (pending) {
+      applyResult(pending)
+    }
+    return () => {
+      window.removeEventListener('aijob:done', onDone)
+      window.removeEventListener('aijob:error', onErr)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

@@ -20,7 +20,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from . import activity, admin, auth, cache, projects, services, yolo_service
+from . import activity, admin, auth, cache, jobs, projects, services, yolo_service
 
 # 서빙할 정적 프론트 디렉터리. 우선순위:
 #   1) 환경변수 WEB_DIR (명시 지정)
@@ -750,6 +750,98 @@ def agent_plan(body: AgentPlanIn) -> dict:
 def agent_run(body: AgentRunIn) -> dict:
     """원클릭 실행 — 설계한 절차를 실제로 수행하고 종합 결과물(보고서)까지 도출."""
     return services.agent_run(body.goal, body.project)
+
+
+# ── 백그라운드 AI 작업(job) ─────────────────────────────────────────
+# 사이드바(=별도 HTML 페이지) 이동 시 브라우저가 진행 중인 AI 요청을 끊어버리는 문제를
+# 피하려고, 오래 걸리는 AI 호출을 서버 스레드로 돌린다. 클라이언트는 job_id 로 폴링한다.
+# 허용된 경로만 실행(임의 함수 호출 차단). 각 핸들러는 위 동기 엔드포인트와 같은 services 함수를 부른다.
+def _job_report(p: dict) -> dict:
+    return services.generate_report(
+        p.get("report_type", "활동 요약"),
+        p.get("period", ""),
+        p.get("sources", []),
+        p.get("include_chart", True),
+    )
+
+
+def _job_report_web(p: dict) -> dict:
+    return services.generate_report_web(
+        p.get("report_type", "활동 요약"),
+        p.get("period", ""),
+        p.get("sources", []),
+        p.get("query", ""),
+        p.get("include_chart", True),
+    )
+
+
+def _job_report_from_rag(p: dict) -> dict:
+    return services.generate_report_from_rag(
+        p.get("question", ""),
+        p.get("answer", ""),
+        p.get("sources", []),
+        p.get("report_type", "활동 요약"),
+        p.get("period", ""),
+        p.get("include_chart", True),
+    )
+
+
+def _job_report_activity(p: dict) -> dict:
+    return services.generate_report_activity(
+        p.get("activities", []),
+        p.get("start", ""),
+        p.get("end", ""),
+        p.get("report_type", "활동 요약"),
+        p.get("include_chart", True),
+    )
+
+
+def _job_rag_search(p: dict) -> dict:
+    return services.rag_search(p.get("query", ""), p.get("top_k", 4), p.get("project", ""))
+
+
+def _job_agent_plan(p: dict) -> dict:
+    return services.agent_plan(p.get("goal", ""))
+
+
+def _job_agent_run(p: dict) -> dict:
+    return services.agent_run(p.get("goal", ""), p.get("project", ""))
+
+
+_JOB_HANDLERS = {
+    "/api/report": _job_report,
+    "/api/report/web": _job_report_web,
+    "/api/report/from-rag": _job_report_from_rag,
+    "/api/report/activity": _job_report_activity,
+    "/api/rag/search": _job_rag_search,
+    "/api/agent/plan": _job_agent_plan,
+    "/api/agent/run": _job_agent_run,
+}
+
+
+class JobStartIn(BaseModel):
+    path: str = ""
+    params: dict = {}
+
+
+@app.post("/api/jobs/start")
+def jobs_start(body: JobStartIn) -> dict:
+    """AI 작업을 백그라운드 job 으로 시작하고 job_id 반환(허용 경로만)."""
+    handler = _JOB_HANDLERS.get(body.path)
+    if not handler:
+        return {"error": "unsupported", "path": body.path}
+    params = dict(body.params or {})
+    jid = jobs.run_async(body.path, lambda: handler(params))
+    return {"job_id": jid}
+
+
+@app.get("/api/jobs/{job_id}")
+def jobs_get(job_id: str) -> dict:
+    """job 상태·결과 조회. 없으면 status=missing(서버 재시작 등)."""
+    j = jobs.get(job_id)
+    if not j:
+        return {"status": "missing"}
+    return {"status": j["status"], "result": j["result"], "error": j["error"], "kind": j["kind"]}
 
 
 # ── 프로젝트(노트북) + 검수 워크플로 ─────────────────────────────────

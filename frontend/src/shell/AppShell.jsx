@@ -5,6 +5,7 @@ import Sidebar from './Sidebar.jsx'
 import SettingsModal from './SettingsModal.jsx'
 import HistoryModal from './HistoryModal.jsx'
 import AiDock from './AiDock.jsx'
+import AiJobIndicator from './AiJobIndicator.jsx'
 
 // 공용 앱 셸 — 8개 내부 페이지의 공통 뼈대(사이드바 + 상단바 + 설정/기록/AI 모달).
 // 기존 web/pages/*.html 의 .app > .sidebar + main.main 구조를 그대로 재현한다.
@@ -33,6 +34,7 @@ export default function AppShell({ title, activeNav, children, askHandler = null
           <header className="topbar">
             <h1>{title}</h1>
             <div className="top-actions">
+              <AiJobIndicator />
               <span>?</span>
               <span>♧</span>
             </div>

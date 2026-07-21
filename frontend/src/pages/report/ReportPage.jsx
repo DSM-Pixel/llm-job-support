@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import AppShell from '../../shell/AppShell.jsx'
 import { toast } from '../../lib/toast.js'
 import { getActivity, getArtifacts } from '../../lib/activity.js'
-import { genReport, genActivity, genFromRag, reviseReport } from './reportApi.js'
+import { reviseReport } from './reportApi.js'
+import { startJob, takeJobResult } from '../../lib/aijob.js'
 import { useReportDoc } from './useReportDoc.js'
 import ReportControls from './components/ReportControls.jsx'
 import { TYPES } from './reportTypes.js'
@@ -37,84 +38,62 @@ export default function ReportPage() {
   const includeChart = !chartOff
   const activeSources = [] // 바닐라: 통계 차트 외 소스 토글이 없어 항상 빈 배열.
 
-  // 내 웹 활동을 날짜 범위로 필터해 분석·통계 보고서 생성. useBusy=false 면 조용히(기본 진입).
-  const generateActivity = async (useBusy) => {
-    const startMs = start ? new Date(`${start}T00:00:00`).getTime() : -Infinity
-    const endMs = end ? new Date(`${end}T23:59:59`).getTime() : Infinity
-    const activities = getActivity().filter((a) => a.ts >= startMs && a.ts <= endMs)
-    if (useBusy) setBusy({ active: true, text: '분석 중…' })
+  // 생성은 모두 서버 백그라운드 job 으로 — 사이드바를 옮겨도 안 끊긴다.
+  // 결과는 아래 useEffect 의 'aijob:done'(현재 페이지) 또는 진입 시 takeJobResult(복귀)로 렌더.
+  const startReportJob = async (path, params, busyText) => {
+    setBusy({ active: true, text: busyText })
     try {
-      const result = await genActivity({
-        activities,
-        start,
-        end,
-        report_type: reportType,
-        include_chart: includeChart,
-      })
-      renderReport(result)
-      if (useBusy) {
-        toast(
-          activities.length
-            ? `내 활동 ${activities.length}건을 분석해 보고서를 생성했습니다 (본문 수정 가능)`
-            : '선택한 기간에 기록된 활동이 없습니다 — 질의·검색·이미지 분석을 사용하면 집계됩니다',
-        )
-      }
+      await startJob(path, params, { kind: 'report', label: '보고서 생성' })
     } catch {
-      /* api()가 toast */
-    } finally {
-      clearLoadingIfStuck()
-      if (useBusy) setBusy({ active: false, text: '' })
-    }
-  }
-
-  // web=true 면 인터넷 웹 검색 기반, false 면 빠른 예시. query 있으면 그 주제로 생성.
-  const generate = async (web, query) => {
-    setBusy({ active: true, text: web ? '웹 검색 중…' : '생성 중' })
-    try {
-      const result = await genReport(
-        {
-          report_type: reportType,
-          period,
-          sources: activeSources,
-          include_chart: includeChart,
-          query: query || '',
-        },
-        web,
-      )
-      renderReport(result)
-      toast(
-        result.backend === 'GEMINI_WEB'
-          ? '웹 검색으로 보고서를 생성했습니다 (출처 클릭 가능, 본문 수정 가능)'
-          : '보고서를 생성했습니다 (본문 수정 가능)',
-      )
-    } catch {
-      /* api()가 toast */
-    } finally {
-      clearLoadingIfStuck()
+      /* startJob/api()가 toast */
       setBusy({ active: false, text: '' })
     }
   }
 
+  // 내 웹 활동을 날짜 범위로 필터해 분석·통계 보고서 생성.
+  const generateActivity = async () => {
+    const startMs = start ? new Date(`${start}T00:00:00`).getTime() : -Infinity
+    const endMs = end ? new Date(`${end}T23:59:59`).getTime() : Infinity
+    const activities = getActivity().filter((a) => a.ts >= startMs && a.ts <= endMs)
+    if (!activities.length) {
+      toast('선택한 기간에 기록된 활동이 없습니다 — 질의·검색·이미지 분석을 사용하면 집계됩니다')
+    }
+    await startReportJob(
+      '/api/report/activity',
+      { activities, start, end, report_type: reportType, include_chart: includeChart },
+      '분석 중…',
+    )
+  }
+
+  // web=true 면 인터넷 웹 검색 기반, false 면 빠른 예시. query 있으면 그 주제로 생성.
+  const generate = async (web, query) => {
+    await startReportJob(
+      web ? '/api/report/web' : '/api/report',
+      {
+        report_type: reportType,
+        period,
+        sources: activeSources,
+        include_chart: includeChart,
+        query: query || '',
+      },
+      web ? '웹 검색 중…' : '생성 중',
+    )
+  }
+
   // RAG 검색 결과를 그대로 이어받아 보고서로 생성.
   const generateFromRag = async (ctx) => {
-    setBusy({ active: true, text: '생성 중…' })
-    try {
-      const result = await genFromRag({
+    await startReportJob(
+      '/api/report/from-rag',
+      {
         question: ctx.question,
         answer: ctx.answer,
         sources: ctx.sources,
         report_type: reportType,
         period,
         include_chart: includeChart,
-      })
-      renderReport(result)
-      toast('RAG 검색 내용으로 보고서를 생성했습니다 (본문 수정 가능)')
-    } catch {
-      /* api()가 toast */
-    } finally {
-      clearLoadingIfStuck()
-      setBusy({ active: false, text: '' })
-    }
+      },
+      '생성 중…',
+    )
   }
 
   // 진입 동작 — from=rag → RAG 이어받기, ?q= → 웹 검색, 그 외 → 내 활동 요약(기본).
@@ -139,6 +118,32 @@ export default function ReportPage() {
       generate(true, incomingQuery)
     }
     // 기본 진입은 자동 생성하지 않는다 — 안내 상태를 유지하고 사용자가 직접 '보고서 생성'을 누르게.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // 백그라운드 job 결과 수신 — 이 페이지에 있는 동안 완료되면 바로 렌더.
+  // 다른 메뉴에 가 있는 동안 완료되면 전역 poller 가 결과를 저장해두고, 복귀 시 아래에서 회수.
+  useEffect(() => {
+    const onDone = (e) => {
+      if (e.detail?.kind !== 'report') return
+      takeJobResult('report') // 슬롯 비움(다음 진입 때 옛 결과 재표시 방지)
+      setBusy({ active: false, text: '' })
+      renderReport(e.detail.result)
+    }
+    const onErr = (e) => {
+      if (e.detail?.kind !== 'report') return
+      setBusy({ active: false, text: '' })
+      clearLoadingIfStuck()
+    }
+    window.addEventListener('aijob:done', onDone)
+    window.addEventListener('aijob:error', onErr)
+    // 복귀 진입 시: 자리를 비운 사이 완료된 보고서가 있으면 렌더.
+    const pending = takeJobResult('report')
+    if (pending) renderReport(pending)
+    return () => {
+      window.removeEventListener('aijob:done', onDone)
+      window.removeEventListener('aijob:error', onErr)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
