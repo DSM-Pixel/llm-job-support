@@ -3,7 +3,6 @@ import AppShell from '../../shell/AppShell.jsx'
 import { useShell } from '../../shell/ShellContext.js'
 import { toast } from '../../lib/toast.js'
 import { logActivity } from '../../lib/activity.js'
-import { labelsToBoxes, sameBox } from './labelingApi.js'
 import { registerJob } from '../../lib/aijob.js'
 import { useLabeling } from './useLabeling.js'
 import PreviewArea from './components/PreviewArea.jsx'
@@ -83,18 +82,8 @@ function LabelingContent() {
       } catch {
         /* 용량 초과 등 무시 */
       }
-      // 이 페이지에 원본 이미지가 아직 있으면 캔버스에도 박스 반영.
-      lab.setImages((prev) =>
-        prev.map((image) => {
-          const it = items.find((x) => x.name === image.name)
-          if (!it || !it.labels?.length) return image
-          const merged = image.savedBoxes.slice()
-          labelsToBoxes(it).forEach((b) => {
-            if (!merged.some((e2) => sameBox(e2, b))) merged.push(b)
-          })
-          return { ...image, savedBoxes: merged }
-        }),
-      )
+      // 원본 이미지가 아직 있으면 캔버스에도 박스 반영(+ IndexedDB 저장) — 복귀 후에도 유지.
+      lab.applyBatchBoxes(items)
     }
     window.addEventListener('aijob:done', onDone)
     // 복귀 진입: 직전 폴더 라벨링 결과를 복원(같은 탭 내).
@@ -105,7 +94,10 @@ function LabelingContent() {
       /* 무시 */
     }
     return () => window.removeEventListener('aijob:done', onDone)
-  }, [lab])
+    // 마운트 1회만 — lab 은 매 렌더 새 객체라 의존성에 넣으면 재렌더 루프가 난다.
+    // (applyBatchBoxes 등 lab 의 메서드는 useCallback 으로 안정적이라 초기 캡처로 충분.)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const openModal = () => lab.setModalOpen(true)
 
