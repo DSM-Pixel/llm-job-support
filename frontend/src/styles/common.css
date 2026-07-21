@@ -1798,3 +1798,59 @@ textarea {
   0%, 100% { opacity: 0.35; transform: scale(0.85); }
   50% { opacity: 1; transform: scale(1.1); }
 }
+
+/* 폴더 라벨링 결과 갤러리 — 라벨링 페이지에서 배치 결과(서버 썸네일)를 유지 표시 */
+.batch-results {
+  margin-top: 18px;
+}
+.batch-results h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
+}
+.batch-results h3 small {
+  color: var(--muted, #6b7280);
+  font-weight: 400;
+  margin-left: 6px;
+}
+.batch-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+.batch-item {
+  margin: 0;
+  border: 1px solid var(--line, #e5e7eb);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--card, #fff);
+}
+.batch-item img,
+.batch-item .batch-nothumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  background: #0c111c;
+}
+.batch-item .batch-nothumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  font-size: 13px;
+}
+.batch-item figcaption {
+  padding: 7px 9px;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.batch-item figcaption b {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.batch-item figcaption span {
+  color: var(--muted, #6b7280);
+}

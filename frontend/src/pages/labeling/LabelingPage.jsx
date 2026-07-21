@@ -19,6 +19,8 @@ function LabelingContent() {
   const lab = useLabeling(SAMPLE_NAME, null)
   const [modeTab, setModeTab] = useState(0)
   const [batchBusy, setBatchBusy] = useState(false)
+  // 폴더 라벨링 결과(서버가 박스 그린 썸네일) — 다른 메뉴 갔다 와도 남도록 sessionStorage 로 유지.
+  const [batchResult, setBatchResult] = useState([])
 
   const modelName = 'gpt-4o'
   const modelSuffix = ' · 멀티모달 비전'
@@ -73,6 +75,15 @@ function LabelingContent() {
     const onDone = (e) => {
       if (e.detail?.kind !== 'labeling_batch') return
       const items = e.detail.result?.items || []
+      // 결과 갤러리(서버 썸네일) 갱신 + 보관 — 원본 이미지가 없어도 결과가 남는다.
+      const gallery = items.filter((it) => it?.count)
+      setBatchResult(gallery)
+      try {
+        sessionStorage.setItem('gnsoft.labeling.lastbatch', JSON.stringify(gallery))
+      } catch {
+        /* 용량 초과 등 무시 */
+      }
+      // 이 페이지에 원본 이미지가 아직 있으면 캔버스에도 박스 반영.
       lab.setImages((prev) =>
         prev.map((image) => {
           const it = items.find((x) => x.name === image.name)
@@ -86,6 +97,13 @@ function LabelingContent() {
       )
     }
     window.addEventListener('aijob:done', onDone)
+    // 복귀 진입: 직전 폴더 라벨링 결과를 복원(같은 탭 내).
+    try {
+      const last = sessionStorage.getItem('gnsoft.labeling.lastbatch')
+      if (last) setBatchResult(JSON.parse(last))
+    } catch {
+      /* 무시 */
+    }
     return () => window.removeEventListener('aijob:done', onDone)
   }, [lab])
 
@@ -136,6 +154,31 @@ function LabelingContent() {
         </aside>
         <ResultPanel result={lab.active.result} />
       </section>
+
+      {batchResult.length > 0 && (
+        <section className="batch-results">
+          <h3>
+            폴더 라벨링 결과 <small>{batchResult.length}장</small>
+          </h3>
+          <div className="batch-grid">
+            {batchResult.map((it, i) => (
+              <figure key={i} className="batch-item">
+                {it.thumb ? (
+                  <img src={it.thumb} alt={it.name} loading="lazy" />
+                ) : (
+                  <div className="batch-nothumb">미리보기 없음</div>
+                )}
+                <figcaption>
+                  <b>{it.name}</b>
+                  <span>
+                    라벨 {it.count}개{it.classes?.length ? ` · ${it.classes.join(', ')}` : ''}
+                  </span>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+        </section>
+      )}
 
       <LabelingModal
         open={lab.modalOpen}
