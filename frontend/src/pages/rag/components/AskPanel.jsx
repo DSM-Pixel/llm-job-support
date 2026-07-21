@@ -34,9 +34,15 @@ export default function AskPanel() {
 
   // RAG job 결과 수신 — 현재 페이지에 있으면 이벤트로, 자리를 비운 사이 끝났으면 진입 시 회수.
   useEffect(() => {
+    // 방금 완료된 결과 반영 — 화면 + 활동 로그 + 산출물 저장 + sessionStorage 보관(복귀 복원용).
     const applyResult = (res) => {
       setResult(res)
       setBusy(false)
+      try {
+        sessionStorage.setItem('gnsoft.rag.lastresult', JSON.stringify(res))
+      } catch {
+        /* 무시 */
+      }
       let q = ''
       try {
         q = sessionStorage.getItem('gnsoft.rag.lastq') || ''
@@ -77,7 +83,15 @@ export default function AskPanel() {
       setQuery(incomingQ)
       runSearch(incomingQ)
     } else if (pending) {
-      applyResult(pending)
+      applyResult(pending) // 자리 비운 사이 완료 → 저장 포함
+    } else {
+      // 복귀: 직전 검색 결과가 있으면 화면만 복원(재저장·재로그는 하지 않음).
+      try {
+        const last = sessionStorage.getItem('gnsoft.rag.lastresult')
+        if (last) setResult(JSON.parse(last))
+      } catch {
+        /* 무시 */
+      }
     }
     return () => {
       window.removeEventListener('aijob:done', onDone)

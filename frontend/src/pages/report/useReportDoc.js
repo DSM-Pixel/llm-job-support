@@ -48,8 +48,9 @@ export function useReportDoc() {
   }, [])
 
   // 구조화 응답 → 편집 가능한 제출 보고서 문서로 렌더.
+  // save=false 면 아티팩트 저장을 건너뛴다(페이지 복귀 시 이미 저장된 보고서를 되살릴 때 중복 방지).
   const renderReport = useCallback(
-    (r) => {
+    (r, { save = true } = {}) => {
       const page = docRef.current
       if (!page) return
       lastReportRef.current = r
@@ -58,7 +59,7 @@ export function useReportDoc() {
       addSectionControls() // 섹션 삭제 버튼 부착
       // 생성된 보고서를 산출물(아티팩트)로 저장 — 기록 관리에서 DOCX 재다운로드용.
       // 빈/플레이스홀더 렌더는 저장하지 않는다(sections 가 실제로 있을 때만).
-      if (Array.isArray(r?.sections) && r.sections.length) {
+      if (save && Array.isArray(r?.sections) && r.sections.length) {
         saveArtifact({
           kind: 'report',
           cat: '문서',

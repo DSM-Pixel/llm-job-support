@@ -124,11 +124,20 @@ export default function ReportPage() {
   // 백그라운드 job 결과 수신 — 이 페이지에 있는 동안 완료되면 바로 렌더.
   // 다른 메뉴에 가 있는 동안 완료되면 전역 poller 가 결과를 저장해두고, 복귀 시 아래에서 회수.
   useEffect(() => {
+    // 마지막 보고서를 sessionStorage 에 보관 → 다른 메뉴 갔다 와도 복원(같은 탭 내 지속).
+    const persist = (r) => {
+      try {
+        sessionStorage.setItem('gnsoft.report.last', JSON.stringify(r))
+      } catch {
+        /* 무시 */
+      }
+    }
     const onDone = (e) => {
       if (e.detail?.kind !== 'report') return
-      takeJobResult('report') // 슬롯 비움(다음 진입 때 옛 결과 재표시 방지)
+      takeJobResult('report') // job 슬롯은 비우되, 아래 sessionStorage 로 계속 유지된다
       setBusy({ active: false, text: '' })
-      renderReport(e.detail.result)
+      persist(e.detail.result)
+      renderReport(e.detail.result) // 방금 완료 → 아티팩트 저장 포함
     }
     const onErr = (e) => {
       if (e.detail?.kind !== 'report') return
@@ -137,9 +146,19 @@ export default function ReportPage() {
     }
     window.addEventListener('aijob:done', onDone)
     window.addEventListener('aijob:error', onErr)
-    // 복귀 진입 시: 자리를 비운 사이 완료된 보고서가 있으면 렌더.
+    // 진입/복귀: 자리 비운 사이 완료됐으면 그 결과(저장 포함), 아니면 직전 보고서 복원(중복 저장 생략).
     const pending = takeJobResult('report')
-    if (pending) renderReport(pending)
+    if (pending) {
+      persist(pending)
+      renderReport(pending)
+    } else {
+      try {
+        const last = sessionStorage.getItem('gnsoft.report.last')
+        if (last) renderReport(JSON.parse(last), { save: false })
+      } catch {
+        /* 무시 */
+      }
+    }
     return () => {
       window.removeEventListener('aijob:done', onDone)
       window.removeEventListener('aijob:error', onErr)
