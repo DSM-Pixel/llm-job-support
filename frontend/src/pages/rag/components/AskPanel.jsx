@@ -3,33 +3,8 @@ import { toast } from '../../../lib/toast.js'
 import { logActivity, saveArtifact } from '../../../lib/activity.js'
 import { searchRag } from '../ragApi.js'
 
-// 최초 화면의 정적 답변(검색 전) — 바닐라 rag.html 하드코딩 값 그대로.
-const INITIAL_ANSWER =
-  '포트홀은 등급에 따라 보수 기한이 다릅니다. <b>심각(상) 등급은 발견 즉시 24시간 이내 긴급 보수</b> 대상입니다. <sup>1</sup> 보통(중)은 7일 이내, 경미(하)는 정기 보수 주기에 포함해 처리합니다. <sup>2</sup>'
-
-// 최초 화면의 정적 근거 3개(검색 전).
-const INITIAL_SOURCES = [
-  {
-    source: '포트홀_보수_기준.md',
-    text: '심각(상) 등급은 발견 즉시 24시간 이내 긴급 보수. 보통(중) 등급은 7일 이내 보수.',
-    width: '94%',
-    score: '0.94',
-  },
-  {
-    source: '포트홀_보수_기준.md',
-    text: '심각(상): 지름 30cm 이상 또는 깊이 5cm 이상. 차량 손상 우려.',
-    width: '90%',
-    score: '0.90',
-  },
-  {
-    source: '도로_균열_점검.md',
-    text: '균열 폭 3mm 이상이면 보수 대상으로 기록한다. 거북등 균열은 면적을 산정하여 보수 물량을 추정한다.',
-    width: '71%',
-    score: '0.71',
-  },
-]
-
 // 질문하기 + AI 답변 + 검색된 근거 — 바닐라 rag.js 검색 흐름 재현.
+// 검색 전(result=null)에는 예시 답변·근거를 보여주지 않고 빈 안내 상태로 둔다.
 export default function AskPanel() {
   const [query, setQuery] = useState('')
   const [result, setResult] = useState(null) // null = 검색 전(정적 화면)
@@ -79,17 +54,11 @@ export default function AskPanel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const method = result ? result.method : '하이브리드 RAG'
-  const confidence = result
-    ? result.found
-      ? `연관도 ${result.confidence}%`
-      : '근거 없음'
-    : '신뢰도 0.93'
-  const meta = result
-    ? `top-K ${result.top_k} · ${result.chunks} chunks · ${result.elapsed}`
-    : 'top-K 4 · 14 chunks · 0.41s'
-  const answerHtml = result ? result.answer : INITIAL_ANSWER
-  const sectionSmall = result ? `${result.sources.length}개 근거 · 연관도순` : '3 sources · RRF'
+  // 검색 전에는 예시 수치/문구를 보여주지 않는다(빈 상태).
+  const method = result ? result.method : ''
+  const confidence = result ? (result.found ? `연관도 ${result.confidence}%` : '근거 없음') : ''
+  const meta = result ? `top-K ${result.top_k} · ${result.chunks} chunks · ${result.elapsed}` : ''
+  const sectionSmall = result ? `${result.sources.length}개 근거 · 연관도순` : ''
 
   return (
     <section className="rag-content">
@@ -116,21 +85,30 @@ export default function AskPanel() {
 
       <article className="card answer">
         <div className="answer-head">
-          <h3>
-            ✣ AI 답변 <span className="status green">{method}</span>
-          </h3>
-          <span className="status green">{confidence}</span>
+          <h3>✣ AI 답변 {method && <span className="status green">{method}</span>}</h3>
+          {confidence && <span className="status green">{confidence}</span>}
         </div>
-        <p dangerouslySetInnerHTML={{ __html: answerHtml }} />
-        <div className="answer-actions">
-          <small>{meta}</small>
-        </div>
+        {result ? (
+          <p dangerouslySetInnerHTML={{ __html: result.answer }} />
+        ) : (
+          <p style={{ opacity: 0.6 }}>
+            질문을 입력하면 참고 문서를 검색해 AI 답변과 근거를 보여줍니다.
+          </p>
+        )}
+        {meta && (
+          <div className="answer-actions">
+            <small>{meta}</small>
+          </div>
+        )}
       </article>
 
       <h2 className="section-title">
-        ⌕ 검색된 근거 <small>{sectionSmall}</small>
+        ⌕ 검색된 근거 {sectionSmall && <small>{sectionSmall}</small>}
       </h2>
       <div className="source-list">
+        {!result && (
+          <p style={{ opacity: 0.6 }}>아직 검색 결과가 없습니다. 질문을 입력해 보세요.</p>
+        )}
         {result
           ? result.sources.map((src, i) => {
               const pct = Math.max(0, Math.min(100, src.score)) // 질의 연관도 0~100
@@ -150,21 +128,7 @@ export default function AskPanel() {
                 </article>
               )
             })
-          : INITIAL_SOURCES.map((src, i) => (
-              <article className="card source" key={i}>
-                <div>
-                  <b>
-                    <span>{i + 1}</span>
-                    {src.source}
-                  </b>
-                  <p>{src.text}</p>
-                </div>
-                <i>
-                  <span style={{ width: src.width }}></span>
-                </i>
-                <em>{src.score}</em>
-              </article>
-            ))}
+          : null}
       </div>
     </section>
   )

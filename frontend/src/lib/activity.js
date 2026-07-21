@@ -78,7 +78,11 @@ const registerSource = (art) => {
   }
 }
 
-// 작업 산출물 저장 — 같은 id 는 최신 것으로 교체, 최근 24개 유지, 용량 초과 시 이미지부터 제거.
+// 한 프로젝트가 보관하는 작업물 개수 상한. 폴더(배치) 라벨링 한 번에 수십 장이
+// 들어올 수 있어 24 → 60 으로 상향(그래도 초과분은 용량 한도 안에서 오래된 것부터 밀림).
+const MAX_ARTIFACTS = 60
+
+// 작업 산출물 저장 — 같은 id 는 최신 것으로 교체, 최근 MAX_ARTIFACTS개 유지, 용량 초과 시 이미지부터 제거.
 export function saveArtifact(art) {
   const page = curPage()
   const entry = { ts: Date.now(), page, ...art }
@@ -95,8 +99,10 @@ export function saveArtifact(art) {
     let list = JSON.parse(localStorage.getItem(artKey()) || '[]')
     if (art.id) list = list.filter((a) => a.id !== art.id)
     list.push(entry)
-    list = list.slice(-24)
-    for (let i = 0; i < 10; i++) {
+    list = list.slice(-MAX_ARTIFACTS)
+    // 용량(localStorage) 초과 시 이미지가 있는 오래된 항목부터 하나씩 지우며 재시도.
+    // 최대 list 길이만큼 시도해 폴더 대량 저장에서도 마지막엔 반드시 들어가게 한다.
+    for (let i = 0; i <= list.length; i++) {
       try {
         localStorage.setItem(artKey(), JSON.stringify(list))
         return

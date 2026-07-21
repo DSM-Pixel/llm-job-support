@@ -2,8 +2,8 @@ import { useState } from 'react'
 import AppShell from '../../shell/AppShell.jsx'
 import { useShell } from '../../shell/ShellContext.js'
 import { toast } from '../../lib/toast.js'
-import { logActivity } from '../../lib/activity.js'
-import { detectImage, labelsToBoxes, sameBox } from './labelingApi.js'
+import { logActivity, saveArtifact } from '../../lib/activity.js'
+import { detectImage, labelsToBoxes, sameBox, makeLabeledThumb } from './labelingApi.js'
 import { useLabeling } from './useLabeling.js'
 import PreviewArea from './components/PreviewArea.jsx'
 import AnalyzePanel from './components/AnalyzePanel.jsx'
@@ -30,6 +30,7 @@ function LabelingContent() {
     let ok = 0
     let totalNew = 0
     let failed = 0
+    let saved = 0
     const merges = {}
     // AI 사용량 한도(분당 요청 수)에 걸리지 않게 이미지 사이 간격을 둔다.
     const gap = (ms) => new Promise((r) => setTimeout(r, ms))
@@ -52,6 +53,23 @@ function LabelingContent() {
         })
         merges[i] = merged
         ok += 1
+        // 폴더로 라벨링한 각 사진을 '데이터 관리'에 개별 작업물(라벨)로 남긴다.
+        // (배치라 용량 절약 위해 작은 썸네일 사용.) 박스가 있을 때만 저장.
+        if (merged.length) {
+          const thumb = await makeLabeledThumb(im.url, merged, 400)
+          if (thumb) {
+            const classes = [...new Set(merged.map((b) => b.label))].filter(Boolean).join(', ')
+            saveArtifact({
+              kind: 'image',
+              cat: '라벨',
+              id: im.name,
+              title: `라벨링 · ${im.name}`,
+              image: thumb,
+              caption: `라벨 ${merged.length}개${classes ? ` · ${classes}` : ''}`,
+            })
+            saved += 1
+          }
+        }
       } catch {
         failed += 1
       }
@@ -59,12 +77,12 @@ function LabelingContent() {
     lab.setImages((prev) =>
       prev.map((image, idx) => (idx in merges ? { ...image, savedBoxes: merges[idx] } : image)),
     )
-    logActivity('전체 AI 라벨링', `${ok}장 · 박스 ${totalNew}개`)
+    logActivity('전체 AI 라벨링', `${ok}장 · 박스 ${totalNew}개 · 저장 ${saved}장`)
     setBatchBusy(false)
     toast(
       failed
-        ? `${ok}장 완료 · 박스 ${totalNew}개 (실패 ${failed}장)`
-        : `${ok}장 전체 라벨링 완료 · 박스 ${totalNew}개`,
+        ? `${ok}장 완료 · 박스 ${totalNew}개 · 데이터 관리에 ${saved}장 저장 (실패 ${failed}장)`
+        : `${ok}장 전체 라벨링 완료 · 박스 ${totalNew}개 · 데이터 관리에 ${saved}장 저장`,
     )
   }
 
