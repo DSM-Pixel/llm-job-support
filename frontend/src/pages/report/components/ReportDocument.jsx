@@ -1,12 +1,12 @@
 import { toast } from '../../../lib/toast.js'
 import { downloadDocx } from '../../../lib/reportDocx.js'
 
-// 초기 로딩 상태 — 바닐라 report.html 의 .report-loading 마크업 그대로.
+// 초기 상태 — 생성 전에는 로딩 스피너 대신 '보고서를 생성하세요' 안내를 보여준다.
 // 모듈 상수(참조 고정)로 두어 React 가 이후 명령형 innerHTML 조작을 덮어쓰지 않게 한다.
-const LOADING_HTML = {
+const GUIDE_HTML = {
   __html:
-    '<div class="report-loading"><span class="report-spinner" aria-hidden="true"></span>' +
-    '<p>보고서를 생성하는 중입니다…</p><small>내 활동을 분석하고 있어요</small></div>',
+    '<div class="report-empty"><p>아직 생성된 보고서가 없습니다.</p>' +
+    '<p>왼쪽에서 기간·유형을 정하고 ‘✣ 보고서 생성’을 눌러주세요.</p></div>',
 }
 
 // 미리보기 영역 — 복사/PDF/공유 툴바 + 편집 가능한 보고서 문서(article).
@@ -68,7 +68,7 @@ export default function ReportDocument({ docRef, readText, getReport }) {
           </button>
         </div>
       </div>
-      <article className="report-page card" ref={docRef} dangerouslySetInnerHTML={LOADING_HTML} />
+      <article className="report-page card" ref={docRef} dangerouslySetInnerHTML={GUIDE_HTML} />
     </section>
   )
 }

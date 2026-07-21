@@ -137,9 +137,8 @@ export default function ReportPage() {
     } else if (incomingQuery) {
       toast(`‘${incomingQuery}’ 관련 보고서를 생성합니다…`)
       generate(true, incomingQuery)
-    } else {
-      generateActivity(false)
     }
+    // 기본 진입은 자동 생성하지 않는다 — 안내 상태를 유지하고 사용자가 직접 '보고서 생성'을 누르게.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
