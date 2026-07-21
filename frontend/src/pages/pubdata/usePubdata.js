@@ -3,8 +3,8 @@ import { toast } from '../../lib/toast.js'
 import { logActivity } from '../../lib/activity.js'
 import { searchPubdata, fetchCatalog, catalogText } from './pubdataApi.js'
 
-// 최초 입력값 — 바닐라 .pd-input value 기본값과 동일.
-const INITIAL_KEYWORD = '포트홀 도로 파손'
+// 최초 입력값 — 빈 상태로 시작(placeholder만 노출). 직전 검색이 있으면 그걸 복원.
+const INITIAL_KEYWORD = ''
 
 // 마지막 검색 결과 저장 키 — 다른 메뉴 갔다 와도 직전 결과를 다시 볼 수 있게.
 const LAST_KEY = 'gnsoft.pubdata.last'

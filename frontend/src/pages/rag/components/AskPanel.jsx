@@ -31,7 +31,7 @@ const INITIAL_SOURCES = [
 
 // 질문하기 + AI 답변 + 검색된 근거 — 바닐라 rag.js 검색 흐름 재현.
 export default function AskPanel() {
-  const [query, setQuery] = useState('심각한 포트홀은 며칠 안에 보수해야 해?')
+  const [query, setQuery] = useState('')
   const [result, setResult] = useState(null) // null = 검색 전(정적 화면)
   const [busy, setBusy] = useState(false)
 
@@ -100,6 +100,7 @@ export default function AskPanel() {
         <div className="ask-line">
           <input
             value={query}
+            placeholder="예: 심각한 포트홀은 며칠 안에 보수해야 해?"
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && runSearch()}
           />

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 
 // 웹에서 찾아 넣기 — 키워드 검색 후 결과를 체크박스로 보여주고, 선택한 것만 색인에 추가.
 export default function WebFind({ webResults, webBusy, onSearch, addBusy, onAdd }) {
-  const [keyword, setKeyword] = useState('포트홀 도로 보수 기준')
+  const [keyword, setKeyword] = useState('')
   const [checked, setChecked] = useState([])
 
   // 새 결과가 오면 모두 선택된 상태로 초기화(바닐라 checkbox checked 기본값).
@@ -20,7 +20,11 @@ export default function WebFind({ webResults, webBusy, onSearch, addBusy, onAdd 
         <span>◉</span>웹에서 찾아 넣기
       </h3>
       <div className="search-line">
-        <input value={keyword} onChange={(e) => setKeyword(e.target.value)} />
+        <input
+          value={keyword}
+          placeholder="예: 포트홀 도로 보수 기준"
+          onChange={(e) => setKeyword(e.target.value)}
+        />
         <button className={webBusy ? 'is-loading' : ''} disabled={webBusy} onClick={() => onSearch(keyword)}>
           {webBusy ? '검색 중' : '검색'}
         </button>

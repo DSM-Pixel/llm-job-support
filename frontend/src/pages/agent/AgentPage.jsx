@@ -11,7 +11,7 @@ import RunResult from './components/RunResult.jsx'
 // 업무 자동화 — 자연어 목표 → AI 에이전트가 업무 절차를 설계하고 기능에 연결.
 // 바닐라 web/assets/js/agent.js 의 동작을 그대로 재현(bug-for-bug).
 function AgentContent() {
-  const [goal, setGoal] = useState('포트홀 신고가 접수됐는데 어떻게 처리하지?')
+  const [goal, setGoal] = useState('')
   const [plan, setPlan] = useState(null) // { backend, summary, steps }
   const [run, setRun] = useState(null) // null | { loading: true } | 실행 데이터
   const [planBusy, setPlanBusy] = useState(false)
