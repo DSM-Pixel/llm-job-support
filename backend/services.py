@@ -1116,6 +1116,23 @@ def _object_tone(label: str) -> str:
     return "gray"
 
 
+def _expand_box2d(box: list[int], frac: float = 0.06, minpad: int = 3) -> list[int]:
+    """탐지 박스(box_2d=[ymin,xmin,ymax,xmax] 0~1000)를 살짝 키운다.
+
+    VLM(특히 Gemini)이 박스를 너무 타이트하게 잡아 대상 가장자리가 잘리는 경향이 있어,
+    각 변을 크기의 frac(기본 6%, 최소 minpad) 만큼 바깥으로 넓혀 잘림을 보정한다. 0~1000 로 클램프.
+    """
+    ymin, xmin, ymax, xmax = box
+    ph = max(minpad, (ymax - ymin) * frac)
+    pw = max(minpad, (xmax - xmin) * frac)
+    return [
+        max(0, round(ymin - ph)),
+        max(0, round(xmin - pw)),
+        min(1000, round(ymax + ph)),
+        min(1000, round(xmax + pw)),
+    ]
+
+
 # 무키/실패 시 폴백 — 다양한 클래스의 예시 객체(필터 UI 시연용).
 _MOCK_OBJECTS = [
     {"label": "포트홀", "box_2d": [610, 80, 880, 360], "confidence": 87},
@@ -1260,7 +1277,8 @@ def _gemini_detect(image_bytes: bytes, mime: str) -> list[dict] | None:
         "- 도로 위 객체: 차량, 보행자, 자전거, 표지판, 신호등, 맨홀, 가드레일, 가로수\n"
         "균열·차선처럼 가늘고 긴 대상도 반드시 포함한다. 길게 이어진 균열·차선은 "
         "구간별로 나눠 여러 개의 박스로 잡아도 된다.\n"
-        "각 박스는 대상에 '딱 맞게' 타이트하게 감싼다(불필요한 배경 여백 금지). "
+        "각 박스는 대상 '전체'를 빠짐없이 감싼다 — 가장자리가 잘리지 않게 살짝 여유를 두되 "
+        "과한 배경 여백은 피한다. "
         "하늘·구름처럼 대상이 아닌 넓은 배경 영역만 박스 치지 마라. "
         "포트홀은 갈라진 가장자리를 포함한 구멍 전체를 감싼다. 같은 종류가 여러 개면 각각 따로.\n"
         "반드시 이 JSON만 출력(코드펜스·설명 금지): "
@@ -1389,6 +1407,8 @@ def detect_objects_vision(image_bytes: bytes, mime: str = "image/png") -> dict:
             )
         if not box:
             continue
+        if backend != "MOCK":  # 실제 탐지 박스는 살짝 넓혀 잘림 보정(MOCK 예시는 그대로)
+            box = _expand_box2d(box)
         name = str(o.get("label") or "객체").strip() or "객체"
         conf = o.get("confidence")
         conf = int(conf) if isinstance(conf, int | float) else None
