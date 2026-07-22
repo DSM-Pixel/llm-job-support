@@ -1254,12 +1254,15 @@ def _gemini_detect(image_bytes: bytes, mime: str) -> list[dict] | None:
     if not key:
         return None
     prompt = (
-        "이 도로 이미지에서 노면 파손(포트홀·균열·패임·침하)과 도로 위 뚜렷한 객체"
-        "(차량·보행자·표지판·신호등·맨홀·차선)를 탐지하라. 확실한 것만, 최대 15개.\n"
+        "이 도로 이미지에서 보이는 객체를 최대한 빠짐없이 탐지하라(최대 25개). 대상:\n"
+        "- 노면 파손: 포트홀, 균열(선형·거북등·종방향·횡방향), 패임, 소성변형, 침하, 박리\n"
+        "- 노면 표시: 차선(흰색·황색 차선), 횡단보도, 정지선, 화살표·글자 표시\n"
+        "- 도로 위 객체: 차량, 보행자, 자전거, 표지판, 신호등, 맨홀, 가드레일, 가로수\n"
+        "균열·차선처럼 가늘고 긴 대상도 반드시 포함한다. 길게 이어진 균열·차선은 "
+        "구간별로 나눠 여러 개의 박스로 잡아도 된다.\n"
         "각 박스는 대상에 '딱 맞게' 타이트하게 감싼다(불필요한 배경 여백 금지). "
-        "하늘·구름·깨끗한 노면·먼 숲처럼 뚜렷한 대상이 아닌 넓은 배경 영역은 박스 치지 마라. "
-        "포트홀은 갈라진 가장자리를 포함한 구멍 전체만 정확히 감싼다. "
-        "애매하면 제외한다. 같은 종류가 여러 개면 각각 따로.\n"
+        "하늘·구름처럼 대상이 아닌 넓은 배경 영역만 박스 치지 마라. "
+        "포트홀은 갈라진 가장자리를 포함한 구멍 전체를 감싼다. 같은 종류가 여러 개면 각각 따로.\n"
         "반드시 이 JSON만 출력(코드펜스·설명 금지): "
         '{"objects":[{"label":"포트홀","box_2d":[ymin,xmin,ymax,xmax],"confidence":87}]}\n'
         "box_2d 는 0~1000 정규화 정수 [ymin,xmin,ymax,xmax] "
@@ -1278,7 +1281,7 @@ def _gemini_detect(image_bytes: bytes, mime: str) -> list[dict] | None:
         try:
             cfg = types.GenerateContentConfig(
                 thinking_config=types.ThinkingConfig(thinking_budget=0),
-                max_output_tokens=1024,
+                max_output_tokens=2048,  # 객체 최대 25개까지 잘리지 않게 상향
                 temperature=0.0,
             )
         except Exception:
