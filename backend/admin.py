@@ -132,6 +132,23 @@ def set_data_key(token: str, key: str) -> dict:
     return {"ok": True, "set": bool(saved), "preview": _mask_key(saved)}
 
 
+def get_gemini_key(token: str) -> dict:
+    """Gemini API 키 설정 상태(슈퍼 전용). 원문 대신 마스킹만 반환."""
+    if not _super(token):
+        return _DENY
+    key = auth.get_setting("GEMINI_API_KEY")
+    return {"ok": True, "set": bool(key), "preview": _mask_key(key)}
+
+
+def set_gemini_key(token: str, key: str) -> dict:
+    """Gemini API 키 저장/삭제(슈퍼 전용). 빈 값이면 삭제. 라벨링 박스 탐지에 즉시 적용."""
+    if not _super(token):
+        return _DENY
+    auth.set_setting("GEMINI_API_KEY", (key or "").strip())
+    saved = auth.get_setting("GEMINI_API_KEY")
+    return {"ok": True, "set": bool(saved), "preview": _mask_key(saved)}
+
+
 def list_requests(token: str) -> dict:
     """관리자 승인 대기 목록(슈퍼 어드민 전용)."""
     if not _super(token):

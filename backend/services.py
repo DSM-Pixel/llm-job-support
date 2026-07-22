@@ -739,22 +739,31 @@ def _relevance(query: str, doc: dict) -> int:
 
 
 def _gemini_key() -> str | None:
-    """prototypes/api-test/.env 의 GEMINI_API_KEY 를 읽는다.
+    """Gemini API 키를 해석한다. 우선순위: ① 어드민 UI 저장(app_settings DB) →
+    ② prototypes/api-test/.env 의 GEMINI_API_KEY → ③ 환경변수.
 
-    .env 가 바뀌면(키 교체) 자동으로 다시 읽어 서버 재시작 없이 적용한다.
-    키가 바뀌면 '한도 소진' 플래그도 초기화해 새 키가 바로 시도되게 한다.
+    슈퍼 어드민이 화면에서 키를 저장하면(DB) 재시작·SSH 없이 즉시 적용된다(data.go.kr 키와 동일 방식).
+    .env 는 mtime 으로 캐시하고, 실제 적용 키가 바뀌면 '한도 소진' 플래그도 초기화한다.
     """
     from pathlib import Path
 
+    # ① 어드민 UI 저장 키(DB) — 최우선.
+    from . import auth
+
+    try:
+        db_key = (auth.get_setting("GEMINI_API_KEY") or "").strip() or None
+    except Exception:
+        db_key = None
+
+    # ②③ .env 파일(mtime 캐시) → 환경변수. 파일값은 별도 속성에 캐시(DB 와 독립).
     env = Path(__file__).resolve().parent.parent / "prototypes" / "api-test" / ".env"
     try:
         mtime = env.stat().st_mtime
     except OSError:
         mtime = 0.0
-
     if mtime != _gemini_key.mtime:  # type: ignore[attr-defined]
         _gemini_key.mtime = mtime  # type: ignore[attr-defined]
-        value = None
+        fv = None
         try:
             for line in env.read_text(encoding="utf-8").splitlines():
                 s = line.strip()
@@ -762,22 +771,26 @@ def _gemini_key() -> str | None:
                     continue
                 k, v = s.split("=", 1)
                 if k.strip() == "GEMINI_API_KEY":
-                    value = v.strip().strip('"').strip("'") or None
+                    fv = v.strip().strip('"').strip("'") or None
                     break
         except OSError:
             pass
-        if value is None:  # 파일에 없으면 환경변수 폴백
-            value = os.getenv("GEMINI_API_KEY")
-        # 키가 실제로 바뀌었으면 한도 소진 플래그 초기화(새 키에 새 기회).
-        if value != _gemini_key.value:  # type: ignore[attr-defined]
-            _gemini_usage["rate_limited"] = False
-            _gemini_usage["retry_at"] = 0.0
-        _gemini_key.value = value  # type: ignore[attr-defined]
-    return _gemini_key.value  # type: ignore[attr-defined]
+        if fv is None:
+            fv = os.getenv("GEMINI_API_KEY")
+        _gemini_key.filevalue = fv  # type: ignore[attr-defined]
+
+    resolved = db_key or _gemini_key.filevalue  # type: ignore[attr-defined]
+    # 실제 적용 키가 바뀌었으면 한도 소진 플래그 초기화(새 키에 새 기회).
+    if resolved != _gemini_key.value:  # type: ignore[attr-defined]
+        _gemini_usage["rate_limited"] = False
+        _gemini_usage["retry_at"] = 0.0
+        _gemini_key.value = resolved  # type: ignore[attr-defined]
+    return resolved
 
 
 _gemini_key.mtime = None  # type: ignore[attr-defined]
 _gemini_key.value = None  # type: ignore[attr-defined]
+_gemini_key.filevalue = None  # type: ignore[attr-defined]
 
 
 def _read_env_key(name: str, files: list) -> str | None:

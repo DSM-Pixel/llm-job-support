@@ -555,6 +555,18 @@ def admin_datakey_set(body: AdminDataKeyIn) -> dict:
     return admin.set_data_key(body.token, body.key)
 
 
+@app.post("/api/admin/geminikey")
+def admin_geminikey(body: AdminTokenIn) -> dict:
+    """Gemini API 키 설정 상태(슈퍼 전용, 마스킹만)."""
+    return admin.get_gemini_key(body.token)
+
+
+@app.post("/api/admin/geminikey/set")
+def admin_geminikey_set(body: AdminDataKeyIn) -> dict:
+    """Gemini API 키 저장/삭제(슈퍼 전용) — 라벨링 박스 탐지에 즉시 적용."""
+    return admin.set_gemini_key(body.token, body.key)
+
+
 @app.post("/api/query")
 def query(body: QueryIn) -> dict:
     return services.route_query(body.question)

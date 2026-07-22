@@ -6,6 +6,7 @@ import { Pager } from '../../components/Pager.jsx'
 import { SummaryChips } from './components/SummaryChips.jsx'
 import { RequestList } from './components/RequestList.jsx'
 import DataKeyCard from './components/DataKeyCard.jsx'
+import GeminiKeyCard from './components/GeminiKeyCard.jsx'
 import { MemberTable } from './components/MemberTable.jsx'
 import { MemberDetailModal } from './components/MemberDetailModal.jsx'
 import SettingsModal from '../../shell/SettingsModal.jsx'
@@ -210,6 +211,7 @@ export default function AdminPage() {
             )}
 
             {isSuper && <DataKeyCard />}
+            {isSuper && <GeminiKeyCard />}
 
             <MemberTable
               members={data.members}

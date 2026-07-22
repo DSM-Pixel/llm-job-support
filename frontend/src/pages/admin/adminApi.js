@@ -46,6 +46,16 @@ export function saveDataKey(key) {
   return api('/api/admin/datakey/set', { token: authToken(), key })
 }
 
+// Gemini API 키 설정 상태(슈퍼 전용) — {ok, set, preview(마스킹)}.
+export function fetchGeminiKey() {
+  return api('/api/admin/geminikey', { token: authToken() })
+}
+
+// Gemini API 키 저장/삭제(빈 값이면 삭제). 라벨링 박스 탐지에 즉시 적용.
+export function saveGeminiKey(key) {
+  return api('/api/admin/geminikey/set', { token: authToken(), key })
+}
+
 // 가입일 등 초 단위 타임스탬프 → 'YYYY.M.D'. 기존 admin.js fmtDate 이식.
 export function fmtDate(sec) {
   if (!sec) return '—'
