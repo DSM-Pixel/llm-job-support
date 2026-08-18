@@ -1,0 +1,238 @@
+/* 사진 설명(VLM) 페이지 전용 스타일 — 공통 프리미티브(common.css)를 우선 활용. */
+
+/* 모드 카드 4개 — px-taskgrid 는 기본 3열이라 이 페이지에서만 4열로. */
+.px-photo .px-taskgrid {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+/* px-taskcard 는 원래 <a>/<div> 용 — <button> 으로 쓰면서 생기는 UA 기본값만 되돌린다. */
+.px-photo .px-taskcard {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* 프롬프트 입력 줄 — 모드 카드 아래, 분석하기 버튼과 한 줄. */
+.px-promptrow {
+  display: flex;
+  gap: 10px;
+  margin: 16px 0 28px;
+}
+.px-prompt-input {
+  flex: 1;
+  min-height: 44px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-btn);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+}
+.px-prompt-input::placeholder {
+  color: var(--g400);
+  font-weight: 500;
+}
+.px-prompt-go {
+  flex: none;
+  padding: 0 24px;
+}
+
+/* 결과 그라데이션 패널 — 좌: 요약, 우: 이미지 미리보기/드롭존. */
+.px-gradient-stage {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  padding: 28px;
+  min-height: 300px;
+  margin-bottom: 28px;
+}
+.px-gradient-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.px-gradient-tags {
+  display: flex;
+  gap: 8px;
+}
+.px-gradient-count {
+  margin: 6px 0 0;
+  line-height: 1;
+}
+.px-gradient-count b {
+  font-size: 42px;
+  font-weight: 800;
+  color: var(--g900);
+  letter-spacing: -0.02em;
+}
+.px-gradient-count b.muted {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--g500);
+}
+.px-gradient-count small {
+  margin-left: 6px;
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--g500);
+}
+.px-gradient-hint {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--g500);
+  line-height: 1.5;
+}
+.px-gradient-brand {
+  margin: auto 0 0;
+  font-size: 12.5px;
+  font-weight: 800;
+  color: var(--violet-strong);
+}
+
+.px-drop {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  border: 1.5px dashed var(--violet-soft);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.45);
+  color: var(--g500);
+  font-size: 13.5px;
+  font-weight: 700;
+  text-align: center;
+  cursor: pointer;
+  overflow: hidden;
+}
+.px-drop img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.px-drop-tag {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 3px 9px;
+  border-radius: 7px;
+  background: rgba(20, 22, 27, 0.55);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+/* 분석할 사진 스트립 */
+.px-photostrip {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.px-photothumb {
+  width: 108px;
+  flex: none;
+  border: none;
+  background: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+}
+.px-photothumb-img {
+  position: relative;
+  display: block;
+  height: 78px;
+  border-radius: 10px;
+  background: linear-gradient(160deg, #232838, #10131c);
+  overflow: hidden;
+}
+.px-photothumb-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.px-photothumb.active .px-photothumb-img {
+  outline: 2px solid var(--violet);
+  outline-offset: 2px;
+}
+.px-photothumb-check {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--violet);
+  color: #fff;
+  font-size: 10px;
+  font-style: normal;
+}
+.px-photothumb-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--g400);
+}
+.px-photothumb-meta b {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--g700);
+  font-weight: 700;
+}
+
+/* 찾은 항목 리스트 — px-ranklist 안에 라벨(등급/신뢰도)과 서술(자유 문장) 두 모양을 함께 쓴다. */
+.px-ranklist.card {
+  padding: 8px 20px;
+  margin-bottom: 28px;
+}
+.px-rank-note {
+  margin: 4px 0 8px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--g400);
+}
+.px-rank-status {
+  flex: none;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--g400);
+}
+.finding-empty {
+  padding: 20px 4px;
+  margin: 0;
+}
+
+/* 이어서 하기 — px-softcard 를 링크로 사용. */
+.px-softcard {
+  display: block;
+  text-decoration: none;
+  transition: transform 0.13s ease;
+}
+.px-softcard:hover {
+  transform: translateY(-2px);
+}
+.px-softcard b {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 14.5px;
+  font-weight: 800;
+  color: var(--g900);
+}
+
+@media (max-width: 900px) {
+  .px-photo .px-taskgrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .px-gradient-stage {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,202 +1,121 @@
-/* 공공데이터 연계 페이지 */
-.pd-layout {
-  padding: 24px 28px;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
+/* 공공데이터 연계 페이지 — px- 프리미티브(요약/랭킹/소프트카드) 조합 */
 
-/* ── 검색 박스 ── */
-.pd-search {
-  padding: 20px 22px;
-}
-.pd-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 700;
-  color: var(--text);
-  margin-bottom: 12px;
-}
-.pd-label span {
-  display: inline-grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  background: var(--blue);
-  color: #fff;
-  font-size: 13px;
-}
-.pd-search-line {
+/* ── 검색 ── */
+.pd-search-row {
   display: flex;
   gap: 10px;
+  margin-top: 4px;
 }
 .pd-input {
   flex: 1;
-  padding: 11px 14px;
+  min-height: 52px;
+  padding: 0 18px;
   border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--bg);
+  border-radius: 14px;
+  background: var(--surface);
   color: var(--text);
-  font-size: 15px;
+  font-size: 16px;
 }
 .pd-input:focus {
   outline: none;
-  border-color: var(--blue);
+  border-color: var(--violet);
 }
+
+/* ── 데이터셋 칩(.pill 확장) ── */
 .pd-chips {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 12px;
-}
-.pd-chip {
-  padding: 6px 12px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--muted);
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.15s;
-}
-.pd-chip:hover {
-  border-color: var(--blue);
-  color: var(--blue);
-}
-.pd-help {
-  margin-top: 12px;
-  font-size: 13px;
-  color: var(--muted);
-  line-height: 1.6;
-}
-.pd-catalog {
-  margin-top: 10px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: color-mix(in srgb, var(--blue) 8%, transparent);
-  color: var(--text);
-  font-size: 12.5px;
-  line-height: 1.5;
-}
-.pd-chart-src {
-  margin: -8px 0 14px;
-  font-size: 12.5px;
-  color: var(--muted);
-}
-
-/* ── 배지 ── */
-.pd-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-  vertical-align: middle;
-}
-.pd-badge.sample,
-.pd-badge.mock {
-  background: color-mix(in srgb, var(--orange) 16%, transparent);
-  color: var(--orange);
-}
-.pd-badge.live {
-  background: color-mix(in srgb, var(--green) 16%, transparent);
-  color: var(--green);
-}
-
-/* ── 결과 레이아웃 ── */
-.pd-result {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-/* ── AI 요약 ── */
-.pd-summary {
-  padding: 20px 22px;
-  border-left: 3px solid var(--blue);
-}
-.pd-summary-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-.pd-summary-head h3 {
-  font-size: 16px;
-  color: var(--text);
-}
-.pd-domain {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--cyan);
-}
-.pd-summary-text {
-  color: var(--text);
-  line-height: 1.7;
-  font-size: 15px;
-}
-.pd-insights {
-  margin: 12px 0 0;
-  padding-left: 18px;
-  color: var(--muted);
-  font-size: 14px;
-  line-height: 1.7;
-}
-.pd-summary-actions {
-  display: flex;
-  gap: 10px;
   margin-top: 14px;
 }
+.pd-chip {
+  cursor: pointer;
+}
+.pd-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--violet);
+}
+.pill.active .pd-dot {
+  background: #fff;
+}
+.pd-chip-add {
+  min-width: 32px;
+  padding: 0;
+  justify-content: center;
+  color: var(--g400);
+}
+.pd-catalog {
+  margin: 12px 0 0;
+  font-size: 12.5px;
+  color: var(--g400);
+  line-height: 1.5;
+}
 
-/* ── 막대 차트 ── */
-.pd-chart {
-  padding: 20px 22px;
+/* ── 보라 그라데이션 요약 패널 ── */
+.pd-summary {
+  margin: 24px 0 0;
+  padding: 26px 28px;
 }
-.pd-chart-title {
-  font-size: 15px;
-  color: var(--text);
-  margin-bottom: 18px;
+.pd-summary-top {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
 }
-.pd-bars {
+.pd-summary-main {
   display: flex;
   align-items: flex-end;
-  gap: 10px;
-  height: 200px;
-  padding-top: 18px;
+  gap: 24px;
+  flex-wrap: wrap;
 }
-.pd-bar-col {
+.pd-summary-figure {
+  flex: none;
+  margin: 0;
+  font-size: 44px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--g900);
+}
+.pd-summary-figure span {
+  margin-left: 4px;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--g500);
+}
+.pd-summary-text {
   flex: 1;
+  min-width: 240px;
+  margin: 0;
+  color: var(--g700);
+  font-size: 15px;
+  line-height: 1.7;
+}
+.pd-summary-aside {
+  display: flex;
+  gap: 28px;
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.5);
+}
+.pd-summary-stat {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  height: 100%;
-  gap: 6px;
+  gap: 4px;
 }
-.pd-bar {
-  width: 68%;
-  max-width: 42px;
-  border-radius: 6px 6px 0 0;
-  background: linear-gradient(180deg, var(--blue), color-mix(in srgb, var(--blue) 55%, transparent));
-  transition: height 0.4s ease;
+.pd-summary-stat b {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--g900);
 }
-.pd-bar.hot {
-  background: linear-gradient(180deg, var(--cyan), color-mix(in srgb, var(--cyan) 55%, transparent));
-}
-.pd-bar-val {
-  font-size: 12px;
+.pd-summary-stat span {
+  font-size: 12.5px;
   font-weight: 700;
-  color: var(--text);
-}
-.pd-bar-label {
-  font-size: 12px;
-  color: var(--muted);
+  color: var(--g500);
 }
 
-/* ── 데이터셋 목록 ── */
+/* ── 사용 데이터(출처 카드) ── */
 .pd-ds-list {
   display: flex;
   flex-direction: column;
@@ -206,44 +125,58 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 14px 18px;
+  padding: 16px 18px;
   text-decoration: none;
   color: inherit;
   transition: border-color 0.15s;
 }
 .pd-ds:hover {
-  border-color: var(--blue);
+  border-color: var(--violet);
+}
+.pd-ds-ic {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 10px;
+  background: var(--g50);
+  color: var(--g500);
+  font-size: 17px;
 }
 .pd-ds-main {
   flex: 1;
+  min-width: 0;
 }
 .pd-ds-main b {
-  color: var(--text);
+  display: block;
+  color: var(--g900);
   font-size: 15px;
 }
 .pd-ds-main p {
-  color: var(--muted);
+  margin: 3px 0 0;
+  color: var(--g400);
   font-size: 13px;
-  margin-top: 3px;
-}
-.pd-ds-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.pd-tag {
-  padding: 3px 10px;
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--blue) 12%, transparent);
-  color: var(--blue);
-  font-size: 12px;
-  font-weight: 600;
-}
-.pd-fmt {
-  font-size: 12px;
-  color: var(--muted);
 }
 .pd-ds-open {
-  color: var(--muted);
-  font-size: 16px;
+  display: inline-block;
+  margin-top: 6px;
+  color: var(--violet);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.pd-fmt-badge {
+  flex: none;
+  padding: 4px 10px;
+  border-radius: 7px;
+  background: var(--g100);
+  color: var(--g500);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .pd-summary-aside {
+    gap: 20px;
+  }
 }

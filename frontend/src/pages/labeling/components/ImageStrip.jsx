@@ -9,6 +9,7 @@ export default function ImageStrip({ images, activeIdx, onSelect, onRemove }) {
             key={i}
             className={'strip-item' + (i === activeIdx ? ' active' : '')}
             title={im.name}
+            data-i={i}
             onClick={() => onSelect(i)}
           >
             <span className="strip-thumb">
@@ -24,6 +25,7 @@ export default function ImageStrip({ images, activeIdx, onSelect, onRemove }) {
               ) : null}
             </span>
             <span className="strip-name">{im.name}</span>
+            <span className="strip-status">{n ? '라벨 있음' : '아직 없음'}</span>
             {!im.sample && (
               <span
                 className="strip-del"

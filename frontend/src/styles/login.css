@@ -6,31 +6,14 @@
   background: var(--bg);
 }
 
-/* 상단 바 — 랜딩과 같은 브랜드 그라데이션 */
+/* 상단 바 — TopNav 와 같은 흰 배경 + 하단 라인(구 다크 그라데이션 제거) */
 .lg-top {
   display: flex;
   align-items: center;
   height: 64px;
   padding: 0 24px;
-  background: linear-gradient(90deg, #34487f 0%, #29314a 55%, var(--nav) 100%);
-}
-
-[data-theme="dark"] .lg-top {
-  background: linear-gradient(90deg, #1b2338 0%, #141a27 70%);
-}
-
-.lg-logo {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-weight: 700;
-  font-size: 18px;
-  color: #fff;
-}
-
-.lg-logo .logo-img {
-  width: 34px;
-  height: 34px;
+  background: var(--nav);
+  border-bottom: 1px solid var(--line);
 }
 
 .lg-main {
@@ -62,8 +45,14 @@
 }
 
 .lg-brand-mark {
+  display: grid;
+  place-items: center;
   width: 48px;
   height: 48px;
+  border-radius: 14px;
+  background: var(--violet);
+  color: #fff;
+  font-size: 24px;
 }
 
 .lg-brand-name {

@@ -38,16 +38,16 @@ export default function ResetPage() {
   return (
     <div className="lg-page">
       <header className="lg-top">
-        <span className="lg-logo">
-          <img className="logo-img" src="/assets/img/logomark-transparent.png" alt="" />
-          GNSoft AI 플랫폼
+        <span className="topnav-brand">
+          <span className="brand-mark">◈</span>
+          Pixel
         </span>
       </header>
 
       <main className="lg-main">
         <div className="lg-card">
           <div className="lg-brand">
-            <img className="lg-brand-mark" src="/assets/img/logomark-transparent.png" alt="" />
+            <span className="lg-brand-mark">◈</span>
             <h1 className="lg-brand-name">비밀번호 재설정</h1>
             <p className="lg-brand-sub">새로 사용할 비밀번호를 입력하세요</p>
           </div>

@@ -15,10 +15,8 @@ export default function WebFind({ webResults, webBusy, onSearch, addBusy, onAdd 
   const add = () => onAdd((webResults || []).filter((_, i) => checked[i]))
 
   return (
-    <section className="kb-section">
-      <h3>
-        <span>◉</span>웹에서 찾아 넣기
-      </h3>
+    <section className="web-find">
+      <p className="web-find-label">웹에서 문서 찾기</p>
       <div className="search-line">
         <input
           value={keyword}

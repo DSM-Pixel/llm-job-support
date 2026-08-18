@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import AppShell from '../../shell/AppShell.jsx'
 import { useShell } from '../../shell/ShellContext.js'
 import { toast } from '../../lib/toast.js'
@@ -8,6 +8,8 @@ import { useLabeling } from './useLabeling.js'
 import PreviewArea from './components/PreviewArea.jsx'
 import AnalyzePanel from './components/AnalyzePanel.jsx'
 import ResultPanel from './components/ResultPanel.jsx'
+import LabelBoard from './components/LabelBoard.jsx'
+import GalleryPanel from './components/GalleryPanel.jsx'
 import LabelingModal from './components/LabelingModal.jsx'
 
 const SAMPLE_NAME = 'road_2026Q1_0142.jpg'
@@ -16,10 +18,12 @@ function LabelingContent() {
   const { settings, openSettings } = useShell()
   // 초기 분석 결과는 비워 둔다(가짜 미리보기 findings 제거) — 실제 '분석하기' 전까진 빈 상태.
   const lab = useLabeling(SAMPLE_NAME, null)
-  const [modeTab, setModeTab] = useState(0)
   const [batchBusy, setBatchBusy] = useState(false)
   // 폴더 라벨링 결과(서버가 박스 그린 썸네일) — 다른 메뉴 갔다 와도 남도록 sessionStorage 로 유지.
   const [batchResult, setBatchResult] = useState([])
+  // 사진 추가(파일/폴더) 입력 — 큰 캔버스(빈 상태 클릭)와 갤러리 버튼이 같은 입력을 공유한다.
+  const fileRef = useRef(null)
+  const folderRef = useRef(null)
 
   const modelName = 'gpt-4o'
   const modelSuffix = ' · 멀티모달 비전'
@@ -120,52 +124,40 @@ function LabelingContent() {
   }, [])
 
   const openModal = () => lab.setModalOpen(true)
+  const hasUpload = lab.images.some((im) => im.file)
 
   return (
     <>
-      <nav className="mode-tabs">
-        <button className={modeTab === 0 ? 'active' : ''} onClick={() => setModeTab(0)}>
-          ☰ 설명 분석
-        </button>
-        <button
-          className={modeTab === 1 ? 'active' : ''}
-          onClick={() => {
-            setModeTab(1)
-            openModal()
-          }}
-        >
-          ⌗ 박스로 찾기
-        </button>
-        <span
-          className="model-chip"
-          data-model="vision"
-          role="button"
-          title="AI 모델 — 클릭해 설정에서 변경"
-          style={{ cursor: 'pointer' }}
-          onClick={openSettings}
-        >
-          ⚙ {modelName}
-          {modelSuffix}
-        </span>
-      </nav>
+      <div className="card canvas-card label-panel">
+        <PreviewArea
+          active={lab.active}
+          activeIdx={lab.activeIdx}
+          totalImages={lab.images.length}
+          onOpenModal={openModal}
+          onEmptyClick={() => fileRef.current?.click()}
+          onRemoveActive={() => lab.removeImage(lab.activeIdx)}
+          modelName={modelName}
+          modelSuffix={modelSuffix}
+          onOpenSettings={openSettings}
+        />
+        <AnalyzePanel active={lab.active} activeIdx={lab.activeIdx} onResult={lab.updateResult} />
+      </div>
 
-      <section className="label-layout">
-        <aside className="label-panel">
-          <PreviewArea
-            images={lab.images}
-            activeIdx={lab.activeIdx}
-            active={lab.active}
-            onSelect={lab.setActive}
-            onRemove={lab.removeImage}
-            onAddImages={lab.addImages}
-            onBatch={onBatch}
-            onOpenModal={openModal}
-            batchBusy={batchBusy}
-          />
-          <AnalyzePanel active={lab.active} activeIdx={lab.activeIdx} onResult={lab.updateResult} />
-        </aside>
-        <ResultPanel result={lab.active.result} />
-      </section>
+      <ResultPanel result={lab.active.result} />
+
+      <LabelBoard boxes={lab.active.savedBoxes} onOpenModal={openModal} />
+
+      <GalleryPanel
+        images={lab.images}
+        activeIdx={lab.activeIdx}
+        onSelect={lab.setActive}
+        onRemove={lab.removeImage}
+        fileRef={fileRef}
+        folderRef={folderRef}
+        onBatch={onBatch}
+        batchBusy={batchBusy}
+        hasUpload={hasUpload}
+      />
 
       {batchResult.length > 0 && (
         <section className="batch-results">
@@ -192,6 +184,40 @@ function LabelingContent() {
         </section>
       )}
 
+      <div className="px-bottomcta">
+        <button className="btn flat" type="button" onClick={openModal}>
+          내보내기
+        </button>
+        <button className="btn primary grow lg" type="button" onClick={openModal}>
+          라벨 저장하기
+        </button>
+      </div>
+
+      <input
+        type="file"
+        className="image-input"
+        accept="image/*"
+        multiple
+        hidden
+        ref={fileRef}
+        onChange={() => {
+          if (fileRef.current.files?.length) lab.addImages(fileRef.current.files)
+          fileRef.current.value = ''
+        }}
+      />
+      <input
+        type="file"
+        className="folder-input"
+        accept="image/*"
+        webkitdirectory=""
+        hidden
+        ref={folderRef}
+        onChange={() => {
+          if (folderRef.current.files?.length) lab.addImages(folderRef.current.files)
+          folderRef.current.value = ''
+        }}
+      />
+
       <LabelingModal
         open={lab.modalOpen}
         images={lab.images}
@@ -208,8 +234,10 @@ function LabelingContent() {
 
 export default function LabelingPage() {
   return (
-    <AppShell title="이미지 분석·라벨링" activeNav="labeling">
-      <LabelingContent />
+    <AppShell title="라벨링 시작하기" activeNav="labeling">
+      <section className="content labeling-page">
+        <LabelingContent />
+      </section>
     </AppShell>
   )
 }

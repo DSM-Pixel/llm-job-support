@@ -1,60 +1,23 @@
-.mode-tabs {
+/* 라벨링 — 큰 캔버스 카드 + 프롬프트 입력 + 찾은 라벨 + 사진 갤러리. 목업(labeling.png)
+   재현. 실제 박스 편집(모달)의 클래스들(.canvas-boxes/.box-list/.modal-* 등)은 통합 UI
+   검증 스크립트(backend/_verify_ui.py)가 그대로 참조하므로 이름은 유지하고 톤만 새로 입힌다. */
+.labeling-page {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  height: 58px;
-  padding: 0 26px;
-  border-bottom: 1px solid #e5ebf4;
-  background: var(--surface);
+  flex-direction: column;
+  gap: 4px;
 }
 
-.mode-tabs button {
-  min-height: 36px;
-  padding: 0 16px;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: #66738b;
-  font-weight: 800;
-}
-
-.mode-tabs button.active {
-  background: rgba(70, 96, 191, 0.10);
-  color: var(--blue);
-}
-
-.mode-tabs span {
-  margin-left: auto;
-  color: #97a4ba;
-  font-weight: 700;
-}
-
-.label-layout {
-  display: grid;
-  grid-template-columns: 320px minmax(0, 1fr);
-  min-height: calc(100vh - 112px);
-}
-
-.label-panel {
-  padding: 20px;
-  border-right: 1px solid #e1e7f0;
-  background: var(--surface);
+/* ── 캔버스 카드(큰 미리보기 + 프롬프트) ─────────────────────────── */
+.canvas-card {
+  overflow: hidden;
 }
 
 .road-preview {
   position: relative;
-  height: 172px;
+  height: 460px;
   overflow: hidden;
-  border-radius: 9px;
-  background: linear-gradient(#1f2b42, #0c111c);
-  /* 클릭 = 큰 캔버스 열기(사진 없으면 추가) — 커서·호버로 어포던스 표시 */
+  background: var(--g100);
   cursor: pointer;
-  border: 1px solid transparent;
-  transition: border-color 0.15s;
-}
-
-.road-preview:hover {
-  border-color: var(--blue);
 }
 
 .preview-img {
@@ -65,6 +28,25 @@
   height: 100%;
   /* 큰 캔버스와 동일하게 contain — 박스 오버레이(JS fitBoxes)와 좌표가 일치한다. */
   object-fit: contain;
+}
+
+.preview-empty {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--g400);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.preview-empty-ic {
+  font-size: 30px;
+  opacity: 0.7;
 }
 
 /* 저장된 박스를 미리보기 위에 표시(닫아도 유지). 위치·크기는 JS(fitBoxes)가
@@ -78,7 +60,7 @@
 .preview-boxes .pbox {
   position: absolute;
   border: 2px solid var(--cyan);
-  background: rgba(16, 212, 210, 0.14);
+  background: rgba(139, 91, 251, 0.14);
 }
 
 .preview-boxes .pbox.red {
@@ -93,7 +75,7 @@
 
 .preview-boxes .pbox.blue {
   border-color: var(--blue);
-  background: rgba(70, 96, 191, 0.16);
+  background: rgba(113, 50, 245, 0.16);
 }
 
 .preview-boxes .pbox.green {
@@ -101,13 +83,500 @@
   background: rgba(26, 165, 102, 0.16);
 }
 
+.preview-boxes .pbox span {
+  position: absolute;
+  top: -15px;
+  left: -2px;
+  padding: 0 4px;
+  border-radius: 3px;
+  background: rgba(7, 11, 20, 0.8);
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.preview-file-badge {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(8, 12, 22, 0.62);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.preview-file-pos {
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.preview-toolbar {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.toolbar-btn {
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid rgba(20, 22, 27, 0.08);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--g700);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  backdrop-filter: blur(2px);
+}
+
+.toolbar-btn:hover {
+  background: #fff;
+}
+
+.toolbar-btn.active {
+  border-color: var(--violet);
+  background: var(--violet);
+  color: #fff;
+}
+
+.toolbar-btn.preview-del {
+  width: 32px;
+  padding: 0;
+  color: var(--g400);
+}
+
+.toolbar-btn.preview-del:hover {
+  border-color: var(--red);
+  color: var(--red);
+}
+
+/* ── 프롬프트 입력(캔버스 카드 하단) ──────────────────────────────── */
+.prompt-row {
+  padding: 20px 24px 22px;
+}
+
+.prompt-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 130px;
+  gap: 10px;
+}
+
+.prompt-line input {
+  min-height: 46px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-btn);
+  outline: none;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14.5px;
+}
+
+.prompt-line input:focus {
+  border-color: var(--violet-soft);
+}
+
+.prompt-line .btn {
+  min-height: 46px;
+}
+
+.prompt-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.prompt-chip {
+  border: 0;
+  background: var(--g50);
+  cursor: pointer;
+  transition: background 0.13s ease, color 0.13s ease;
+}
+
+.prompt-chip:hover {
+  background: var(--violet-weak);
+  color: var(--violet-strong);
+}
+
+.preset-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.preset-label {
+  flex: none;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--g400);
+}
+
+.preset-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.preset-pills .pill {
+  cursor: pointer;
+  border: 0;
+  background: var(--g50);
+  color: var(--g500);
+}
+
+.preset-pills .pill.active {
+  background: var(--g900);
+  color: #fff;
+}
+
+.btn.flat {
+  border-color: transparent;
+  background: rgba(99, 120, 160, 0.1);
+  color: var(--g500);
+}
+
+.btn.flat:hover {
+  background: rgba(99, 120, 160, 0.18);
+}
+
+/* ── AI 설명 결과(분석하기 결과 — 보조 카드) ─────────────────────── */
+.result-panel {
+  margin-top: 18px;
+}
+
+.result-card {
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+}
+
+.answer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.answer-head h3 {
+  margin: 0;
+  font-size: 14.5px;
+  color: var(--g700);
+}
+
+.finding-list {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.finding-list li {
+  margin: 8px 0;
+  color: var(--text);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.finding-empty {
+  color: var(--muted);
+  list-style: none;
+}
+
+.badge {
+  display: inline-grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  margin-right: 10px;
+  border-radius: 7px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.badge.red {
+  background: var(--red);
+}
+
+.badge.orange {
+  background: var(--orange);
+}
+
+.result-hint {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+/* ── 찾은 라벨(신뢰도 요약 + 리스트) ─────────────────────────────── */
+.label-board {
+  margin-top: 8px;
+}
+
+.conf-stat {
+  grid-column: span 1;
+}
+
+.conf-stat .px-stat-label small {
+  color: var(--violet);
+  font-weight: 700;
+}
+
+.conf-slider {
+  width: 100%;
+  margin-top: 14px;
+  accent-color: var(--violet);
+}
+
+.label-classchips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 16px 0 4px;
+}
+
+.label-classchips .pill {
+  background: var(--g50);
+  color: var(--g600);
+}
+
+.label-conf-text {
+  margin-left: 8px;
+  color: var(--g400);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.label-found-list .px-rank {
+  align-items: flex-start;
+}
+
+.px-rank-main .px-badge {
+  margin-left: 8px;
+}
+
+.label-board-empty {
+  margin: 0;
+  padding: 26px 8px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+/* ── 이 폴더의 사진(갤러리) ───────────────────────────────────────── */
+.gallery-panel {
+  margin-top: 8px;
+}
+
+.image-strip {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.image-strip:empty {
+  display: none;
+}
+
+.strip-item {
+  position: relative;
+  flex: none;
+  width: 200px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  border-radius: var(--r-card);
+  padding: 0;
+}
+
+.strip-item.active {
+  border-color: var(--violet);
+}
+
+.strip-thumb {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 112px;
+  overflow: hidden;
+  border-radius: 12px 12px 0 0;
+  background: var(--g800);
+}
+
+.strip-item.active .strip-thumb {
+  border-radius: 10px 10px 0 0;
+}
+
+.strip-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.strip-ph {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.strip-count {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--violet);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  font-style: normal;
+}
+
+.strip-item:not(.active) {
+  border: 1px solid var(--line);
+}
+
+.strip-name {
+  display: block;
+  margin: 10px 12px 0;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--g900);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.strip-status {
+  display: block;
+  margin: 3px 12px 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--g400);
+}
+
+.strip-del {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--red);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+  z-index: 2;
+}
+
+.gallery-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+/* 폴더 라벨링 결과 갤러리 — 배치 결과(서버 썸네일)를 유지 표시 */
+.batch-results {
+  margin-top: 26px;
+}
+
+.batch-results h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
+}
+
+.batch-results h3 small {
+  color: var(--muted);
+  font-weight: 400;
+  margin-left: 6px;
+}
+
+.batch-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.batch-item {
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.batch-item img,
+.batch-item .batch-nothumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  background: var(--g800);
+}
+
+.batch-item .batch-nothumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--g300);
+  font-size: 13px;
+}
+
+.batch-item figcaption {
+  padding: 8px 10px;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.batch-item figcaption b {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.batch-item figcaption span {
+  color: var(--muted);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   아래부터는 라벨링 모달(큰 캔버스에서 박스 그리기/편집) — 마크업은 그대로 두고
+   토큰만 새 팔레트(바이올렛/Toss 그레이)를 상속해 자동으로 톤이 맞는다.
+   ════════════════════════════════════════════════════════════════ */
+
 /* ── 전체 객체 탐지 — 클래스 필터 패널 ── */
 .detect-filter {
   margin: 0;
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 11px;
-  background: color-mix(in srgb, var(--blue) 6%, transparent);
+  background: color-mix(in srgb, var(--violet) 6%, transparent);
 }
 
 .detect-filter h4 {
@@ -153,14 +622,14 @@
 }
 
 .filter-row:hover {
-  background: color-mix(in srgb, var(--blue) 8%, transparent);
+  background: color-mix(in srgb, var(--violet) 8%, transparent);
 }
 
 .filter-row input {
   width: 17px;
   height: 17px;
   flex: none;
-  accent-color: var(--blue);
+  accent-color: var(--violet);
   cursor: pointer;
 }
 
@@ -194,37 +663,7 @@
   gap: 8px;
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid color-mix(in srgb, var(--blue) 14%, transparent);
-}
-
-.preview-boxes .pbox span {
-  position: absolute;
-  top: -15px;
-  left: -2px;
-  padding: 0 4px;
-  border-radius: 3px;
-  background: rgba(7, 11, 20, 0.8);
-  color: #fff;
-  font-size: 9px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-/* 실제 이미지가 올라오면 CSS 가짜 도로 placeholder는 숨긴다. */
-.road-preview.has-image .road,
-.road-preview.has-image .lane {
-  display: none;
-}
-
-.btn.wide {
-  display: flex;
-  width: 100%;
-  margin-top: 10px;
-}
-
-/* hidden 속성이 .btn.wide의 display:flex 보다 우선하도록 */
-.btn.wide[hidden] {
-  display: none;
+  border-top: 1px solid color-mix(in srgb, var(--violet) 14%, transparent);
 }
 
 /* ── 라벨링 모달 (큰 이미지 + 박스 그리기/편집) ───────────────── */
@@ -337,14 +776,14 @@
 
 .draw-box {
   position: absolute;
-  border: 2px solid var(--blue);
-  background: rgba(37, 99, 255, 0.16);
+  border: 2px solid var(--violet);
+  background: rgba(113, 50, 245, 0.16);
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.4);
 }
 
 .draw-box.selected {
   border-color: var(--cyan);
-  background: rgba(16, 212, 210, 0.2);
+  background: rgba(139, 91, 251, 0.22);
 }
 
 .draw-box .tag {
@@ -353,7 +792,7 @@
   left: -2px;
   padding: 1px 6px;
   border-radius: 4px;
-  background: var(--blue);
+  background: var(--violet);
   color: #fff;
   font-size: 11px;
   font-weight: 700;
@@ -395,7 +834,7 @@
 }
 
 .label-side .modal-class:focus {
-  border-color: var(--blue);
+  border-color: var(--violet);
 }
 
 /* 탐지 액션 — 전폭 스택(제각각 줄바꿈 제거) */
@@ -441,8 +880,8 @@
   height: 20px;
   padding: 0 7px;
   border-radius: 999px;
-  background: rgba(70, 96, 191, 0.12);
-  color: var(--blue);
+  background: var(--violet-weak);
+  color: var(--violet-strong);
   font-size: 12px;
   font-weight: 800;
 }
@@ -481,8 +920,8 @@
 }
 
 .box-list li.selected {
-  border-color: var(--blue);
-  background: rgba(70, 96, 191, 0.08);
+  border-color: var(--violet);
+  background: var(--violet-weak);
 }
 
 .box-list input {
@@ -498,7 +937,7 @@
 }
 
 .box-list input:focus {
-  border-color: var(--blue);
+  border-color: var(--violet);
 }
 
 .box-list .conf {
@@ -553,297 +992,6 @@
   font-size: 14px;
 }
 
-.btn.flat {
-  border-color: transparent;
-  background: rgba(99, 120, 160, 0.10);
-  color: var(--muted);
-}
-
-.result-hint {
-  margin: 12px 0 0;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-.road {
-  position: absolute;
-  left: 54px;
-  right: 54px;
-  bottom: -20px;
-  height: 162px;
-  clip-path: polygon(36% 0, 64% 0, 100% 100%, 0 100%);
-  background: #2c3750;
-}
-
-.lane {
-  position: absolute;
-  left: 50%;
-  top: 46px;
-  width: 4px;
-  height: 28px;
-  border-radius: 999px;
-  background: #8d98ad;
-}
-
-.sample {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin: 8px 0 10px;
-  color: #718097;
-}
-
-.image-count {
-  font-weight: 700;
-  color: var(--muted);
-}
-
-/* 다중 이미지 추가 버튼 */
-.image-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-/* 이미지 갤러리(스트립) — 올린 사진들을 나열, 클릭 전환 */
-.image-strip {
-  display: flex;
-  gap: 8px;
-  overflow-x: auto;
-  padding-bottom: 6px;
-  margin-bottom: 12px;
-}
-
-.image-strip:empty {
-  display: none;
-}
-
-.strip-item {
-  position: relative;
-  flex: none;
-  width: 78px;
-  cursor: pointer;
-  border: 2px solid transparent;
-  border-radius: 8px;
-  padding: 2px;
-}
-
-.strip-item.active {
-  border-color: var(--blue);
-}
-
-.strip-thumb {
-  position: relative;
-  display: grid;
-  place-items: center;
-  width: 100%;
-  height: 52px;
-  overflow: hidden;
-  border-radius: 6px;
-  background: rgba(120, 140, 170, 0.12);
-}
-
-.strip-thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.strip-ph {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--muted);
-}
-
-.strip-name {
-  display: block;
-  margin-top: 3px;
-  font-size: 10px;
-  line-height: 1.25;
-  color: var(--muted);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.strip-count {
-  position: absolute;
-  left: 3px;
-  bottom: 3px;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 3px;
-  display: grid;
-  place-items: center;
-  border-radius: 8px;
-  background: var(--blue);
-  color: #fff;
-  font-size: 10px;
-  font-weight: 700;
-  font-style: normal;
-}
-
-.strip-del {
-  position: absolute;
-  top: -6px;
-  right: -6px;
-  width: 18px;
-  height: 18px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  background: var(--red);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.finding-empty {
-  color: var(--muted);
-  list-style: none;
-}
-
-.sample a {
-  color: var(--blue);
-  font-weight: 800;
-}
-
-.label-panel h3 {
-  margin: 14px 0 10px;
-}
-
-/* 이미지 라벨링 영역과 분석 시나리오 사이 구분선 */
-.panel-sep {
-  border: 0;
-  border-top: 1px solid var(--line);
-  margin: 18px 0 4px;
-}
-
-.radio-list {
-  display: grid;
-  gap: 8px;
-}
-
-.radio-list label {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 40px;
-  padding: 0 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  color: var(--text);
-  font-weight: 800;
-}
-
-.radio-list label.active {
-  border-color: #85a6ff;
-  background: rgba(70, 96, 191, 0.08);
-  color: var(--blue);
-}
-
-.radio-list span {
-  display: grid;
-  place-items: center;
-  width: 16px;
-  height: 16px;
-  border: 2px solid #b8c3d5;
-  border-radius: 50%;
-}
-
-.radio-list label.active span {
-  border-color: var(--blue);
-  background: var(--blue);
-}
-
-.radio-list label.active span::after {
-  content: "✓";
-  color: #fff;
-  font-size: 10px;
-  font-weight: 800;
-  line-height: 1;
-}
-
-textarea {
-  width: 100%;
-  height: 78px;
-  resize: none;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  outline: none;
-}
-
-.label-panel .btn {
-  display: flex;
-  width: 100%;
-  margin-top: 16px;
-}
-
-.result-panel {
-  padding: 22px 26px;
-}
-
-.result-card {
-  padding: 18px;
-  border: 2px solid var(--blue);
-}
-
-.answer-head,
-.answer-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.answer-head h3 {
-  margin: 0;
-  font-size: 17px;
-}
-
-.finding-list {
-  margin: 14px 0 18px;
-  padding: 0 0 14px;
-  border-bottom: 1px solid #e7ecf4;
-  list-style: none;
-}
-
-.finding-list li {
-  margin: 10px 0;
-  color: var(--text);
-  font-size: 14px;
-}
-
-.badge {
-  display: inline-grid;
-  width: 28px;
-  height: 28px;
-  place-items: center;
-  margin-right: 12px;
-  border-radius: 8px;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 800;
-}
-
-.badge.red {
-  background: var(--red);
-}
-
-.badge.orange {
-  background: var(--orange);
-}
-
-@media (max-width: 1200px) {
-  .label-layout {
-    grid-template-columns: 1fr;
-  }
-}
-
 /* 모달 내 사진 네비게이션 — 폴더 단위로 이전/다음 사진을 넘기며 라벨링 */
 .modal-nav {
   display: flex;
@@ -869,4 +1017,16 @@ textarea {
 .modal-next:disabled {
   opacity: 0.4;
   cursor: default;
+}
+
+@media (max-width: 1200px) {
+  .prompt-line {
+    grid-template-columns: 1fr;
+  }
+  .px-stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .strip-item {
+    width: 160px;
+  }
 }

@@ -1,91 +1,94 @@
-.report-layout {
-  display: grid;
-  grid-template-columns: 320px minmax(0, 1fr);
-  /* 구성(왼쪽)·미리보기(오른쪽)를 각자 스크롤되게 — 레이아웃 높이를 뷰포트에 고정 */
-  height: calc(100vh - 54px);
-  overflow: hidden;
+.rp-layout {
+  max-width: 900px;
+  margin: 0 auto;
 }
 
-/* 보고서 본문 — 문단 + 불릿 목록 */
-.report-page .sec-body p {
+/* ── 히어로(REPORT BUILDER) ── */
+.rp-hero {
+  padding: 36px 40px;
+}
+.rp-eyebrow {
   margin: 0 0 8px;
-  line-height: 1.75;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--violet);
+  text-transform: uppercase;
 }
-
-.report-page .sec-body ul {
-  margin: 4px 0 8px;
-  padding-left: 20px;
+.rp-hero h2 {
+  font-size: 34px;
 }
-
-.report-page .sec-body li {
-  margin: 4px 0;
-  line-height: 1.7;
+.rp-hero-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 24px 0 22px;
 }
-
-/* 웹 검색 보고서 — 실제 출처 링크 */
-.report-page .src-link {
-  text-decoration: none;
-  border-color: #8fb0ff;
-  color: var(--blue);
+.rp-control-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--g500);
 }
-
-.report-page .src-link:hover {
-  background: rgba(70, 96, 191, 0.08);
+.rp-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
 }
-
-/* 보고서 본문 직접 편집(글 수정) — 편집 가능 영역 표시 */
-.report-page [contenteditable="true"] {
-  border-radius: 6px;
-  transition: background 0.12s ease, box-shadow 0.12s ease;
-}
-
-/* 호버/포커스 하이라이트가 글자에 딱 붙지 않도록 여백을 준다(표 셀 제외).
-   음수 마진으로 보정해 글 위치는 그대로 두고 강조 영역만 넓힌다. */
-.report-page [contenteditable="true"]:not(td) {
-  margin: -3px -9px;
-  padding: 3px 9px;
-}
-
-.report-page [contenteditable="true"]:hover {
-  background: rgba(70, 96, 191, 0.06);
-}
-
-.report-page [contenteditable="true"]:focus {
-  outline: none;
-  background: #fff;
-  box-shadow: 0 0 0 2px #8fb0ff;
-}
-
-@media print {
-  .report-page [contenteditable="true"]:hover,
-  .report-page [contenteditable="true"]:focus {
-    background: transparent;
-    box-shadow: none;
-  }
-}
-
-.report-form {
-  padding: 24px 22px 28px;
-  border-right: 1px solid #e1e7f0;
+.rp-date-inline {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-chip);
   background: var(--surface);
-  overflow-y: auto; /* 구성 패널 독립 스크롤 */
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+.rp-date-sep {
+  color: var(--g300);
+}
+.rp-material-chip {
+  cursor: default;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rp-generate {
+  width: 100%;
 }
 
-.report-form h2 {
-  margin: 0;
-  font-size: 22px;
+/* ── 스탯 행 ── */
+.rp-stats {
+  margin-top: 24px;
+}
+.px-stat-value.text {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--g700);
 }
 
-/* 제목('보고서 구성')과 '양식 삽입' 버튼을 한 줄에 양끝 정렬. */
-.report-form-head {
+/* ── 자동 자료 패널 ── */
+.rp-materials {
+  margin-top: 24px;
+  padding: 22px 24px;
+}
+.rp-materials-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin: 0 0 16px;
+  margin: 0 0 12px;
 }
-
-/* 양식 삽입 — 제목 옆 컴팩트 버튼(이전엔 패널 하단의 큰 블록). */
+.rp-materials-head h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--g900);
+}
 .tmpl-btn {
   flex: none;
   min-height: 34px;
@@ -94,142 +97,137 @@
   font-weight: 800;
   white-space: nowrap;
 }
-
-/* 섹션 제목 — 위쪽 여백을 넉넉히 줘서 기능별로 구분되게 한다. */
-.report-form h3 {
-  margin: 28px 0 12px;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  color: #6b7890;
-}
-
-.select-list {
-  display: grid;
-  gap: 10px;
-}
-
-.select-list button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 40px;
-  padding: 0 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--text);
-  font-weight: 800;
-  text-align: left;
-}
-
-.chart-icon {
-  display: inline-block;
-  width: 16px;
-  height: 16px;
-  color: currentColor;
-  background:
-    linear-gradient(currentColor, currentColor) left 2px bottom 2px / 3px 7px
-      no-repeat,
-    linear-gradient(currentColor, currentColor) left 7px bottom 2px / 3px 11px
-      no-repeat,
-    linear-gradient(currentColor, currentColor) left 12px bottom 2px / 3px 5px
-      no-repeat;
-}
-
-.select-list button.active {
-  border-color: #8fb0ff;
-  background: rgba(70, 96, 191, 0.08);
-  color: var(--blue);
-}
-
 .report-hint {
-  margin: 0 0 4px;
+  margin: 0 0 14px;
   padding: 12px 14px;
   border-radius: 10px;
-  background: rgba(99, 120, 160, 0.08);
-  color: #51607a;
+  background: var(--g50);
+  color: var(--g500);
   font-size: 13px;
   line-height: 1.55;
 }
 
-/* 시작/종료 날짜 — 라벨을 왼쪽 고정폭으로 정렬하고 입력은 폭을 채운다. */
-.date-range {
+.artifact-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+  max-height: 220px;
+  overflow-y: auto;
 }
-
-.date-field {
+.artifact-empty {
+  margin: 0;
+  color: var(--g400);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.artifact-item {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.artifact-thumb {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--g50);
+}
+.artifact-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.artifact-ic {
+  font-size: 18px;
+  color: var(--violet);
+}
+.artifact-meta {
+  flex: 1;
+  min-width: 0;
+}
+.artifact-meta b {
+  display: block;
+  font-size: 13px;
+}
+.artifact-meta small {
+  display: block;
+  color: var(--g400);
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.artifact-add {
+  flex: none;
+  padding: 6px 12px;
+  font-size: 13px;
+}
+.artifact-thumb,
+.artifact-meta {
+  cursor: pointer;
 }
 
-.date-field > span {
-  flex: none;
-  width: 48px;
-  color: #6b7890;
+.art-modal {
+  max-width: 720px;
+}
+.art-modal .modal-body {
+  padding: 22px 24px;
+}
+.art-image {
+  margin-bottom: 14px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--g50);
+}
+.art-image img {
+  display: block;
+  width: 100%;
+  max-height: 440px;
+  object-fit: contain;
+}
+.art-rows {
+  display: grid;
+  gap: 9px;
+}
+.art-row {
+  display: grid;
+  grid-template-columns: 78px 1fr;
+  gap: 12px;
+  align-items: start;
+}
+.art-row span {
+  color: var(--g400);
   font-size: 13px;
   font-weight: 700;
 }
-
-.date-field input[type="date"] {
-  flex: 1;
-  min-height: 44px;
-  padding: 0 14px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--surface);
-  color: var(--text);
+.art-row b {
   font-weight: 700;
-  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+  word-break: break-word;
 }
 
-.date-field input[type="date"]:focus {
-  outline: none;
-  border-color: #8fb0ff;
-  box-shadow: 0 0 0 3px #e8f0ff;
-}
-
-/* 통계 차트 토글 — 기간 입력과 버튼 사이에 여백을 둔다. */
-.chart-toggle {
-  margin-top: 22px;
-  padding-top: 18px;
-  border-top: 1px solid #eef2f8;
-}
-
-.staged-note {
-  margin: 10px 0 0;
-  padding: 8px 12px;
-  border-radius: 8px;
-  background: rgba(70, 96, 191, 0.08);
-  color: #2f6df0;
-  font-size: 12.5px;
-  font-weight: 700;
-}
-
-.report-form .wide {
-  margin-top: 14px;
-  min-height: 48px;
-  font-size: 15px;
-}
-
-/* 사진 추가 버튼 + 썸네일 그리드(왼쪽 패널) */
+/* 사진 추가 버튼 + 썸네일 그리드 */
 .add-report-image {
   width: 100%;
   justify-content: center;
+  margin-top: 14px;
   border-style: dashed;
-  color: var(--blue);
+  color: var(--violet);
 }
-
 .report-thumbs {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 8px;
   margin-top: 10px;
 }
-
 .report-thumb {
   position: relative;
   aspect-ratio: 1 / 1;
@@ -237,13 +235,11 @@
   overflow: hidden;
   border: 1px solid var(--line);
 }
-
 .report-thumb img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
-
 .report-thumb .thumb-del {
   position: absolute;
   top: 3px;
@@ -260,99 +256,206 @@
   cursor: pointer;
 }
 
-/* 내 작업에서 가져오기(아티팩트 picker) */
-.artifact-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  max-height: 280px;
-  overflow-y: auto;
-}
-
-.artifact-empty {
-  margin: 0;
-  color: #8a97ab;
-  font-size: 13px;
-  line-height: 1.5;
-}
-
-.artifact-item {
+/* 통계 차트 포함 토글 */
+.source-toggle {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 42px;
+  color: var(--g900);
+  font-weight: 700;
+}
+.source-toggle.is-off,
+.source-toggle.disabled {
+  color: var(--g400);
+}
+.chart-toggle {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
 }
 
-.artifact-thumb {
-  flex: none;
-  width: 44px;
+/* ── 미리보기 문서 ── */
+.rp-preview {
+  margin-top: 24px;
+}
+.preview-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   height: 44px;
-  border-radius: 8px;
-  overflow: hidden;
+  color: var(--g400);
+  font-weight: 800;
+}
+.preview-toolbar div {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(99, 120, 160, 0.08);
+  gap: 10px;
 }
 
-.artifact-thumb img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+.report-page {
+  background: #fff;
+  color: #1f2a3c; /* 흰 종이 문서 — 테마와 무관하게 어두운 글씨 고정(제목 포함) */
+  overflow: hidden;
 }
 
-.artifact-ic {
-  font-size: 18px;
+.report-page > header {
+  padding: 34px 44px 22px;
+  border-bottom: 1px solid var(--line);
+}
+.report-page header p {
+  margin: 0 0 12px;
+  color: var(--violet);
+  font-weight: 800;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+.report-page header h2 {
+  margin: 0 0 10px;
+  font-size: 26px;
+  color: #1f2a3c;
+}
+.report-page header span {
+  display: block;
+  color: #6b7280;
+}
+.report-page header .report-date {
+  margin-top: 4px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+.report-page section,
+.report-page footer {
+  padding: 28px 44px 4px;
+}
+.report-page .sec-body p {
+  margin: 0 0 8px;
+  line-height: 1.75;
+}
+.report-page .sec-body ul {
+  margin: 4px 0 8px;
+  padding-left: 20px;
+}
+.report-page .sec-body li {
+  margin: 4px 0;
+  line-height: 1.7;
+}
+.report-page section p {
+  color: #334155;
+  font-size: 15px;
+  line-height: 1.75;
+}
+
+/* 웹 검색 보고서 — 실제 출처 링크 */
+.report-page .src-link {
+  text-decoration: none;
+  border-color: #8fb0ff;
   color: var(--blue);
 }
-
-.artifact-meta {
-  flex: 1;
-  min-width: 0;
+.report-page .src-link:hover {
+  background: rgba(70, 96, 191, 0.08);
 }
 
-.artifact-meta b {
-  display: block;
+/* 보고서 본문 직접 편집(글 수정) — 편집 가능 영역 표시 */
+.report-page [contenteditable="true"] {
+  border-radius: 6px;
+  transition: background 0.12s ease, box-shadow 0.12s ease;
+}
+.report-page [contenteditable="true"]:not(td) {
+  margin: -3px -9px;
+  padding: 3px 9px;
+}
+.report-page [contenteditable="true"]:hover {
+  background: rgba(70, 96, 191, 0.06);
+}
+.report-page [contenteditable="true"]:focus {
+  outline: none;
+  background: #fff;
+  box-shadow: 0 0 0 2px #8fb0ff;
+}
+@media print {
+  .report-page [contenteditable="true"]:hover,
+  .report-page [contenteditable="true"]:focus {
+    background: transparent;
+    box-shadow: none;
+  }
+}
+
+.report-page table {
+  width: calc(100% - 88px);
+  margin: 16px 44px 24px;
+  border-collapse: collapse;
+}
+.report-page th,
+.report-page td {
+  padding: 10px 10px;
+  border-bottom: 1px solid #e5ebf4;
+  text-align: left;
+}
+.report-page th {
+  color: #718097;
+}
+
+.report-page footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 22px;
+}
+.report-page footer b {
+  color: #14b8a6;
+}
+.report-page footer .pill {
+  background: #eef2f8;
+  border-color: #dbe3ef;
+  color: #475569;
+}
+
+/* 보고서 첨부 자료(이미지 + RAG 도출 결과) */
+.report-attachments .report-img-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+.report-attachments figure {
+  margin: 0;
+}
+.report-attachments img {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid #e5ebf4;
+}
+.report-attachments figcaption {
+  margin-top: 6px;
+  color: #718097;
   font-size: 13px;
 }
 
-.artifact-meta small {
-  display: block;
-  color: #8a97ab;
-  font-size: 12px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.report-finding {
+  margin-top: 12px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: #f8f9fc;
+  border: 1px solid #e5ebf4;
 }
-
-.artifact-add {
-  flex: none;
-  padding: 6px 12px;
+.report-finding b {
+  color: #14b8a6;
+}
+.report-finding p {
+  margin: 6px 0 0;
+}
+.report-finding .rf-src {
+  color: #718097;
   font-size: 13px;
-}
-
-/* 썸네일·내용 클릭 → 상세 모달 */
-.artifact-thumb,
-.artifact-meta {
-  cursor: pointer;
-}
-
-.art-modal {
-  max-width: 720px;
-}
-
-/* 사진 상세 모달 본문 여백(기본 modal-body는 패딩이 없음) */
-.art-modal .modal-body {
-  padding: 22px 24px;
 }
 
 /* 섹션 삭제(휴지통) — 섹션에 마우스 올리면 우상단에 나타남 */
 .report-page section {
   position: relative;
 }
-
 .report-page section > .sec-del {
   position: absolute;
   top: 18px;
@@ -372,18 +475,14 @@
   opacity: 0;
   transition: opacity 0.12s ease;
 }
-
 .report-page section:hover > .sec-del,
 .report-page section > .sec-del:focus {
   opacity: 1;
 }
-
 .report-page section > .sec-del:hover {
   background: #ef4444;
   color: #fff;
 }
-
-/* 휴지통에 마우스를 올리면 그 섹션을 하이라이팅(어느 섹션이 지워질지 표시) */
 .report-page section:has(> .sec-del:hover) {
   background: #fff5f5;
   box-shadow: inset 0 0 0 2px #fecaca;
@@ -394,20 +493,16 @@
   .report-page .sec-del {
     display: none !important;
   }
-
   /* PDF 저장 시 화면의 다른 부분은 빼고 미리보기 서류만 출력 */
   body * {
     visibility: hidden !important;
   }
-
   .report-page,
   .report-page * {
     visibility: visible !important;
-    /* 화면에 보이는 색(파란 헤더 등)을 PDF에도 그대로 인쇄 */
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
-
   .report-page {
     position: absolute;
     left: 0;
@@ -416,260 +511,6 @@
     margin: 0;
     box-shadow: none;
   }
-}
-
-.art-image {
-  margin-bottom: 14px;
-  border-radius: 10px;
-  overflow: hidden;
-  border: 1px solid var(--line);
-  background: rgba(99, 120, 160, 0.08);
-}
-
-.art-image img {
-  display: block;
-  width: 100%;
-  max-height: 440px;
-  object-fit: contain;
-}
-
-.art-rows {
-  display: grid;
-  gap: 9px;
-}
-
-.art-row {
-  display: grid;
-  grid-template-columns: 78px 1fr;
-  gap: 12px;
-  align-items: start;
-}
-
-.art-row span {
-  color: #8a97ab;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.art-row b {
-  font-weight: 700;
-  line-height: 1.5;
-  word-break: break-word;
-}
-
-/* 보고서 본문에 들어가는 첨부 자료(이미지 + RAG 도출 결과) */
-.report-attachments .report-img-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 14px;
-}
-
-.report-attachments figure {
-  margin: 0;
-}
-
-.report-attachments img {
-  width: 100%;
-  border-radius: 10px;
-  border: 1px solid #e5ebf4;
-}
-
-.report-attachments figcaption {
-  margin-top: 6px;
-  color: #718097;
-  font-size: 13px;
-}
-
-.report-finding {
-  margin-top: 12px;
-  padding: 14px 16px;
-  border-radius: 10px;
-  background: rgba(99, 120, 160, 0.07);
-  border: 1px solid #e5ebf4;
-}
-
-.report-finding b {
-  color: #14b8a6;
-}
-
-.report-finding p {
-  margin: 6px 0 0;
-}
-
-.report-finding .rf-src {
-  color: #718097;
-  font-size: 13px;
-}
-
-.source-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  min-height: 42px;
-  color: #111827;
-  font-weight: 700;
-}
-
-.source-toggle.is-off,
-.source-toggle.disabled {
-  color: #98a5ba;
-}
-
-.report-form > .btn {
-  display: flex;
-  width: 100%;
-}
-
-.preview-zone {
-  padding: 0 26px 36px;
-  overflow-y: auto; /* 미리보기 독립 스크롤(구성 패널과 따로 움직임) */
-}
-
-/* 미리보기 도구막대는 스크롤해도 위에 고정 */
-.preview-toolbar {
-  position: sticky;
-  top: 0;
-  z-index: 2;
-  background: var(--bg);
-}
-
-.preview-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  height: 54px;
-  color: #718097;
-  font-weight: 800;
-}
-
-.preview-toolbar div {
-  display: flex;
-  gap: 10px;
-}
-
-.report-page {
-  background: #fff;
-  color: #1f2a3c; /* 흰 종이 문서 — 테마와 무관하게 어두운 글씨 고정(제목 포함) */
-  width: min(760px, 100%);
-  margin: 24px auto 0;
-  overflow: hidden;
-}
-
-.report-page > header {
-  padding: 34px 44px;
-  background: #183f8f;
-  color: #fff;
-}
-
-.report-page header p {
-  margin: 0 0 10px;
-  color: #34d3cc;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-}
-
-.report-page header h2 {
-  margin: 0 0 14px;
-  font-size: 26px;
-}
-
-.report-page header span {
-  display: block;
-  color: #aebee0;
-}
-
-/* 작성일 — 부제 아래 한 줄, 살짝 더 옅게. */
-.report-page header .report-date {
-  margin-top: 6px;
-  font-size: 13px;
-  font-weight: 700;
-  color: #8ea3ce;
-}
-
-/* 헤더는 어두운 배경 — 편집 시 흰 글자가 흰 배경에 묻히지 않도록 반투명 처리 */
-.report-page header [contenteditable="true"]:hover {
-  background: rgba(255, 255, 255, 0.14);
-}
-
-.report-page header [contenteditable="true"]:focus {
-  background: rgba(255, 255, 255, 0.18);
-  color: #fff;
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.65);
-}
-
-.report-page section,
-.report-page footer {
-  padding: 28px 44px 4px;
-}
-
-.report-page section p {
-  color: #334155;
-  font-size: 15px;
-  line-height: 1.75;
-}
-
-.line-chart {
-  height: 128px;
-}
-
-.line-chart::after {
-  content: "";
-  display: block;
-  height: 58px;
-  margin-top: 16px;
-  background:
-    linear-gradient(
-      140deg,
-      transparent 0 30%,
-      #2563ff 31% 33%,
-      transparent 34%
-    ),
-    linear-gradient(40deg, transparent 0 50%, #14b8a6 51% 53%, transparent 54%);
-  opacity: 0.35;
-}
-
-.line-chart div {
-  display: flex;
-  justify-content: space-around;
-  color: #7f8ba1;
-  font-weight: 800;
-}
-
-.report-page table {
-  width: calc(100% - 88px);
-  margin: 16px 44px 24px;
-  border-collapse: collapse;
-}
-
-.report-page th,
-.report-page td {
-  padding: 10px 10px;
-  border-bottom: 1px solid #e5ebf4;
-  text-align: left;
-}
-
-.report-page th {
-  color: #718097;
-}
-
-.report-page footer {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  padding-bottom: 22px;
-}
-
-.report-page footer b {
-  color: #14b8a6;
-}
-
-/* 출처 칩 — 문서는 항상 흰 종이라 테마와 무관하게 밝게 고정(다크모드에서 까맣게 보이던 것 수정) */
-.report-page footer .pill {
-  background: #eef2f8;
-  border-color: #dbe3ef;
-  color: #475569;
 }
 
 /* 보고서 로딩/빈 상태 — 진입 시 가짜 보고서 대신 '로딩 중' 표시 */
@@ -685,7 +526,6 @@
   text-align: center;
   color: #64748b;
 }
-
 .report-loading p,
 .report-empty p {
   margin: 0;
@@ -693,14 +533,12 @@
   font-weight: 700;
   color: #334155;
 }
-
 .report-loading small,
 .report-empty p:last-child:not(:first-child) {
   font-size: 13px;
   color: #94a3b8;
   font-weight: 600;
 }
-
 .report-spinner {
   width: 34px;
   height: 34px;
@@ -709,31 +547,52 @@
   border-radius: 50%;
   animation: report-spin 0.8s linear infinite;
 }
-
 @keyframes report-spin {
   to {
     transform: rotate(360deg);
   }
 }
 
-@media (max-width: 1200px) {
-  /* 좁은 화면에선 한 열로 쌓이며 전체가 함께 스크롤(분리 스크롤 해제) */
-  .report-layout {
-    grid-template-columns: 1fr;
-    height: auto;
-    overflow: visible;
-  }
-  .report-form,
-  .preview-zone {
-    overflow-y: visible;
-  }
-  .preview-toolbar {
-    position: static;
+/* ── AI 수정(문서 아래 상시 입력) ── */
+.rp-ai-edit {
+  margin-top: 24px;
+  padding: 20px 24px;
+}
+.rp-ai-edit h3 {
+  margin: 0 0 12px;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--g900);
+}
+.rp-ai-edit-row {
+  display: flex;
+  gap: 10px;
+}
+.rp-ai-edit-row input {
+  flex: 1;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+}
+.rp-ai-edit-row input:focus {
+  outline: none;
+  border-color: var(--violet);
+}
+.rp-ai-edit-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+@media (max-width: 900px) {
+  .report-thumbs {
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
-/* 다크 모드 — 보고서 구성 패널 텍스트 보정(문서는 흰 종이 유지) */
-[data-theme="dark"] .date-field input { color: var(--text); }
-[data-theme="dark"] .date-field > span,
-[data-theme="dark"] .report-form h3 { color: var(--muted); }
-[data-theme="dark"] .artifact-meta b { color: var(--text); }
+/* 다크 모드 — 문서는 흰 종이 그대로, 주변 패널만 보정(자동으로 var() 토큰을 따르므로 대부분 불필요). */

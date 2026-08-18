@@ -204,8 +204,8 @@
 }
 /* 검수자(팀장) 계급 태그 — 대표(파랑)와 구분되는 보라 톤. */
 .ad-tag.rv {
-  background: rgba(139, 92, 246, 0.16);
-  color: #7c53e6;
+  background: var(--violet-weak);
+  color: var(--violet-strong);
 }
 
 .ad-badge {
@@ -253,13 +253,13 @@
 }
 /* 검수자 지정(보라) / 해제(보라 채움) 버튼. */
 .ad-btn.rv:hover {
-  border-color: #7c53e6;
-  color: #7c53e6;
+  border-color: var(--violet);
+  color: var(--violet);
 }
 .ad-btn.rv-on {
-  border-color: #7c53e6;
-  background: rgba(139, 92, 246, 0.12);
-  color: #7c53e6;
+  border-color: var(--violet);
+  background: var(--violet-weak);
+  color: var(--violet-strong);
 }
 
 .ad-empty,

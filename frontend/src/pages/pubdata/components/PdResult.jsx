@@ -1,60 +1,117 @@
-// 검색 결과 — AI 요약 + 관련 데이터셋(바닐라 render/renderDatasets 재현).
-// (막대차트는 실데이터 미연계로 가짜 수치라 제거 — 실제 데이터셋 링크만 남긴다.)
+// 검색 결과 — 보라 그라데이션 요약 + AI 인사이트 카드 + 통계 랭킹 + 사용 데이터(목업 스타일).
 // React 가 텍스트를 자동 이스케이프하므로 바닐라의 escapeHtml 은 불필요.
 import { isRealAI } from '../../../lib/aiBackend.js'
 
-export default function PdResult({ data, onToReport }) {
+export default function PdResult({ data, onToReport, onCompare }) {
+  const stats = data.stats || {}
+  const labels = stats.labels || []
+  const values = stats.values || []
+  const max = Math.max(1, ...values)
+
   return (
-    <div className="pd-result">
-      <div className="pd-summary card">
-        <div className="pd-summary-head">
-          <h3>
-            ✣ AI 통계 요약{' '}
-            <span className="pd-badge">{isRealAI(data.summary_backend) ? 'AI 생성' : '템플릿'}</span>
-          </h3>
-          <span className="pd-domain">{data.domain}</span>
+    <>
+      <div className="px-gradient pd-summary">
+        <div className="pd-summary-top">
+          <span className="px-badge v">{isRealAI(data.summary_backend) ? 'AI 생성' : '템플릿'}</span>
+          <span className="px-badge g">{data.domain}</span>
         </div>
-        <p className="pd-summary-text">{data.summary}</p>
-        <ul className="pd-insights">
-          {(data.insights || []).map((t, i) => (
-            <li key={i}>{t}</li>
-          ))}
-        </ul>
-        <div className="pd-summary-actions">
-          <button
-            className="btn flat pd-to-report"
-            type="button"
-            title="이 통계 요약을 보고서 초안으로 보냅니다"
-            onClick={onToReport}
-          >
-            보고서로 보내기 →
-          </button>
-          <a className="btn flat pd-portal" href={data.portal_url} target="_blank" rel="noopener">
-            data.go.kr에서 열기 ↗
-          </a>
+        <div className="pd-summary-main">
+          {labels.length > 0 && (
+            <p className="pd-summary-figure">
+              {labels.length}
+              <span>곳</span>
+            </p>
+          )}
+          <p className="pd-summary-text">{data.summary}</p>
+        </div>
+        <div className="pd-summary-aside">
+          <div className="pd-summary-stat">
+            <b>{data.dataset_matched ?? data.datasets.length}</b>
+            <span>관련 데이터셋</span>
+          </div>
+          <div className="pd-summary-stat">
+            <b>{stats.sample === false ? '실시간' : '샘플'}</b>
+            <span>데이터 상태</span>
+          </div>
         </div>
       </div>
 
-      <div className="pd-datasets">
-        <h2 className="section-title">
-          ▤ 관련 공공데이터셋 <small>{(data.datasets || []).length} sets · data.go.kr</small>
-        </h2>
-        <div className="pd-ds-list">
-          {(data.datasets || []).map((d, i) => (
-            <a className="pd-ds card" key={i} href={d.url} target="_blank" rel="noopener">
-              <div className="pd-ds-main">
-                <b>{d.title}</b>
-                <p>{d.provider} 제공</p>
+      {(data.insights || []).length > 0 && (
+        <>
+          <div className="px-section-head">
+            <h3>
+              새 소식 <span className="count">AI가 정리했어요</span>
+            </h3>
+          </div>
+          <div className="px-softcards">
+            {data.insights.map((t, i) => (
+              <div className="px-softcard" key={i}>
+                <span className="px-softcard-no">{i + 1}</span>
+                <p>{t}</p>
               </div>
-              <div className="pd-ds-meta">
-                <span className="pd-tag">{d.category}</span>
-                <span className="pd-fmt">{d.format}</span>
+            ))}
+          </div>
+        </>
+      )}
+
+      {labels.length > 0 && (
+        <>
+          <div className="px-section-head">
+            <h3>{stats.title || '통계'}</h3>
+            <span className="px-section-aside">{stats.dataset || data.domain} 기준</span>
+          </div>
+          <div className="px-ranklist">
+            {labels.map((label, i) => (
+              <div className="px-rank" key={label + i}>
+                <span className={'px-rank-no' + (i === 0 ? ' top' : '')}>{i + 1}</span>
+                <div className="px-rank-main">
+                  <b>{label}</b>
+                  <div className="px-rank-bar">
+                    <span
+                      className={i === 0 ? undefined : 'mute'}
+                      style={{ width: `${Math.round((values[i] / max) * 100)}%` }}
+                    />
+                  </div>
+                </div>
+                <span className="px-rank-val">
+                  {values[i]}
+                  {stats.unit || ''}
+                </span>
               </div>
-              <span className="pd-ds-open">↗</span>
-            </a>
-          ))}
-        </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      <div className="px-section-head">
+        <h3>
+          사용 데이터 <span className="count">{(data.datasets || []).length}개</span>
+        </h3>
       </div>
-    </div>
+      <div className="pd-ds-list">
+        {(data.datasets || []).map((d, i) => (
+          <a className="card pd-ds" key={i} href={d.url} target="_blank" rel="noopener">
+            <span className="pd-ds-ic" aria-hidden="true">
+              ⌂
+            </span>
+            <div className="pd-ds-main">
+              <b>{d.title}</b>
+              <p>{d.provider}</p>
+              <span className="pd-ds-open">원본 열기 ↗</span>
+            </div>
+            <span className="pd-fmt-badge">{d.format}</span>
+          </a>
+        ))}
+      </div>
+
+      <div className="px-bottomcta">
+        <button className="btn lg" type="button" onClick={onCompare}>
+          우리 문서와 비교
+        </button>
+        <button className="btn primary grow lg" type="button" onClick={onToReport}>
+          이 데이터로 보고서 만들기
+        </button>
+      </div>
+    </>
   )
 }

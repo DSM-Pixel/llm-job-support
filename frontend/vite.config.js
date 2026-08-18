@@ -21,6 +21,8 @@ export default defineConfig({
         rag: resolve(__dirname, 'rag.html'),
         pubdata: resolve(__dirname, 'pubdata.html'),
         labeling: resolve(__dirname, 'labeling.html'),
+        photo: resolve(__dirname, 'photo.html'),
+        workflow: resolve(__dirname, 'workflow.html'),
         report: resolve(__dirname, 'report.html'),
         data: resolve(__dirname, 'data.html'),
         agent: resolve(__dirname, 'agent.html'),

@@ -12,8 +12,11 @@ import {
 
 // 분석 시나리오(프리셋) — 바닐라 radio-list 순서 고정.
 const PRESETS = ['도로 파손/포트홀 찾기', '이미지 전체 설명', '객체 목록 뽑기', '이상 상황 탐지']
+// 프롬프트 입력칸 아래 예시 칩 — 클릭하면 그 문구로 채운다(목업 재현, '박스로 찾기' 예시).
+const EXAMPLES = ['도로 위 문제를 찾아줘', '균열까지 모두 표시해줘', '번호판은 가려줘']
 
-// 왼쪽 패널 하단 — 프리셋/직접질문 + 분석하기. 활성 이미지를 분석해 결과를 저장.
+// 캔버스 카드 하단 — 프롬프트 입력 + 예시 칩 + 분석 시나리오 + 분석하기.
+// 활성 이미지를 분석해 결과를 저장(부모의 label-panel 안에서 렌더 — .label-panel .analyze-btn).
 export default function AnalyzePanel({ active, activeIdx, onResult }) {
   const [presetIdx, setPresetIdx] = useState(0)
   const [prompt, setPrompt] = useState('')
@@ -86,36 +89,48 @@ export default function AnalyzePanel({ active, activeIdx, onResult }) {
   }
 
   return (
-    <>
-      <h3>분석 시나리오 (프리셋)</h3>
-      <div className="radio-list">
-        {PRESETS.map((p, i) => (
-          <label
-            key={p}
-            className={i === presetIdx ? 'active' : ''}
-            onClick={() => setPresetIdx(i)}
-          >
-            <span></span>
-            {p}
-          </label>
+    <div className="prompt-row">
+      <div className="prompt-line">
+        <input
+          type="text"
+          value={prompt}
+          placeholder="도로 위 문제를 찾아줘"
+          onChange={(e) => setPrompt(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && analyze()}
+        />
+        <button
+          className={'btn primary analyze-btn' + (busy ? ' is-loading' : '')}
+          type="button"
+          disabled={busy}
+          onClick={analyze}
+        >
+          {busy ? '분석 중' : '✣ AI로 찾기'}
+        </button>
+      </div>
+
+      <div className="prompt-chips">
+        {EXAMPLES.map((ex) => (
+          <button key={ex} type="button" className="pill prompt-chip" onClick={() => setPrompt(ex)}>
+            {ex}
+          </button>
         ))}
       </div>
-      <h3>
-        직접 질문 <small>(선택 · 입력 시 프리셋 대체)</small>
-      </h3>
-      <textarea
-        placeholder="예: 이 사진에서 보행자에게 위험한 요소를 찾아줘"
-        value={prompt}
-        onChange={(e) => setPrompt(e.target.value)}
-      ></textarea>
-      <button
-        className={'btn primary wide analyze-btn' + (busy ? ' is-loading' : '')}
-        type="button"
-        disabled={busy}
-        onClick={analyze}
-      >
-        {busy ? '분석 중' : '✣ 분석하기'}
-      </button>
-    </>
+
+      <div className="preset-row">
+        <span className="preset-label">분석 시나리오</span>
+        <div className="preset-pills">
+          {PRESETS.map((p, i) => (
+            <button
+              key={p}
+              type="button"
+              className={'pill' + (i === presetIdx ? ' active' : '')}
+              onClick={() => setPresetIdx(i)}
+            >
+              {p}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
   )
 }

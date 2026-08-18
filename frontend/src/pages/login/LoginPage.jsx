@@ -64,9 +64,9 @@ export default function LoginPage() {
   return (
     <div className="lg-page">
       <header className="lg-top">
-        <span className="lg-logo">
-          <img className="logo-img" src="/assets/img/logomark-transparent.png" alt="" />
-          GNSoft AI 플랫폼
+        <span className="topnav-brand">
+          <span className="brand-mark">◈</span>
+          Pixel
         </span>
       </header>
 
@@ -74,8 +74,8 @@ export default function LoginPage() {
         <div className="lg-card">
           {/* 브랜드: 로고 + 서비스명 */}
           <div className="lg-brand">
-            <img className="lg-brand-mark" src="/assets/img/logomark-transparent.png" alt="" />
-            <h1 className="lg-brand-name">GNSoft AI 플랫폼</h1>
+            <span className="lg-brand-mark">◈</span>
+            <h1 className="lg-brand-name">Pixel</h1>
             <p className="lg-brand-sub">로그인하고 프로젝트를 시작하세요</p>
           </div>
 

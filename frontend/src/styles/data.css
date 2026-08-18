@@ -13,14 +13,14 @@
   border: 0;
   border-radius: 6px;
   background: transparent;
-  color: #64748b;
+  color: var(--g500);
   font-size: 16px;
   font-weight: 800;
   cursor: pointer;
 }
 
 .row-menu:hover {
-  background: rgba(120, 140, 180, 0.16);
+  background: var(--g100);
   color: var(--text);
 }
 
@@ -53,7 +53,7 @@
 }
 
 .row-pop button:hover {
-  background: rgba(120, 140, 180, 0.12);
+  background: var(--g50);
 }
 
 .row-pop button[data-act="delete"] {
@@ -61,7 +61,7 @@
 }
 
 .preview-body .field.row {
-  border-bottom: 1px solid #eef2f6;
+  border-bottom: 1px solid var(--line);
   padding-bottom: 8px;
 }
 
@@ -142,7 +142,7 @@
   object-fit: contain;
   border-radius: 8px;
   border: 1px solid var(--line);
-  background: rgba(120, 140, 170, 0.08);
+  background: var(--g50);
 }
 
 .preview-note {
@@ -157,7 +157,7 @@
   line-height: 1.6;
   text-align: center;
   border-radius: 8px;
-  background: rgba(120, 140, 170, 0.08);
+  background: var(--g50);
 }
 
 /* 선택된 필터 칩을 또렷하게(채운 파랑) 구분 */
@@ -175,15 +175,14 @@ table {
 th,
 td {
   padding: 12px 16px;
-  /* 행 구분선 — 흰색처럼 튀지 않게 은은한 반투명 회색(라이트·다크 공통) */
-  border-bottom: 1px solid rgba(120, 140, 170, 0.16);
+  border-bottom: 1px solid var(--line);
   color: var(--text);
   text-align: left;
   vertical-align: middle;
 }
 
 th {
-  background: rgba(99, 120, 170, 0.13);
+  background: var(--g50);
   color: var(--muted);
   font-weight: 800;
 }

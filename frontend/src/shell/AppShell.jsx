@@ -1,11 +1,10 @@
 import { useState } from 'react'
 import { getSettings } from '../lib/storage.js'
 import { ShellContext } from './ShellContext.js'
-import Sidebar from './Sidebar.jsx'
+import TopNav from './TopNav.jsx'
 import SettingsModal from './SettingsModal.jsx'
 import HistoryModal from './HistoryModal.jsx'
 import AiDock from './AiDock.jsx'
-import AiJobIndicator from './AiJobIndicator.jsx'
 
 // 공용 앱 셸 — 8개 내부 페이지의 공통 뼈대(사이드바 + 상단바 + 설정/기록/AI 모달).
 // 기존 web/pages/*.html 의 .app > .sidebar + main.main 구조를 그대로 재현한다.
@@ -29,16 +28,13 @@ export default function AppShell({ title, activeNav, children, askHandler = null
   return (
     <ShellContext.Provider value={ctx}>
       <div className="app">
-        <Sidebar activeNav={activeNav} />
+        <TopNav activeNav={activeNav} />
         <main className="main">
-          <header className="topbar">
-            <h1>{title}</h1>
-            <div className="top-actions">
-              <AiJobIndicator />
-              <span>?</span>
-              <span>♧</span>
-            </div>
-          </header>
+          {title && (
+            <header className="topbar">
+              <h1>{title}</h1>
+            </header>
+          )}
           {children}
         </main>
       </div>

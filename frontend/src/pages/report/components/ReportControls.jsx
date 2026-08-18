@@ -1,87 +1,35 @@
 import { useRef } from 'react'
 import ArtifactPicker from './ArtifactPicker.jsx'
 import TemplateUpload from './TemplateUpload.jsx'
-import { TYPES } from '../reportTypes.js'
 
-// 왼쪽 '보고서 구성' 패널 — 유형·기간·차트 토글·자료 첨부·생성 버튼.
+// '자동 자료' 패널 — 내 작업에서 가져오기 + 사진 직접 첨부 + 양식 삽입 + 통계 차트 포함 여부.
+// 보고서 유형·기간·초안 생성 버튼은 ReportHero 로 옮겨갔다(같은 상태를 그대로 받아 쓴다).
 export default function ReportControls({
-  activeIndex,
-  onSelectType,
-  start,
-  end,
-  onStart,
-  onEnd,
-  chartOff,
-  onToggleChart,
   artifacts,
   onAddArtifact,
   onOpenArtifact,
   reportItems,
   onAddImages,
   onRemoveThumb,
-  onGenerate,
-  busy,
+  chartOff,
+  onToggleChart,
   period,
   includeChart,
   onTemplateRender,
 }) {
   const imgInput = useRef(null)
-  const stagedCount = reportItems.length
 
   return (
-    <aside className="report-form">
-      <div className="report-form-head">
-        <h2>◫ 보고서 구성</h2>
+    <aside className="card rp-materials">
+      <div className="rp-materials-head">
+        <h3>자동 자료</h3>
         <TemplateUpload period={period} includeChart={includeChart} onRender={onTemplateRender} />
       </div>
       <p className="report-hint">
-        내가 웹에서 한 활동(질의·검색·이미지 분석·라벨·업로드)을 분석·통계 내어 보고서를 만듭니다.
-      </p>
-      <h3>보고서 유형</h3>
-      <div className="select-list">
-        {TYPES.map((t, i) => (
-          <button
-            key={t}
-            className={i === activeIndex ? 'active' : undefined}
-            type="button"
-            onClick={() => onSelectType(i)}
-          >
-            {i === 0 && <i className="chart-icon" aria-hidden="true"></i>}
-            {t}
-          </button>
-        ))}
-      </div>
-      <h3>기간</h3>
-      <div className="date-range">
-        <label className="date-field">
-          <span>시작일</span>
-          <input
-            type="date"
-            className="date-start"
-            value={start}
-            onChange={(e) => onStart(e.target.value)}
-          />
-        </label>
-        <label className="date-field">
-          <span>종료일</span>
-          <input
-            type="date"
-            className="date-end"
-            value={end}
-            onChange={(e) => onEnd(e.target.value)}
-          />
-        </label>
-      </div>
-      <div className={'source-toggle chart-toggle' + (chartOff ? ' is-off' : '')}>
-        <b>통계 차트 포함</b>
-        <span className={'switch' + (chartOff ? ' off' : '')} onClick={onToggleChart}></span>
-      </div>
-      <h3>내 작업에서 가져오기</h3>
-      <p className="report-hint">
-        분석·라벨한 이미지와 RAG로 도출한 결과를 보고서에 넣을 수 있습니다.
+        분석·라벨한 이미지와 RAG로 도출한 결과를 보고서에 넣거나, 사진을 직접 첨부할 수 있습니다.
       </p>
       <ArtifactPicker artifacts={artifacts} onAdd={onAddArtifact} onOpen={onOpenArtifact} />
-      <h3>직접 사진 첨부</h3>
+
       <button
         className="btn add-report-image"
         type="button"
@@ -119,19 +67,11 @@ export default function ReportControls({
           ) : null,
         )}
       </div>
-      <p className="staged-note" hidden={stagedCount === 0}>
-        {stagedCount
-          ? `추가 예정 자료 ${stagedCount}건 — ‘보고서 생성’을 누르면 본문에 반영됩니다`
-          : ''}
-      </p>
-      <button
-        className={'btn primary wide' + (busy.active ? ' is-loading' : '')}
-        type="button"
-        disabled={busy.active}
-        onClick={onGenerate}
-      >
-        {busy.active ? busy.text : '✣ 보고서 생성'}
-      </button>
+
+      <div className={'source-toggle chart-toggle' + (chartOff ? ' is-off' : '')}>
+        <b>통계 차트 포함</b>
+        <span className={'switch' + (chartOff ? ' off' : '')} onClick={onToggleChart}></span>
+      </div>
     </aside>
   )
 }

@@ -1,0 +1,143 @@
+/* 업무 절차(파이프라인) 페이지 전용 스타일 — 공통 프리미티브(common.css)를 우선 활용. */
+
+/* ── 히어로 — 목표 입력 ─────────────────────────────────────────── */
+.wf-hero-eyebrow {
+  margin: 0 0 10px;
+  color: var(--g300);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.wf-input-row {
+  display: flex;
+  gap: 10px;
+}
+
+.wf-input {
+  flex: 1;
+  min-width: 0;
+  height: 52px;
+  padding: 0 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 15px;
+  outline: none;
+}
+
+.wf-input:focus {
+  border-color: var(--violet);
+}
+
+.wf-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.wf-chip {
+  padding: 7px 14px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--g600);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.13s ease, color 0.13s ease;
+}
+
+.wf-chip:hover {
+  border-color: var(--violet);
+  color: var(--violet);
+}
+
+/* ── 스탯 행 + 우측 실행 버튼 ───────────────────────────────────── */
+.wf-stats-action {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+/* ── 단계 목록 ──────────────────────────────────────────────────── */
+.wf-steps {
+  list-style: none;
+  margin: 0;
+  padding: 8px 4px 0;
+}
+
+.wf-step {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 20px 8px;
+  border-top: 1px solid var(--line);
+}
+
+.wf-step:first-child {
+  border-top: 0;
+}
+
+.wf-step-num {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border: 1px solid var(--g200);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--g500);
+  font-size: 14px;
+  font-weight: 800;
+  transition: background 0.13s ease, border-color 0.13s ease, color 0.13s ease;
+}
+
+.wf-step-num.done {
+  border-color: var(--violet);
+  background: var(--violet);
+  color: #fff;
+}
+
+.wf-step-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.wf-step-body h4 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--g900);
+}
+
+.wf-step-body p {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--g500);
+}
+
+.wf-step-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+}
+
+@media (max-width: 720px) {
+  .wf-input-row {
+    flex-direction: column;
+  }
+  .wf-step {
+    flex-wrap: wrap;
+  }
+  .wf-step-actions {
+    width: 100%;
+    padding-left: 52px;
+    justify-content: space-between;
+  }
+}

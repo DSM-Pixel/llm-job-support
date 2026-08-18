@@ -5,9 +5,11 @@ import { getActivity, getArtifacts } from '../../lib/activity.js'
 import { reviseReport } from './reportApi.js'
 import { startJob, takeJobResult } from '../../lib/aijob.js'
 import { useReportDoc } from './useReportDoc.js'
+import ReportHero from './components/ReportHero.jsx'
 import ReportControls from './components/ReportControls.jsx'
 import { TYPES } from './reportTypes.js'
 import ReportDocument from './components/ReportDocument.jsx'
+import ReportAiEdit from './components/ReportAiEdit.jsx'
 import ArtifactModal from './components/ArtifactModal.jsx'
 import SecDeleteModal from './components/SecDeleteModal.jsx'
 
@@ -195,6 +197,16 @@ export default function ReportPage() {
 
   const removeThumb = (i) => setReportItems((prev) => prev.filter((_, idx) => idx !== i))
 
+  // 하단 CTA — 본문 복사(미리보기 툴바의 복사와 동일 동작, 문서 아래에서도 바로 쓸 수 있게).
+  const copyBody = async () => {
+    try {
+      await navigator.clipboard.writeText(doc.readText())
+      toast('보고서 내용이 복사되었습니다')
+    } catch {
+      toast('복사를 지원하지 않는 브라우저입니다')
+    }
+  }
+
   // AI 대화 패널 = 보고서 편집기. 수정 지시면 본문을 다시 쓰고, 질문이면 답한다.
   const reviseHandler = async (q) => {
     const r = await reviseReport({ content: docRef.current.innerText, instruction: q })
@@ -212,20 +224,40 @@ export default function ReportPage() {
 
   return (
     <>
-      <AppShell
-        title="요약·보고서 생성"
-        activeNav="report"
-        askHandler={reviseHandler}
-        aiScope={AI_SCOPE}
-      >
-        <section className="report-layout">
-          <ReportControls
+      <AppShell activeNav="report" askHandler={reviseHandler} aiScope={AI_SCOPE}>
+        <section className="content rp-layout">
+          <ReportHero
             activeIndex={activeIndex}
             onSelectType={setActiveIndex}
             start={start}
             end={end}
             onStart={setStart}
             onEnd={setEnd}
+            reportItems={reportItems}
+            onGenerate={() => generateActivity(true)}
+            busy={busy}
+          />
+
+          <div className="px-stats rp-stats">
+            <div className="px-stat">
+              <p className="px-stat-label">가져올 산출물</p>
+              <div className="px-stat-value">{artifacts.length}</div>
+            </div>
+            <div className="px-stat">
+              <p className="px-stat-label">첨부 예정 자료</p>
+              <div className="px-stat-value">{reportItems.length}</div>
+            </div>
+            <div className="px-stat">
+              <p className="px-stat-label">문서 섹션</p>
+              <div className="px-stat-value">{lastReportRef.current?.sections?.length || 0}</div>
+            </div>
+            <div className="px-stat">
+              <p className="px-stat-label">대상 기간</p>
+              <div className="px-stat-value text">{period}</div>
+            </div>
+          </div>
+
+          <ReportControls
             chartOff={chartOff}
             onToggleChart={() => setChartOff((v) => !v)}
             artifacts={artifacts}
@@ -234,13 +266,23 @@ export default function ReportPage() {
             reportItems={reportItems}
             onAddImages={addImages}
             onRemoveThumb={removeThumb}
-            onGenerate={() => generateActivity(true)}
-            busy={busy}
             period={period}
             includeChart={includeChart}
             onTemplateRender={renderReport}
           />
+
           <ReportDocument docRef={docRef} readText={doc.readText} getReport={() => lastReportRef.current} />
+
+          <ReportAiEdit onAsk={reviseHandler} />
+
+          <div className="px-bottomcta">
+            <button className="btn lg" type="button" onClick={copyBody}>
+              본문 복사
+            </button>
+            <button className="btn primary grow lg" type="button" onClick={() => window.print()}>
+              PDF로 다운로드
+            </button>
+          </div>
         </section>
       </AppShell>
 

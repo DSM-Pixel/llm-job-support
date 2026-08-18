@@ -1,26 +1,23 @@
 import { useCallback, useEffect, useRef } from 'react'
-import { toast } from '../../../lib/toast.js'
 import { escapeHtml } from '../labelingApi.js'
-import ImageStrip from './ImageStrip.jsx'
 
-// 왼쪽 패널의 미리보기 + 갤러리 + 업로드 영역 — 바닐라 label-panel 상단부 재현.
+// 큰 캔버스 카드 — 목업 '라벨링 시작하기'의 메인 캔버스. 실제 박스 그리기/AI 탐지/편집은
+// 클릭 시 여는 큰 모달(LabelingModal + CanvasStage)에서 하고, 여기서는 저장된 박스를
+// 미리보기 위에 겹쳐 보여주는 역할만 한다(바닐라 road-preview 재현, 시각만 확대).
 export default function PreviewArea({
-  images,
-  activeIdx,
   active,
-  onSelect,
-  onRemove,
-  onAddImages,
-  onBatch,
+  activeIdx,
+  totalImages,
   onOpenModal,
-  batchBusy,
+  onEmptyClick,
+  onRemoveActive,
+  modelName,
+  modelSuffix,
+  onOpenSettings,
 }) {
-  const fileRef = useRef(null)
-  const folderRef = useRef(null)
   const stageRef = useRef(null) // .road-preview
   const imgRef = useRef(null) // .preview-img
   const boxesRef = useRef(null) // .preview-boxes
-  const hasUpload = images.some((im) => im.file)
 
   // 박스 오버레이를 '실제 렌더된 이미지 영역'(object-fit:contain 결과)에 맞춘다.
   // 큰 캔버스(CanvasStage.fitBoxes)와 동일한 방식 → 두 화면의 박스 위치가 일치한다.
@@ -53,7 +50,7 @@ export default function PreviewArea({
     }
   }, [fitBoxes, active.url, active.savedBoxes])
 
-  // 미리보기(작은 썸네일) 위 박스 오버레이 — 저장된 박스를 보여준다.
+  // 미리보기(큰 캔버스) 위 박스 오버레이 — 저장된 박스를 보여준다.
   const previewBoxesHtml = active.savedBoxes
     .map(
       (b) =>
@@ -62,89 +59,85 @@ export default function PreviewArea({
     .join('')
 
   return (
-    <>
+    <div
+      className={'road-preview' + (active.url ? ' has-image' : '')}
+      title="클릭하면 크게 열어 라벨링합니다"
+      role="button"
+      ref={stageRef}
+      onClick={() => (active.url ? onOpenModal() : onEmptyClick())}
+    >
+      <img
+        className="preview-img"
+        alt="분석 대상 이미지"
+        hidden={!active.url}
+        ref={imgRef}
+        onLoad={fitBoxes}
+        {...(active.url ? { src: active.url } : {})}
+      />
       <div
-        className={'road-preview' + (active.url ? ' has-image' : '')}
-        title="클릭하면 크게 열어 라벨링합니다"
-        role="button"
-        ref={stageRef}
-        onClick={() => (active.url ? onOpenModal() : fileRef.current?.click())}
-      >
-        <img
-          className="preview-img"
-          alt="분석 대상 이미지"
-          hidden={!active.url}
-          ref={imgRef}
-          onLoad={fitBoxes}
-          {...(active.url ? { src: active.url } : {})}
-        />
-        <div className="road"></div>
-        <span className="lane"></span>
-        <div
-          className="preview-boxes"
-          ref={boxesRef}
-          dangerouslySetInnerHTML={{ __html: previewBoxesHtml }}
-        />
-      </div>
-      <p className="sample">
-        현재: <span className="sample-name">{active.name}</span>{' '}
-        <span className="image-count">이미지 {images.length}개</span>
-      </p>
-      <div className="image-actions">
-        <button className="btn flat add-images" type="button" onClick={() => fileRef.current?.click()}>
-          ＋ 사진 추가
-        </button>
-        <button
-          className="btn flat add-folder"
-          type="button"
-          onClick={() => folderRef.current?.click()}
-        >
-          폴더 선택
-        </button>
-      </div>
-      <input
-        type="file"
-        className="image-input"
-        accept="image/*"
-        multiple
-        hidden
-        ref={fileRef}
-        onChange={() => {
-          if (fileRef.current.files?.length) onAddImages(fileRef.current.files)
-          fileRef.current.value = ''
-        }}
+        className="preview-boxes"
+        ref={boxesRef}
+        dangerouslySetInnerHTML={{ __html: previewBoxesHtml }}
       />
-      <input
-        type="file"
-        className="folder-input"
-        accept="image/*"
-        webkitdirectory=""
-        hidden
-        ref={folderRef}
-        onChange={() => {
-          if (folderRef.current.files?.length) onAddImages(folderRef.current.files)
-          folderRef.current.value = ''
-        }}
-      />
-      <ImageStrip images={images} activeIdx={activeIdx} onSelect={onSelect} onRemove={onRemove} />
-      {hasUpload && (
-        <button
-          className={'btn primary wide batch-label' + (batchBusy ? ' is-loading' : '')}
-          type="button"
-          disabled={batchBusy}
-          onClick={() => {
-            const targets = images.filter((im) => im.file)
-            if (!targets.length) return toast('폴더로 사진을 먼저 추가하세요')
-            onBatch()
-          }}
-        >
-          {batchBusy || '전체 AI 라벨링'}
-        </button>
+
+      {!active.url && (
+        <div className="preview-empty">
+          <span className="preview-empty-ic">🖼</span>
+          도로 파손 사진을 끌어다 놓으세요
+        </div>
       )}
-      <button className="btn flat wide open-label-modal" type="button" onClick={onOpenModal}>
-        ⛶ 크게 열어 라벨링
-      </button>
-      <hr className="panel-sep" />
-    </>
+
+      <div className="preview-file-badge">
+        <span className="sample-name">{active.name}</span>
+        <span className="preview-file-pos">
+          {activeIdx + 1} / {totalImages}
+        </span>
+      </div>
+
+      <div className="preview-toolbar" onClick={(e) => e.stopPropagation()}>
+        <button
+          type="button"
+          className="toolbar-btn"
+          onClick={() => (active.url ? onOpenModal() : onEmptyClick())}
+        >
+          ▷ 선택
+        </button>
+        <button
+          type="button"
+          className="toolbar-btn active open-label-modal"
+          onClick={() => (active.url ? onOpenModal() : onEmptyClick())}
+        >
+          ⊡ 박스 추가
+        </button>
+        <button
+          type="button"
+          className="toolbar-btn"
+          onClick={() => (active.url ? onOpenModal() : onEmptyClick())}
+        >
+          ⊘ 마스킹
+        </button>
+        <span
+          className="model-chip"
+          data-model="vision"
+          role="button"
+          title="AI 모델 — 클릭해 설정에서 변경"
+          onClick={onOpenSettings}
+        >
+          ⚙ {modelName}
+          {modelSuffix}
+        </span>
+        {!active.sample && active.url && (
+          <button
+            type="button"
+            className="toolbar-btn preview-del"
+            title="이 사진 제거"
+            aria-label="이 사진 제거"
+            onClick={onRemoveActive}
+          >
+            ⌫
+          </button>
+        )}
+      </div>
+    </div>
   )
 }

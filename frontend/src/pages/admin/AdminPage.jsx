@@ -157,8 +157,8 @@ export default function AdminPage() {
     <div className="pj-landing">
       <header className="pj-top">
         <span className="pj-logo" onClick={goLogo} style={{ cursor: 'pointer' }}>
-          <img className="logo-img" src="/assets/img/logomark-transparent.png" alt="" />
-          GNSoft AI 플랫폼
+          <span className="brand-mark">◈</span>
+          Pixel
         </span>
         <div className="pj-top-right">
           {/* 슈퍼는 서비스(프로젝트)를 쓰지 않으므로 '프로젝트 목록' 링크를 숨긴다. */}

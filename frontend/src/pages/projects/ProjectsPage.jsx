@@ -187,8 +187,8 @@ export default function ProjectsPage() {
     <div className="pj-landing">
       <header className="pj-top">
         <span className="pj-logo" onClick={showGallery} style={{ cursor: 'pointer' }}>
-          <img className="logo-img" src="/assets/img/logomark-transparent.png" alt="" />
-          GNSoft AI 플랫폼
+          <span className="brand-mark">◈</span>
+          Pixel
         </span>
         <div className="pj-top-right">
           {adminLink && (

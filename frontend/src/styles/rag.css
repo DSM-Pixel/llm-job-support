@@ -1,93 +1,468 @@
-.rag-layout {
-  display: grid;
-  grid-template-columns: 360px minmax(0, 1fr);
-  min-height: calc(100vh - 54px);
-}
-
-.knowledge {
-  padding: 26px 22px;
-  border-right: 1px solid #e1e7f0;
-  background: var(--surface);
-}
-
-.knowledge h2 {
+/* 문서 검색(RAG) — 질문/답변 요약 + 근거 리스트 + 색인 문서 카드. 한 칼럼으로 쭉 이어지는
+   목업(query.png) 재현. 아래 클래스 다수(.ask-line/.answer/.source-list 등)는 통합 UI
+   검증 스크립트(backend/_verify_ui.py)가 그대로 참조하므로 이름은 유지하고 모양만 새 톤으로 입힌다. */
+.rag-page {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0 0 20px;
-  font-size: 24px;
-  line-height: 1;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.kb-icon {
-  color: var(--blue);
-  font-size: 18px;
-}
-
-.kb-section {
-  margin-bottom: 18px;
-}
-
-.knowledge h3,
-.rag-content label {
+/* ── 질문하기 ─────────────────────────────────────────────────────── */
+.ask-box label {
   display: flex;
   align-items: center;
   gap: 10px;
   margin: 0 0 14px;
-  color: var(--text);
+  color: var(--g900);
   font-size: 14px;
   font-weight: 800;
 }
 
-.knowledge h3::before,
-.rag-content label::before {
-  content: "";
-  width: 3px;
+.ask-box label span {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
   height: 20px;
-  border-radius: 999px;
-  background: var(--blue);
+  border-radius: 6px;
+  background: var(--violet);
+  color: #fff;
+  font-size: 11px;
 }
 
-.knowledge h3 span,
-.rag-content label span {
-  color: var(--blue);
+.ask-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 136px;
+  gap: 10px;
 }
 
-.toggle-row {
+.ask-line input {
+  min-height: 50px;
+  padding: 0 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-btn);
+  outline: none;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 16px;
+}
+
+.ask-line input:focus {
+  border-color: var(--violet-soft);
+}
+
+.ask-line .btn {
+  min-height: 50px;
+  font-size: 15px;
+}
+
+.ask-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.ask-chip {
+  border: 0;
+  background: var(--g50);
+  cursor: pointer;
+  transition: background 0.13s ease, color 0.13s ease;
+}
+
+.ask-chip:hover {
+  background: var(--violet-weak);
+  color: var(--violet-strong);
+}
+
+/* 이 페이지의 '보조' 버튼(선택 취소 등) — 테두리 없이 은은한 배경만. */
+.btn.flat {
+  border-color: transparent;
+  background: rgba(99, 120, 160, 0.1);
+  color: var(--g500);
+}
+
+/* ── AI 답변 요약(보라 그라데이션) ───────────────────────────────── */
+.answer {
+  margin: 26px 0 22px;
+  padding: 26px 28px;
+  border: 0;
+}
+
+.answer .answer-head {
+  margin-bottom: 4px;
+}
+
+.answer-head h3 {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  margin-bottom: 14px;
+  gap: 10px;
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--g700);
 }
 
-.toggle-row b {
-  color: var(--text);
+.rag-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--violet-strong);
+  font-size: 12.5px;
+  font-weight: 800;
 }
 
-.toggle-row p {
-  margin: 4px 0 0;
-  color: var(--muted);
+.rag-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--violet);
+}
+
+.answer-head > .status {
+  margin-left: auto;
+}
+
+.rag-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  gap: 24px;
+  align-items: start;
+  margin: 18px 0 16px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid rgba(113, 50, 245, 0.14);
+}
+
+.rag-summary-main {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+}
+
+.rag-summary-num {
+  font-size: 52px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--g900);
+}
+
+.rag-summary-num-label {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--g500);
+}
+
+.rag-summary-brand {
+  margin-left: auto;
   font-size: 12px;
+  font-weight: 800;
+  color: var(--violet-strong);
+  opacity: 0.8;
 }
 
-.upload {
+.rag-summary-aside {
+  display: grid;
+  gap: 8px;
+  padding-left: 20px;
+  border-left: 1px solid rgba(113, 50, 245, 0.16);
+}
+
+.rag-summary-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 12.5px;
+}
+
+.rag-summary-row span {
+  color: var(--g500);
+  font-weight: 700;
+}
+
+.rag-summary-row b {
+  color: var(--g900);
+  font-weight: 800;
+}
+
+.rag-summary-bar {
+  height: 6px;
+  margin-top: 2px;
+  border-radius: 999px;
+  background: rgba(113, 50, 245, 0.14);
+  overflow: hidden;
+}
+
+.rag-summary-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--violet);
+}
+
+.answer p {
+  margin: 0;
+  color: var(--g800);
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+.answer-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+
+.answer-actions small {
+  color: var(--g500);
+  font-weight: 700;
+}
+
+/* ── 이 근거로 답했어요 ─────────────────────────────────────────── */
+.section-title {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 30px 0 14px;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--g900);
+}
+
+.section-title small {
+  color: var(--g400);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.source-list {
+  display: grid;
+  gap: 10px;
+}
+
+.source {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 110px 46px;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 18px;
+}
+
+.source b {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--g900);
+}
+
+.source b span {
   display: grid;
   place-items: center;
-  min-height: 106px;
-  margin-bottom: 10px;
-  border-style: dashed;
-  border-color: var(--line);
-  box-shadow: none;
-  background: rgba(70, 96, 191, 0.035);
-  color: #7b879a;
-  cursor: pointer;
-  text-align: center;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  border-radius: 7px;
+  background: var(--g100);
+  color: var(--g500);
+  font-size: 12px;
+  font-weight: 800;
 }
 
-.upload:hover {
-  border-color: var(--blue);
-  background: rgba(70, 96, 191, 0.07);
+.source:first-child b span {
+  background: var(--violet);
+  color: #fff;
+}
+
+.source p {
+  margin: 8px 0 0 34px;
+  color: var(--g500);
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.source i {
+  display: block;
+  width: 90px;
+  height: 6px;
+  justify-self: end;
+  border-radius: 999px;
+  background: var(--g100);
+  overflow: hidden;
+}
+
+.source i span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--violet);
+}
+
+.source em {
+  color: var(--g900);
+  font-style: normal;
+  font-weight: 800;
+  font-size: 14px;
+}
+
+/* ── 색인한 문서 ────────────────────────────────────────────────── */
+.docs-panel {
+  margin-top: 8px;
+}
+
+.docs-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.docs-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--g600);
+}
+
+.docs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+/* .file-list 는 <ul> 이지만 display:contents 로 박스를 없애, <li> 카드들이 부모
+   .docs-grid 의 그리드 아이템으로 바로 배치된다(업로드 카드와 같은 줄에 정렬). */
+.file-list {
+  display: contents;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.file-list li {
+  position: relative;
+  min-height: 116px;
+  padding: 16px 34px 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  cursor: pointer;
+  transition: border-color 0.13s ease, box-shadow 0.13s ease;
+}
+
+.file-list li:hover {
+  border-color: var(--g200);
+  box-shadow: var(--shadow-card);
+}
+
+.doc-type-badge {
+  display: inline-block;
+}
+
+.doc-used-badge {
+  margin-left: 6px;
+}
+
+.file-list li b {
+  display: block;
+  margin-top: 14px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--g900);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-list li small {
+  display: block;
+  margin-top: 4px;
+  color: var(--g400);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.file-list li i {
+  display: none; /* 문서 아이콘 글리프는 새 카드 톤에선 배지로 대체 */
+}
+
+.file-del {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--g300);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.file-list li:hover .file-del {
+  color: var(--g500);
+}
+
+.file-del:hover {
+  background: color-mix(in srgb, var(--red) 12%, transparent);
+  color: var(--red) !important;
+}
+
+.doc-upload-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 116px;
+  border: 1px dashed var(--g200);
+  border-radius: var(--r-card);
+  background: var(--g50);
+  color: var(--g500);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.13s ease, background 0.13s ease;
+}
+
+.doc-upload-card:hover {
+  border-color: var(--violet);
+  background: var(--violet-weak);
+  color: var(--violet-strong);
+}
+
+.doc-upload-card .upload-icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  margin-bottom: 4px;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--violet);
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.doc-upload-card b {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: inherit;
+}
+
+.doc-upload-card small {
+  color: var(--g400);
+  font-size: 11.5px;
 }
 
 .upload-input {
@@ -98,276 +473,20 @@
   pointer-events: none;
 }
 
-.upload-icon {
-  color: #75849c;
-  font-size: 22px;
-}
-
-.upload b,
-.upload small {
-  display: block;
-}
-
-.upload small {
-  color: #a0abc0;
-}
-
-.index-actions {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 10px;
-}
-
-.index-actions .primary {
-  width: 100%;
-}
-
-.index-actions .flat {
-  border-color: transparent;
-}
-
-.indexed {
-  margin-top: 12px;
-  padding: 11px 12px;
-  border-radius: 8px;
-  background: rgba(118, 130, 152, 0.1);
-  color: var(--muted);
-  font-weight: 800;
-}
-
-.search-line,
-.ask-line {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 8px;
-}
-
-.search-line input,
-.ask-line input {
-  min-height: 38px;
-  padding: 0 14px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  outline: none;
-  color: var(--text);
-}
-
-.search-line button {
-  min-width: 54px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface);
-  color: var(--text);
-  font-weight: 800;
-}
-
-.file-list {
-  display: grid;
-  gap: 12px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.file-list li {
-  display: grid;
-  grid-template-columns: 22px 1fr;
-  color: var(--text);
-}
-
-.file-list i {
-  grid-row: span 2;
-  color: var(--blue);
-  font-style: normal;
-}
-
-.file-list b {
-  font-size: 14px;
-}
-
-.file-list small {
-  color: var(--muted);
-}
-
-.rag-content {
-  padding: 28px 34px;
-}
-
-.ask-box {
-  margin-bottom: 22px;
-}
-
-.ask-line {
-  grid-template-columns: minmax(0, 1fr) 136px;
-}
-
-.ask-line input {
-  min-height: 50px;
-  font-size: 16px;
-}
-
-.ask-line .btn {
-  min-height: 50px;
-  font-size: 16px;
-}
-
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-top: 14px;
-  color: var(--muted);
-}
-
-.answer {
-  margin-top: 0;
-  padding: 24px;
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--blue); /* AI 답변임을 은은하게 강조 */
-  box-shadow: none;
-}
-
-.answer h3 {
-  color: var(--blue); /* 'AI 답변' 라벨 하이라이팅 */
-}
-
-.answer-head,
-.answer-actions {
+/* 색인 전 선택된 문서(스테이징) — 문서 선택 후 색인 버튼을 눌러야 카드 그리드에 추가된다. */
+.staged-files {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-}
-
-.answer h3 {
-  display: flex;
-  align-items: center;
+  flex-wrap: wrap;
   gap: 10px;
-  margin: 0;
-  font-size: 18px;
-}
-
-.answer p {
-  margin: 18px 0;
-  padding-bottom: 18px;
-  border-bottom: 1px solid #e7ecf4;
-  color: var(--text);
-  font-size: 17px;
-  line-height: 1.8;
-}
-
-.answer sup {
-  display: inline-grid;
-  width: 18px;
-  height: 18px;
-  place-items: center;
-  border-radius: 5px;
-  background: rgba(118, 130, 152, 0.14);
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.answer-actions small {
-  margin-left: auto;
-  color: #97a4ba;
-  font-weight: 700;
-}
-
-.section-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 24px 0 14px;
-  font-size: 24px;
-}
-
-.section-title small {
-  color: var(--muted);
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.source-list {
-  display: grid;
-  gap: 14px;
-}
-
-.source {
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 120px 42px;
-  align-items: center;
-  gap: 14px;
-  min-height: 80px;
-  padding: 16px 18px;
-}
-
-.source b {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.source b span {
-  display: grid;
-  width: 24px;
-  height: 24px;
-  place-items: center;
-  border-radius: 7px;
-  background: rgba(118, 130, 152, 0.14);
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.source p {
-  margin: 8px 0 0 34px;
-  color: #66738b;
-}
-
-.source i {
-  display: block;
-  width: 70px;
-  height: 6px;
-  justify-self: end;
-  border-radius: 999px;
-  background: #e6edf6;
-}
-
-.source i span {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--cyan);
-}
-
-.source:nth-child(3) i span {
-  background: var(--blue);
-}
-
-.source em {
-  color: #69758b;
-  font-style: normal;
-  font-weight: 800;
-}
-
-.kb-help {
-  margin: 8px 0 0;
-  color: var(--muted);
-  font-size: 11.5px;
-  line-height: 1.6;
-}
-
-/* 색인 전 선택된 문서(스테이징) 표시 */
-.staged-files {
-  margin: 8px 0 0;
-  padding: 8px 10px;
-  border: 1px dashed var(--line);
-  border-radius: 8px;
-  background: rgba(70, 96, 191, 0.06);
-  color: var(--text);
-  font-size: 12px;
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px dashed var(--violet-soft);
+  border-radius: 10px;
+  background: var(--violet-weak);
+  color: var(--g700);
+  font-size: 12.5px;
   line-height: 1.5;
 }
 
@@ -376,53 +495,112 @@
 }
 
 .staged-files b {
-  color: var(--blue);
+  color: var(--violet-strong);
 }
 
-/* 전체 참고 파일 초기화 버튼(목록 아래) */
-.reset-all {
-  width: 100%;
-  margin-top: 12px;
+.staged-actions {
+  display: flex;
+  gap: 8px;
 }
 
-/* 참고중인 파일 — 클릭하면 내용 열람, ✕로 삭제 */
-.file-list li {
-  position: relative;
-  cursor: pointer;
-  padding-right: 26px;
+.kb-help {
+  margin: 10px 0 0;
+  color: var(--g400);
+  font-size: 11.5px;
+  line-height: 1.6;
 }
 
-.file-list li:hover {
-  background: rgba(70, 96, 191, 0.07);
-  border-radius: 7px;
+/* ── 웹에서 문서 찾기(토글 시에만 표시) ─────────────────────────── */
+.web-find {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--g50);
 }
 
-.file-del {
-  position: absolute;
-  top: 50%;
-  right: 4px;
-  transform: translateY(-50%);
-  width: 20px;
-  height: 20px;
-  border: 0;
-  border-radius: 5px;
-  background: transparent;
-  color: #94a3b8;
+.web-find-label {
+  margin: 0 0 10px;
+  color: var(--g500);
+  font-size: 12px;
   font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.search-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+
+.search-line input {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  outline: none;
+  color: var(--text);
+}
+
+.search-line button {
+  min-width: 64px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 800;
+}
+
+.web-results {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.web-results:empty {
+  display: none;
+  margin: 0;
+}
+
+.web-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
   cursor: pointer;
-  opacity: 0;
-  transition: opacity 0.12s ease;
 }
 
-.file-list li:hover .file-del {
-  opacity: 1;
+.web-item input {
+  margin-top: 3px;
+  accent-color: var(--violet);
 }
 
-.file-del:hover {
-  background: #fdeaea;
-  color: var(--red);
+.web-item b {
+  font-size: 13px;
 }
 
+.web-item small {
+  display: block;
+  color: var(--violet);
+  font-size: 11px;
+}
+
+.web-item p {
+  margin: 4px 0 0;
+  color: var(--g500);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.web-results .add-web {
+  width: 100%;
+}
+
+/* ── 문서 열람 모달(DocModal) ───────────────────────────────────── */
 .doc-body {
   display: grid;
   gap: 12px;
@@ -434,7 +612,7 @@
   padding: 12px 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--surface);
+  background: var(--g50);
   color: var(--text);
   font-size: 13px;
   line-height: 1.7;
@@ -445,8 +623,8 @@
   margin-right: 8px;
   padding: 1px 7px;
   border-radius: 999px;
-  background: rgba(70, 96, 191, 0.10);
-  color: var(--blue);
+  background: var(--violet-weak);
+  color: var(--violet-strong);
   font-size: 11px;
   font-weight: 700;
 }
@@ -455,61 +633,25 @@
   color: var(--muted);
 }
 
-/* 웹에서 찾아 넣기 — 선택형 결과 */
-.web-results {
-  display: grid;
-  gap: 6px;
-  margin-top: 8px;
-}
-
-.web-results:empty {
-  display: none;
-}
-
-.web-item {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 8px;
-  padding: 8px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface);
-  cursor: pointer;
-}
-
-.web-item input {
-  margin-top: 3px;
-}
-
-.web-item b {
-  font-size: 13px;
-}
-
-.web-item small {
-  display: block;
-  color: var(--blue);
-  font-size: 11px;
-}
-
-.web-item p {
-  margin: 4px 0 0;
-  color: #64748b;
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.web-results .add-web {
-  width: 100%;
-  margin-top: 2px;
-}
-
-@media (max-width: 1200px) {
-  .rag-layout {
+@media (max-width: 900px) {
+  .ask-line {
     grid-template-columns: 1fr;
   }
-
-  .knowledge {
-    border-right: 0;
-    border-bottom: 1px solid #e1e7f0;
+  .rag-summary {
+    grid-template-columns: 1fr;
+  }
+  .rag-summary-aside {
+    padding-left: 0;
+    border-left: 0;
+    padding-top: 14px;
+    border-top: 1px solid rgba(113, 50, 245, 0.16);
+  }
+  .source {
+    grid-template-columns: 1fr;
+  }
+  .source i {
+    justify-self: start;
+    width: 100%;
+    margin-top: 8px;
   }
 }

@@ -4,9 +4,14 @@ import { logActivity, saveArtifact } from '../../../lib/activity.js'
 import { pid } from '../ragApi.js'
 import { startJob, takeJobResult } from '../../../lib/aijob.js'
 
-// 질문하기 + AI 답변 + 검색된 근거 — 바닐라 rag.js 검색 흐름 재현.
+// 질문 입력칸 아래 예시 칩 — 클릭하면 그 질문으로 바로 검색(목업 재현).
+const EXAMPLES = ['포트홀 보수 기준이 뭐야?', '균열은 언제 보수해야 해?', '점검 주기 알려줘']
+
+// 질문하기 + AI 답변(보라 그라데이션 요약) + 근거 리스트 — 바닐라 rag.js 검색 흐름 재현.
 // 검색 전(result=null)에는 예시 답변·근거를 보여주지 않고 빈 안내 상태로 둔다.
-export default function AskPanel() {
+// docCount: 색인된 문서 수(요약 패널 표시용). onResult: 검색 결과를 상위(RagPage)에도 알려
+// '색인한 문서' 카드의 '답변에 쓰임' 배지에 활용한다.
+export default function AskPanel({ docCount = 0, onResult }) {
   const [query, setQuery] = useState('')
   const [result, setResult] = useState(null) // null = 검색 전(정적 화면)
   const [busy, setBusy] = useState(false)
@@ -37,6 +42,7 @@ export default function AskPanel() {
     // 방금 완료된 결과 반영 — 화면 + 활동 로그 + 산출물 저장 + sessionStorage 보관(복귀 복원용).
     const applyResult = (res) => {
       setResult(res)
+      onResult?.(res)
       setBusy(false)
       try {
         sessionStorage.setItem('gnsoft.rag.lastresult', JSON.stringify(res))
@@ -88,7 +94,11 @@ export default function AskPanel() {
       // 복귀: 직전 검색 결과가 있으면 화면만 복원(재저장·재로그는 하지 않음).
       try {
         const last = sessionStorage.getItem('gnsoft.rag.lastresult')
-        if (last) setResult(JSON.parse(last))
+        if (last) {
+          const parsed = JSON.parse(last)
+          setResult(parsed)
+          onResult?.(parsed)
+        }
       } catch {
         /* 무시 */
       }
@@ -105,6 +115,11 @@ export default function AskPanel() {
   const confidence = result ? (result.found ? `연관도 ${result.confidence}%` : '근거 없음') : ''
   const meta = result ? `top-K ${result.top_k} · ${result.chunks} chunks · ${result.elapsed}` : ''
   const sectionSmall = result ? `${result.sources.length}개 근거 · 연관도순` : ''
+  const sourceCount = result ? result.sources.length : 0
+  // 근거 중 가장 높은 연관도(요약 패널 '최고 연관도') — 근거 리스트가 이미 연관도순이라 첫 항목.
+  const topScore = result?.sources?.length
+    ? Math.max(0, Math.min(100, Math.round(result.sources[0].score)))
+    : null
 
   return (
     <section className="rag-content">
@@ -115,7 +130,7 @@ export default function AskPanel() {
         <div className="ask-line">
           <input
             value={query}
-            placeholder="예: 심각한 포트홀은 며칠 안에 보수해야 해?"
+            placeholder="예: 포트홀 보수 기준이 뭐야?"
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && runSearch()}
           />
@@ -124,23 +139,63 @@ export default function AskPanel() {
             disabled={busy}
             onClick={() => runSearch()}
           >
-            {busy ? '검색 중' : '→ 질문하기'}
+            {busy ? '검색 중' : '→ 물어보기'}
           </button>
+        </div>
+        <div className="ask-chips">
+          {EXAMPLES.map((ex) => (
+            <button key={ex} type="button" className="pill ask-chip" onClick={() => runSearch(ex)}>
+              {ex}
+            </button>
+          ))}
         </div>
       </div>
 
-      <article className="card answer">
+      <article className="card answer px-gradient">
         <div className="answer-head">
-          <h3>✣ AI 답변 {method && <span className="status green">{method}</span>}</h3>
+          <h3>
+            <span className="rag-pill">
+              <i className="rag-dot" />
+              {result ? `근거 ${sourceCount}건` : '검색 대기'}
+            </span>
+            {method && <span className="status green">{method}</span>}
+          </h3>
           {confidence && <span className="status green">{confidence}</span>}
         </div>
-        {result ? (
-          <p dangerouslySetInnerHTML={{ __html: result.answer }} />
-        ) : (
-          <p style={{ opacity: 0.6 }}>
-            질문을 입력하면 참고 문서를 검색해 AI 답변과 근거를 보여줍니다.
-          </p>
-        )}
+
+        <div className="rag-summary">
+          <div className="rag-summary-main">
+            <strong className="rag-summary-num">{result ? sourceCount : '–'}</strong>
+            <span className="rag-summary-num-label">건의 근거</span>
+            <span className="rag-summary-brand">✦ PIXEL AI</span>
+          </div>
+          <div className="rag-summary-aside">
+            <div className="rag-summary-row">
+              <span>색인된 문서</span>
+              <b>{docCount}개</b>
+            </div>
+            <div className="rag-summary-row">
+              <span>검색 방식</span>
+              <b>키워드 · 문맥 유사도</b>
+            </div>
+            <div className="rag-summary-row">
+              <span>최고 연관도</span>
+              <b>{topScore != null ? `${topScore}%` : '–'}</b>
+            </div>
+            <div className="rag-summary-bar">
+              <span style={{ width: `${topScore || 0}%` }} />
+            </div>
+          </div>
+        </div>
+
+        <p>
+          {result ? (
+            <span dangerouslySetInnerHTML={{ __html: result.answer }} />
+          ) : (
+            '질문을 입력하면 참고 문서를 검색해 AI 답변과 근거를 보여줍니다.'
+          )}
+        </p>
+
         {meta && (
           <div className="answer-actions">
             <small>{meta}</small>
@@ -149,7 +204,7 @@ export default function AskPanel() {
       </article>
 
       <h2 className="section-title">
-        ⌕ 검색된 근거 {sectionSmall && <small>{sectionSmall}</small>}
+        ⌕ 이 근거로 답했어요 {sectionSmall && <small>{sectionSmall}</small>}
       </h2>
       <div className="source-list">
         {!result && (

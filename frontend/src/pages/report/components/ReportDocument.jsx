@@ -50,7 +50,7 @@ export default function ReportDocument({ docRef, readText, getReport }) {
   }
 
   return (
-    <section className="preview-zone">
+    <section className="rp-preview">
       <div className="preview-toolbar">
         <span>미리보기</span>
         <div>
