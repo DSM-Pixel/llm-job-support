@@ -1,5 +1,6 @@
-// 업무 절차 5단계 고정 시나리오(포트홀 신고 처리) — 절차 설계 API가 없어 MOCK 데이터로 구성.
-export const STEPS = [
+// 예시 절차(포트홀 신고 처리 5단계) — 목표를 입력해 "계획 만들기" 전까지 보여줄 기본 시나리오.
+// 실제 절차는 /api/agent/plan 이 설계해 반환한다(WorkflowPage 참조).
+export const EXAMPLE_STEPS = [
   {
     n: 1,
     title: '신고 사진 라벨링',
@@ -42,4 +43,4 @@ export const STEPS = [
   },
 ]
 
-export const PIPELINE_TITLE = '포트홀 신고 접수부터 보고까지 처리하기'
+export const EXAMPLE_TITLE = '포트홀 신고 접수부터 보고까지 처리하기'

@@ -1,10 +1,10 @@
 // 히어로 — 목표 한 줄 입력 + 예시 칩 + [계획 만들기]. 목업의 보라 톤 큰 헤드라인 재현.
-// 이 페이지는 고정 시나리오(포트홀 신고 처리) 데모라, 계획 만들기는 진행 상태만 초기화한다(MOCK).
+// 계획 만들기는 /api/agent/plan 으로 실제 절차를 설계한다(WorkflowPage).
 
 const CHIPS = ['포트홀 신고 처리', '가드레일 점검 절차', '보수 기준 검토']
 
-// props: goal, setGoal, onPlan(value?)
-export default function WorkflowHero({ goal, setGoal, onPlan }) {
+// props: goal, setGoal, onPlan(value?), busy
+export default function WorkflowHero({ goal, setGoal, onPlan, busy }) {
   return (
     <div className="px-hero plain wf-hero">
       <div>
@@ -19,10 +19,15 @@ export default function WorkflowHero({ goal, setGoal, onPlan }) {
             value={goal}
             placeholder="예: 포트홀 신고 접수부터 보고까지 처리하기"
             onChange={(e) => setGoal(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && onPlan()}
+            onKeyDown={(e) => e.key === 'Enter' && !busy && onPlan()}
           />
-          <button className="btn primary lg" type="button" onClick={() => onPlan()}>
-            계획 만들기
+          <button
+            className={'btn primary lg' + (busy ? ' is-loading' : '')}
+            type="button"
+            disabled={busy}
+            onClick={() => onPlan()}
+          >
+            {busy ? '설계 중…' : '계획 만들기'}
           </button>
         </div>
         <div className="wf-chips">

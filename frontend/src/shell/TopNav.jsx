@@ -1,4 +1,4 @@
-import { getProject } from '../lib/storage.js'
+import { getAuth, getProject } from '../lib/storage.js'
 import { useShell } from './ShellContext.js'
 
 // 상단 가로 내비 — Pixel 브랜드 + 7개 메뉴 + 우상단 프로젝트 선택기 + 아바타.
@@ -17,6 +17,10 @@ const NAV = [
 export default function TopNav({ activeNav }) {
   const { settings, openSettings } = useShell()
   const proj = getProject()
+  const auth = getAuth()
+  // 권한 분기 — 로그인 시 저장된 역할(is_admin/is_super)로 '관리' 진입을 노출한다.
+  // (회사 대빵·슈퍼 어드민만. 서버 재확인은 admin 페이지 진입 시 /api/auth/me 로 한 번 더 한다)
+  const canManage = !!(auth && (auth.is_admin || auth.is_super))
   const name = settings.name || '사용자'
 
   return (
@@ -39,6 +43,11 @@ export default function TopNav({ activeNav }) {
       </nav>
 
       <div className="topnav-right">
+        {canManage && (
+          <a className="topnav-manage" href="admin.html" title="회사 관리">
+            관리
+          </a>
+        )}
         <button
           className="proj-chip"
           type="button"
