@@ -98,6 +98,12 @@ export default function ProjectsPage() {
         emoji: emoji || '📁',
         visibility: vis,
       })
+      if (p?.error === 'auth_required') {
+        toast('세션이 만료되었습니다. 다시 로그인해주세요')
+        localStorage.removeItem('gnsoft.auth')
+        location.replace('login.html')
+        return
+      }
       if (!p || p.error || !p.id) {
         toast('프로젝트 생성에 실패했습니다')
         return
@@ -159,25 +165,28 @@ export default function ProjectsPage() {
       } catch {
         auth = null
       }
-      if (!auth?.token) return
+      // 토큰이 아예 없으면 로그인으로 — 세션 없이 만든 프로젝트는 본인에게도 안 보인다.
+      if (!auth?.token) {
+        location.replace('login.html')
+        return
+      }
       try {
         const me = await api('/api/auth/me', { token: auth.token })
-        if (me.code === 'deactivated') {
+        // 만료·비활성 등 세션이 유효하지 않으면 정리 후 로그인으로(orphan 프로젝트 방지).
+        if (!me.ok) {
           localStorage.removeItem('gnsoft.auth')
           location.replace('login.html')
           return
         }
-        if (me.ok && me.user) {
-          localStorage.setItem('gnsoft.auth', JSON.stringify({ ...auth, ...me.user }))
-          if (me.user.is_super) {
-            location.replace('admin.html') // 슈퍼는 관리 콘솔로.
-            return
-          }
-          setAdminLink(!!me.user.is_admin)
-          setCanReview(!!me.user.is_admin || !!me.user.is_reviewer)
+        localStorage.setItem('gnsoft.auth', JSON.stringify({ ...auth, ...me.user }))
+        if (me.user.is_super) {
+          location.replace('admin.html') // 슈퍼는 관리 콘솔로.
+          return
         }
+        setAdminLink(!!me.user.is_admin)
+        setCanReview(!!me.user.is_admin || !!me.user.is_reviewer)
       } catch {
-        /* 서버 미연결 시 버튼 숨김 유지 */
+        /* 서버 미연결(네트워크 오류) 시엔 쫓아내지 않고 버튼만 숨긴 채 유지 */
       }
     })()
     // eslint-disable-next-line react-hooks/exhaustive-deps

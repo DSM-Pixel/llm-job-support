@@ -894,8 +894,14 @@ def projects_list(page: int = 1, page_size: int = 24, token: str = "") -> dict:
 
 @app.post("/api/projects")
 def projects_create(body: ProjectCreateIn) -> dict:
-    """새 프로젝트(노트북) 생성 — 만든이·소속·공개범위(팀/개인)를 기록."""
+    """새 프로젝트(노트북) 생성 — 만든이·소속·공개범위(팀/개인)를 기록.
+
+    유효 세션이 없으면 만들지 않는다. (owner 가 비면 본인에게도 안 보이는
+    '떠도는' 프로젝트가 생기므로, 로그인 만료 시 생성을 막고 재로그인을 유도한다.)
+    """
     owner = auth.session_user(body.token)
+    if not owner or not owner.get("id"):
+        return {"error": "auth_required"}
     return projects.create_project(body.name, body.emoji, body.visibility, owner)
 
 
