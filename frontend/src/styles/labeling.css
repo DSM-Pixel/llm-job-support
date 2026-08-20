@@ -1035,3 +1035,19 @@
     width: 160px;
   }
 }
+
+/* ── 다크 모드 보정 ──────────────────────────────────────────────
+   g800(썸네일 placeholder)·g900(active pill)은 다크에서 밝게 반전되므로
+   어둡게 되돌리고, 흰색 하드코딩 hover 도 표면색으로 맞춘다. */
+[data-theme="dark"] .strip-thumb,
+[data-theme="dark"] .batch-item img,
+[data-theme="dark"] .batch-item .batch-nothumb {
+  background: var(--g100);
+}
+[data-theme="dark"] .preset-pills .pill.active {
+  background: var(--violet);
+  color: #fff;
+}
+[data-theme="dark"] .toolbar-btn:hover {
+  background: var(--surface);
+}
