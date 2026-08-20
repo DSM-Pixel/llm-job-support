@@ -1,17 +1,25 @@
 # 모델 가중치 (best.pt)
 
-라벨링 "AI 자동 탐지"는 이 폴더의 `best.pt`(YOLO 도로파손 모델, 클래스: pothole/crack/road_damage)를
-사용합니다. 가중치 파일은 용량이 커서 git에 커밋하지 않습니다(`.gitignore`의 `*.pt`).
+라벨링 "AI 자동 탐지"는 이 폴더의 `best.pt`(YOLO 포트홀 **세그멘테이션** 모델,
+단일 클래스 `pothole`, 62M 파라미터 / ~125MB)를 사용합니다. 가중치 파일은
+용량이 커서 git에 커밋하지 않습니다(`.gitignore`의 `*.pt`).
 
-## best.pt 두는 법
+## best.pt 두는 법 (권장: 스크립트로 자동 내려받기)
 
-이 경로에 `best.pt`를 두면 실제 탐지가 켜집니다:
+공개 Google Drive 에 올려둔 모델을 스크립트로 받아 이 경로에 배치합니다:
+
+```bash
+pip install gdown                       # 최초 1회
+python scripts/fetch_pothole_model.py   # → backend/storage/models/best.pt
+```
+
+이 경로에 `best.pt`가 있으면 실제 탐지가 켜집니다:
 
 ```
 backend/storage/models/best.pt
 ```
 
-- 출처: `geunyoung0120/abc_project_geunyoung` 의 `backend/storage/models/best.pt`
+- 출처: 팀 공유 Drive 폴더 `pothole_rode_test/weights/best.pt` (직접 학습, imgsz 640)
 - 또는 `backend/ml/finetuning/train_yolo.py` 로 직접 학습해 생성
 
 ## 없을 때
