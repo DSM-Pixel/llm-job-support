@@ -383,9 +383,9 @@ textarea {
   height: 36px;
   flex: none;
   border-radius: 50%;
-  background: var(--violet-weak);
+  background: var(--violet-weak-2);
   color: var(--violet);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 800;
   cursor: pointer;
 }
@@ -2030,11 +2030,11 @@ textarea {
   grid-template-columns: 1fr;
 }
 .px-hero h2 {
-  margin: 0 0 14px;
-  font-size: 56px;
+  margin: 0 0 16px;
+  font-size: 72px;
   font-weight: 800;
-  line-height: 1.14;
-  letter-spacing: -0.03em;
+  line-height: 1.1;
+  letter-spacing: -0.035em;
   color: var(--g900);
 }
 .px-hero h2 .accent {
@@ -2460,7 +2460,7 @@ textarea {
     grid-template-columns: 1fr;
   }
   .px-hero h2 {
-    font-size: 34px;
+    font-size: 44px;
   }
   .px-stats,
   .px-taskgrid,
