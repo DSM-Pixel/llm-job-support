@@ -95,9 +95,39 @@ def _load_general_model():
         return None
 
 
-def _predict_labels(model, image, w: int, h: int, conf: float, class_map) -> list[dict]:
-    """모델 1개 추론 → 공통 라벨 스키마 목록. class_map(raw)-> (name, grade, tone)."""
+# ── 차량 모델(vehicle.pt, 학습 세그멘테이션: bus/car/truck) ───────────
+# 포트홀 모델과 짝을 이루는 두 번째 학습 모델. 일반 yolov8n 보다 차량류를
+# 정밀 세그로 잡으므로, 아래 detect_all_boxes 에서 차량은 이 모델이 담당한다.
+_VEHICLE_MODEL_PATH = Path(__file__).resolve().parent / "storage" / "models" / "vehicle.pt"
+_VEHICLE_MAP = {
+    "car": {"name": "차량", "grade": "객체", "tone": "blue"},
+    "bus": {"name": "버스", "grade": "객체", "tone": "blue"},
+    "truck": {"name": "트럭", "grade": "객체", "tone": "blue"},
+}
+# yolov8n(일반)에서 제외할 차량류 raw 클래스 — 전용 차량 모델과 중복 방지.
+_VEHICLE_SKIP = {"car", "bus", "truck", "motorcycle"}
+
+
+@lru_cache(maxsize=1)
+def _load_vehicle_model():
+    """vehicle.pt(차량 세그)를 한 번만 로드(캐시). 없거나 실패 시 None."""
+    if not _VEHICLE_MODEL_PATH.is_file():
+        return None
+    try:
+        from ultralytics import YOLO
+
+        return YOLO(str(_VEHICLE_MODEL_PATH))
+    except Exception:
+        return None
+
+
+def _predict_labels(model, image, w: int, h: int, conf: float, class_map, skip=None) -> list[dict]:
+    """모델 1개 추론 → 공통 라벨 스키마 목록. class_map(raw)-> (name, grade, tone).
+
+    skip: 이 raw 클래스명들은 건너뛴다(전용 모델이 담당하는 클래스 중복 방지용).
+    """
     labels: list[dict] = []
+    skip = skip or set()
     try:
         results = model.predict(source=image, conf=conf, verbose=False)
     except Exception:
@@ -111,6 +141,8 @@ def _predict_labels(model, image, w: int, h: int, conf: float, class_map) -> lis
             x1, y1, x2, y2 = (float(v) for v in box.xyxy[0].tolist())
             confidence = round(float(box.conf[0]) * 100)
             raw = str(names.get(int(box.cls[0]), int(box.cls[0])))
+            if raw in skip:
+                continue
             name, grade, tone = class_map(raw)
             labels.append(
                 {
@@ -135,8 +167,9 @@ def detect_all_boxes(image_bytes: bytes, conf: float = 0.3) -> dict | None:
     from PIL import Image
 
     damage = _load_model()
+    vehicle = _load_vehicle_model()
     general = _load_general_model()
-    if damage is None and general is None:
+    if damage is None and vehicle is None and general is None:
         return None
 
     image = Image.open(_io.BytesIO(image_bytes)).convert("RGB")
@@ -153,13 +186,23 @@ def detect_all_boxes(image_bytes: bytes, conf: float = 0.3) -> dict | None:
         labels += _predict_labels(damage, image, w, h, max(conf, 0.25), _dmg)
         engines.append("best.pt")
 
-    if general is not None:  # 사람·차량·신호등 등 일반 객체 (COCO)
+    if vehicle is not None:  # 버스·차량·트럭 (전용 세그 모델)
+
+        def _veh(raw: str):
+            meta = _VEHICLE_MAP.get(raw, {"name": raw, "grade": "객체", "tone": "blue"})
+            return meta["name"], meta["grade"], meta["tone"]
+
+        labels += _predict_labels(vehicle, image, w, h, conf, _veh)
+        engines.append("vehicle.pt")
+
+    if general is not None:  # 사람·신호등 등 일반 객체 (COCO) — 차량류는 전용 모델이 담당
 
         def _gen(raw: str):
             name = _COCO_KO.get(raw, raw)
             return name, "객체", _GENERAL_TONES.get(name, "gray")
 
-        labels += _predict_labels(general, image, w, h, conf, _gen)
+        skip = _VEHICLE_SKIP if vehicle is not None else None
+        labels += _predict_labels(general, image, w, h, conf, _gen, skip=skip)
         engines.append("yolov8n")
 
     return {"backend": "YOLO", "engine": "+".join(engines), "labels": labels}

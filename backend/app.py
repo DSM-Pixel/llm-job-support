@@ -422,7 +422,10 @@ def auth_reset(body: ResetPasswordIn) -> dict:
 def dashboard() -> dict:
     # 통계 카드 수치는 데모(MOCK) 유지, 모델 상태는 실제 가용성(YOLO best.pt·Gemini 키)으로.
     data = services.dashboard_stats()
-    data["models"] = services.real_model_status(yolo_service.model_available())
+    data["models"] = services.real_model_status(
+        yolo_service.model_available(),
+        yolo_service._load_vehicle_model() is not None,
+    )
     return data
 
 

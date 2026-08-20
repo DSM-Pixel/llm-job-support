@@ -2031,9 +2031,9 @@ textarea {
 }
 .px-hero h2 {
   margin: 0 0 14px;
-  font-size: 46px;
+  font-size: 56px;
   font-weight: 800;
-  line-height: 1.12;
+  line-height: 1.14;
   letter-spacing: -0.03em;
   color: var(--g900);
 }

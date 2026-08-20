@@ -154,7 +154,9 @@ function DashboardContent() {
       <div className="px-hero">
         <div>
           <h2>
-            더 안전한 도로 <span className="accent">데이터</span>로 만듭니다
+            더 안전한 도로
+            <br />
+            <span className="accent">데이터</span>로 만듭니다
           </h2>
           <p className="px-hero-sub">자연어 질의로 이미지를 라벨링하는 멀티모달 AI 서비스입니다.</p>
           <div className="px-hero-actions">

@@ -379,8 +379,8 @@ _GEMINI_TPM = 250_000  # 분당 토큰(입력 기준)
 _GEMINI_CTX = 1_000_000  # 컨텍스트 윈도우
 
 
-def real_model_status(yolo_ok: bool) -> list[dict]:
-    """모델 상태 — YOLO(best.pt)·Gemini 는 실제 가용성/사용량, 나머지는 데모값."""
+def real_model_status(yolo_ok: bool, vehicle_ok: bool = False) -> list[dict]:
+    """모델 상태 — YOLO(best.pt·vehicle.pt)·Gemini 는 실제 가용성/사용량, 나머지는 데모값."""
     u = _gemini_usage
     ai_ok = bool(_gemini_key() or _openai_key())
     if not ai_ok:
@@ -474,6 +474,13 @@ def real_model_status(yolo_ok: bool) -> list[dict]:
             "load": 100 if yolo_ok else 0,
             "state": "운영" if yolo_ok else "모델 없음",
             "tone": "green" if yolo_ok else "gray",
+        },
+        {
+            "name": "차량 탐지(YOLO)",
+            "kind": "탐지 · vehicle.pt",
+            "load": 100 if vehicle_ok else 0,
+            "state": "운영" if vehicle_ok else "모델 없음",
+            "tone": "green" if vehicle_ok else "gray",
         },
         {
             "name": f"{os.getenv('OPENAI_MODEL', 'gpt-4o')} · GPT"
