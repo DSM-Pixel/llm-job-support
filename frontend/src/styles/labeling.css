@@ -499,6 +499,11 @@
   gap: 8px;
   margin-top: 14px;
 }
+/* 포트홀 샘플 이미지 모음(Drive) 링크 — 업로드 버튼과 구분되게 오른쪽으로 */
+.gallery-actions .sample-link {
+  margin-left: auto;
+  text-decoration: none;
+}
 
 /* 폴더 라벨링 결과 갤러리 — 배치 결과(서버 썸네일)를 유지 표시 */
 .batch-results {
