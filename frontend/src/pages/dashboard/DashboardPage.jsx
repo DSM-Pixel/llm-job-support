@@ -149,6 +149,17 @@ function DashboardContent() {
       ? DEMO_JOBS
       : []
 
+  // 이어서 하던 작업(디자인의 다크 카드) — 시연 모드면 고정 예시, 아니면 실제 최근 활동 top3.
+  const continueRows = DEMO_FIXTURES
+    ? CONTINUE_ITEMS
+    : activityRows.slice(0, 3).map((a, i) => ({
+        icon: i === 0 ? '⌘' : '▢',
+        v: i === 0,
+        title: a.text,
+        sub: a.sub,
+        time: a.time,
+      }))
+
   return (
     <section className="content dashboard">
       <div className="px-hero">
@@ -208,29 +219,35 @@ function DashboardContent() {
         ))}
       </div>
 
-      {/* "이어서 하던 작업"은 시연용 예시 데이터라 DEMO_FIXTURES 일 때만 노출한다. */}
-      {DEMO_FIXTURES && (
-        <>
-          <div className="px-section-head">
-            <h3>
-              이어서 하던 작업 <span className="count">{CONTINUE_ITEMS.length}개</span>
-            </h3>
+      {/* 이어서 하던 작업 — 디자인의 다크 카드. 실제 최근 활동으로 채우고, 없으면 빈 상태. */}
+      <div className="px-section-head">
+        <h3>
+          이어서 하던 작업 <span className="count">{continueRows.length}개</span>
+        </h3>
+      </div>
+      <div className="px-continue">
+        {continueRows.length === 0 ? (
+          <div className="px-continue-row px-continue-empty">
+            <span className="px-continue-ic">▢</span>
+            <div className="px-continue-body">
+              <b>아직 이어서 할 작업이 없어요</b>
+              <span>라벨링·검색·보고서를 시작하면 여기 모입니다.</span>
+            </div>
           </div>
-          <div className="px-continue">
-            {CONTINUE_ITEMS.map((it) => (
-              <div className="px-continue-row" key={it.title}>
-                <span className={'px-continue-ic' + (it.v ? ' v' : '')}>{it.icon}</span>
-                <div className="px-continue-body">
-                  <b>{it.title}</b>
-                  <span>{it.sub}</span>
-                </div>
-                <span className="px-continue-time">{it.time}</span>
-                <span className="px-continue-go">↗</span>
+        ) : (
+          continueRows.map((it, i) => (
+            <div className="px-continue-row" key={i}>
+              <span className={'px-continue-ic' + (it.v ? ' v' : '')}>{it.icon}</span>
+              <div className="px-continue-body">
+                <b>{it.title}</b>
+                <span>{it.sub}</span>
               </div>
-            ))}
-          </div>
-        </>
-      )}
+              <span className="px-continue-time">{it.time}</span>
+              <span className="px-continue-go">↗</span>
+            </div>
+          ))
+        )}
+      </div>
 
       <div className="px-section-head">
         <h3>다양한 작업 시작하기</h3>

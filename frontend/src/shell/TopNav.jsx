@@ -64,7 +64,7 @@ export default function TopNav({ activeNav }) {
           title="설정"
           onClick={openSettings}
         >
-          {name.slice(-2)}
+          {name.trim().slice(0, 1) || '?'}
         </button>
       </div>
     </header>
