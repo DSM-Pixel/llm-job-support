@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from '../../lib/toast.js'
 import { getSettings } from '../../lib/storage.js'
 import { ConfirmModal } from '../../components/Modal.jsx'
+import BrandMark from '../../components/BrandMark.jsx'
 import { Pager } from '../../components/Pager.jsx'
 import { SummaryChips } from './components/SummaryChips.jsx'
 import { RequestList } from './components/RequestList.jsx'
@@ -157,7 +158,7 @@ export default function AdminPage() {
     <div className="pj-landing">
       <header className="pj-top">
         <span className="pj-logo" onClick={goLogo} style={{ cursor: 'pointer' }}>
-          <span className="brand-mark">◈</span>
+          <BrandMark />
           Pixel
         </span>
         <div className="pj-top-right">

@@ -257,10 +257,11 @@ textarea {
   place-items: center;
   width: 26px;
   height: 26px;
-  border-radius: 8px;
-  background: var(--violet);
-  color: #fff;
-  font-size: 15px;
+  color: var(--violet);
+}
+.topnav-brand .brand-mark svg {
+  width: 100%;
+  height: 100%;
 }
 
 .topnav-menu {

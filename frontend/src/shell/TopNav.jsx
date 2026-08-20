@@ -1,5 +1,6 @@
 import { getAuth, getProject } from '../lib/storage.js'
 import { useShell } from './ShellContext.js'
+import BrandMark from '../components/BrandMark.jsx'
 
 // 상단 가로 내비 — Pixel 브랜드 + 7개 메뉴 + 우상단 프로젝트 선택기 + 아바타.
 // 디자인(도로 점검) 목업의 공통 헤더를 그대로 재현한다.
@@ -26,7 +27,7 @@ export default function TopNav({ activeNav }) {
   return (
     <header className="topnav">
       <a className="topnav-brand" href="dashboard.html">
-        <span className="brand-mark">◈</span>
+        <BrandMark />
         Pixel
       </a>
 

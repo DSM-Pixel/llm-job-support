@@ -4,6 +4,7 @@ import { toast } from '../../lib/toast.js'
 import { getSettings, setProject } from '../../lib/storage.js'
 import { Pager } from '../../components/Pager.jsx'
 import { ConfirmModal, InputModal } from '../../components/Modal.jsx'
+import BrandMark from '../../components/BrandMark.jsx'
 import ProjectCard from './components/ProjectCard.jsx'
 import DetailView from './components/DetailView.jsx'
 import SettingsModal from '../../shell/SettingsModal.jsx'
@@ -196,7 +197,7 @@ export default function ProjectsPage() {
     <div className="pj-landing">
       <header className="pj-top">
         <span className="pj-logo" onClick={showGallery} style={{ cursor: 'pointer' }}>
-          <span className="brand-mark">◈</span>
+          <BrandMark />
           Pixel
         </span>
         <div className="pj-top-right">

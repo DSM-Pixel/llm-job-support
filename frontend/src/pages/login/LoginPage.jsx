@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { api, enter } from './authApi.js'
 import SignupModal from './SignupModal.jsx'
+import BrandMark from '../../components/BrandMark.jsx'
 
 // 로그인·비밀번호 찾기 카드 + 회원가입 모달 — 기존 web/pages/login.html + login.js 이관.
 export default function LoginPage() {
@@ -65,7 +66,7 @@ export default function LoginPage() {
     <div className="lg-page">
       <header className="lg-top">
         <span className="topnav-brand">
-          <span className="brand-mark">◈</span>
+          <BrandMark />
           Pixel
         </span>
       </header>
@@ -74,7 +75,7 @@ export default function LoginPage() {
         <div className="lg-card">
           {/* 브랜드: 로고 + 서비스명 */}
           <div className="lg-brand">
-            <span className="lg-brand-mark">◈</span>
+            <BrandMark className="lg-brand-mark" />
             <h1 className="lg-brand-name">Pixel</h1>
             <p className="lg-brand-sub">로그인하고 프로젝트를 시작하세요</p>
           </div>
