@@ -2056,6 +2056,11 @@ textarea {
    --g900 은 다크 모드에서 밝게 뒤집히므로 고정 다크 색을 쓴다. */
 .px-hero:not(.plain) {
   background: #14161b;
+  /* 풀블리드 — 시안처럼 가장자리까지 꽉 채운다(회색 여백·둥근모서리 제거).
+     .content 의 좌우 32px 패딩과 상단 10px 패딩을 음수 마진으로 상쇄해 뷰포트 끝까지. */
+  margin: -10px -32px 22px;
+  padding: 52px 48px;
+  border-radius: 0;
 }
 .px-hero:not(.plain) h2 {
   color: #fff;
