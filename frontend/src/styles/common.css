@@ -2051,6 +2051,24 @@ textarea {
   font-weight: 600;
   color: var(--g500);
 }
+
+/* 다크 히어로(대시보드 홈) — 시안의 검은 배경. plain 히어로(보고서·업무절차)는 제외.
+   --g900 은 다크 모드에서 밝게 뒤집히므로 고정 다크 색을 쓴다. */
+.px-hero:not(.plain) {
+  background: #14161b;
+}
+.px-hero:not(.plain) h2 {
+  color: #fff;
+}
+.px-hero:not(.plain) h2 .accent {
+  color: var(--violet-soft);
+}
+.px-hero:not(.plain) .px-hero-sub {
+  color: #aeb6c2;
+}
+[data-theme="dark"] .px-hero:not(.plain) {
+  background: #1a2231; /* 다크 모드에선 페이지보다 살짝 밝은 다크 패널로 구분 */
+}
 .px-hero-actions {
   display: flex;
   gap: 10px;
