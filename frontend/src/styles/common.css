@@ -2074,6 +2074,45 @@ textarea {
 [data-theme="dark"] .px-hero:not(.plain) {
   background: #1a2231; /* 다크 모드에선 페이지보다 살짝 밝은 다크 패널로 구분 */
 }
+/* 다크 히어로 위 버튼 — 시안: 주=흰색(#fff), 보조=진회색(#2c2e32) */
+.px-hero:not(.plain) .btn.primary {
+  background: #fff;
+  color: #14161b;
+  border-color: #fff;
+}
+.px-hero:not(.plain) .btn.primary:hover {
+  background: #e9e9ee;
+  border-color: #e9e9ee;
+}
+.px-hero:not(.plain) .btn:not(.primary) {
+  background: #2c2e32;
+  color: #e7ecf3;
+  border-color: #2c2e32;
+}
+.px-hero:not(.plain) .btn:not(.primary):hover {
+  background: #3a3d43;
+  border-color: #3a3d43;
+}
+/* 다크 히어로 오른쪽 미리보기 박스 — 시안: 어두운 패널(#373b43) + 밝은 텍스트 */
+.px-hero:not(.plain) .px-hero-preview {
+  background: #373b43;
+}
+.px-hero:not(.plain) .px-hero-preview-mark {
+  border-color: #6f7885;
+  color: #cbd2dc;
+}
+.px-hero:not(.plain) .px-hero-preview-center b {
+  color: #eef1f5;
+}
+.px-hero:not(.plain) .px-hero-preview-center span {
+  color: #98a1ad;
+}
+.px-hero:not(.plain) .px-hero-preview-hint {
+  color: #c0c7d0;
+}
+.px-hero:not(.plain) .px-hero-preview-bars span {
+  background: rgba(255, 255, 255, 0.14);
+}
 .px-hero-actions {
   display: flex;
   gap: 10px;
