@@ -12,6 +12,51 @@
   overflow: hidden;
 }
 
+/* ── 라벨링 캔버스 카드 = 다크(시안) — 밝은 캔버스 + 다크 프레임/질의영역 ─────
+   .road-preview(밝은 캔버스)는 그대로 두고 카드 배경만 다크로 하면, 하단 질의
+   영역이 자연히 다크가 된다. 입력·칩·프리셋 텍스트만 밝게 보정한다. */
+.canvas-card {
+  background: #14161b;
+  border-color: #262b34;
+}
+.canvas-card .road-preview {
+  margin: 12px 12px 0;
+  border-radius: 12px;
+}
+.canvas-card .prompt-line input {
+  background: #1e232c;
+  border-color: #2c333d;
+  color: #e7ecf3;
+}
+.canvas-card .prompt-line input::placeholder {
+  color: #7c8698;
+}
+.canvas-card .prompt-chip {
+  background: #1e232c;
+  border: 1px solid #2c333d;
+  color: #c4ccd8;
+}
+.canvas-card .prompt-chip:hover {
+  border-color: #3a434f;
+  color: #e7ecf3;
+}
+.canvas-card .preset-row {
+  border-top-color: #262b34;
+}
+.canvas-card .preset-label {
+  color: #8a94a3;
+}
+.canvas-card .preset-pills .pill {
+  background: #1e232c;
+  border: 1px solid #2c333d;
+  color: #c4ccd8;
+}
+.canvas-card .preset-pills .pill.active {
+  background: #fff;
+  border-color: #fff;
+  color: #14161b;
+}
+
 .road-preview {
   position: relative;
   height: 460px;
