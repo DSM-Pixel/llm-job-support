@@ -58,6 +58,29 @@
   margin: 24px 0 0;
   padding: 26px 28px;
 }
+/* 시안: 공공데이터 결과 패널 = 진한 보라 그라데이션 + 흰 텍스트 */
+.pd-summary.px-gradient {
+  background: linear-gradient(135deg, var(--violet) 0%, var(--violet-strong) 100%);
+  color: #fff;
+}
+.pd-summary.px-gradient .pd-summary-figure {
+  color: #fff;
+}
+.pd-summary.px-gradient .pd-summary-figure span {
+  color: rgba(255, 255, 255, 0.82);
+}
+.pd-summary.px-gradient .pd-summary-text {
+  color: rgba(255, 255, 255, 0.9);
+}
+.pd-summary.px-gradient .pd-summary-aside {
+  border-top-color: rgba(255, 255, 255, 0.22);
+}
+.pd-summary.px-gradient .pd-summary-stat b {
+  color: #fff;
+}
+.pd-summary.px-gradient .pd-summary-stat span {
+  color: rgba(255, 255, 255, 0.75);
+}
 .pd-summary-top {
   display: flex;
   gap: 8px;

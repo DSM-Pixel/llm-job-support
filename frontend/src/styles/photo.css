@@ -46,6 +46,9 @@
   padding: 28px;
   min-height: 300px;
   margin-bottom: 28px;
+  /* 시안: 진한 보라 그라데이션 + 흰 텍스트(옅은 --violet-weak 기본을 덮는다) */
+  background: linear-gradient(135deg, var(--violet) 0%, var(--violet-strong) 100%);
+  color: #fff;
 }
 .px-gradient-summary {
   display: flex;
@@ -63,32 +66,32 @@
 .px-gradient-count b {
   font-size: 42px;
   font-weight: 800;
-  color: var(--g900);
+  color: #fff;
   letter-spacing: -0.02em;
 }
 .px-gradient-count b.muted {
   font-size: 22px;
   font-weight: 700;
-  color: var(--g500);
+  color: rgba(255, 255, 255, 0.72);
 }
 .px-gradient-count small {
   margin-left: 6px;
   font-size: 17px;
   font-weight: 700;
-  color: var(--g500);
+  color: rgba(255, 255, 255, 0.82);
 }
 .px-gradient-hint {
   margin: 0;
   font-size: 13.5px;
   font-weight: 600;
-  color: var(--g500);
+  color: rgba(255, 255, 255, 0.82);
   line-height: 1.5;
 }
 .px-gradient-brand {
   margin: auto 0 0;
   font-size: 12.5px;
   font-weight: 800;
-  color: var(--violet-strong);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .px-drop {
@@ -96,10 +99,10 @@
   display: grid;
   place-items: center;
   padding: 20px;
-  border: 1.5px dashed var(--violet-soft);
+  border: 1.5px dashed rgba(255, 255, 255, 0.35);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.45);
-  color: var(--g500);
+  background: rgba(0, 0, 0, 0.22);
+  color: rgba(255, 255, 255, 0.8);
   font-size: 13.5px;
   font-weight: 700;
   text-align: center;

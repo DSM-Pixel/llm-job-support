@@ -88,6 +88,46 @@
   border: 0;
 }
 
+/* 시안: 문서검색 결과 패널 = 진한 보라 그라데이션 + 흰 텍스트(옅은 --violet-weak 덮음) */
+.answer.px-gradient {
+  background: linear-gradient(135deg, var(--violet) 0%, var(--violet-strong) 100%);
+  color: #fff;
+}
+.answer.px-gradient .rag-summary {
+  border-bottom-color: rgba(255, 255, 255, 0.18);
+}
+.answer.px-gradient .rag-summary-num {
+  color: #fff;
+}
+.answer.px-gradient .rag-summary-num-label {
+  color: rgba(255, 255, 255, 0.82);
+}
+.answer.px-gradient .rag-summary-brand {
+  color: rgba(255, 255, 255, 0.85);
+  opacity: 1;
+}
+.answer.px-gradient .rag-summary-aside {
+  border-left-color: rgba(255, 255, 255, 0.2);
+}
+.answer.px-gradient .rag-summary-row span {
+  color: rgba(255, 255, 255, 0.72);
+}
+.answer.px-gradient .rag-summary-row b {
+  color: #fff;
+}
+.answer.px-gradient .rag-summary-bar {
+  background: rgba(255, 255, 255, 0.18);
+}
+.answer.px-gradient .rag-summary-bar span {
+  background: #fff;
+}
+.answer.px-gradient > p {
+  color: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
 .answer .answer-head {
   margin-bottom: 4px;
 }
