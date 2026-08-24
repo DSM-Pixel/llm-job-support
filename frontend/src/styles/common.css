@@ -2267,8 +2267,13 @@ textarea {
   display: flex;
   align-items: center;
   gap: 14px;
+  width: 100%;
   padding: 16px 18px;
+  border: 0;
   border-top: 1px solid rgba(255, 255, 255, 0.07);
+  background: transparent; /* button 기본 회색 제거 — 다크 카드 유지 */
+  text-align: left;
+  font: inherit;
   cursor: pointer;
   transition: background 0.13s ease;
 }
@@ -2340,9 +2345,17 @@ textarea {
   transition: border-color 0.13s ease, transform 0.13s ease, box-shadow 0.13s ease;
 }
 .px-taskcard:hover {
-  border-color: var(--g200);
+  border-color: var(--violet);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-card);
+  box-shadow: 0 8px 22px rgba(123, 87, 230, 0.18);
+}
+/* 호버 시 아이콘·화살표도 보라 톤으로 — feature(이미 보라 배경) 카드는 제외 */
+.px-taskcard:not(.feature):hover .px-taskcard-ic {
+  background: var(--violet-weak-2);
+  color: var(--violet);
+}
+.px-taskcard:not(.feature):hover .px-taskcard-go {
+  color: var(--violet);
 }
 .px-taskcard.feature {
   background: var(--violet);

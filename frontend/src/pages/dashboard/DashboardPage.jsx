@@ -46,10 +46,22 @@ const CLASS_CHIPS = [
 
 // 이어서 하던 작업 — 진행 중이던 라벨링/검수/보고서 초안(데모 고정값).
 const CONTINUE_ITEMS = [
-  { icon: '⌘', v: true, title: 'IMG_0421.jpg', sub: '라벨 5개 중 1개를 검수했어요', time: '12분 전' },
-  { icon: '▥', title: 'IMG_0398.jpg', sub: '라벨 3개가 검수를 기다려요', time: '1시간 전' },
-  { icon: '▢', title: '8월 활동 요약', sub: '초안 2개 섹션까지 썼어요', time: '3시간 전' },
+  { icon: '⌘', v: true, title: 'IMG_0421.jpg', sub: '라벨 5개 중 1개를 검수했어요', time: '12분 전', route: 'labeling.html' },
+  { icon: '▥', title: 'IMG_0398.jpg', sub: '라벨 3개가 검수를 기다려요', time: '1시간 전', route: 'labeling.html' },
+  { icon: '▢', title: '8월 활동 요약', sub: '초안 2개 섹션까지 썼어요', time: '3시간 전', route: 'report.html' },
 ]
+
+// 활동/작업의 '페이지' 이름 → 이어서 이동할 실제 라우트. 모르면 라벨링으로.
+const PAGE_ROUTE = {
+  labeling: 'labeling.html',
+  photo: 'photo.html',
+  rag: 'rag.html',
+  pubdata: 'pubdata.html',
+  workflow: 'workflow.html',
+  report: 'report.html',
+  dashboard: 'dashboard.html',
+}
+const routeOf = (page) => PAGE_ROUTE[String(page || '').replace('.html', '')] || 'labeling.html'
 
 // 다양한 작업 시작하기 — 기존 QUICK/업무 자동화 카드가 하던 이동 역할을 이어받는다.
 const TASKS = [
@@ -158,6 +170,7 @@ function DashboardContent() {
         title: a.text,
         sub: a.sub,
         time: a.time,
+        route: routeOf(a.sub),
       }))
 
   // 히어로 미리보기 박스 — 실제로 마우스 드래그하면 보라 박스가 그려지는 반응형 데모.
@@ -287,7 +300,7 @@ function DashboardContent() {
           </div>
         ) : (
           continueRows.map((it, i) => (
-            <div className="px-continue-row" key={i}>
+            <button type="button" className="px-continue-row" key={i} onClick={() => go(it.route)}>
               <span className={'px-continue-ic' + (it.v ? ' v' : '')}>{it.icon}</span>
               <div className="px-continue-body">
                 <b>{it.title}</b>
@@ -295,7 +308,7 @@ function DashboardContent() {
               </div>
               <span className="px-continue-time">{it.time}</span>
               <span className="px-continue-go">↗</span>
-            </div>
+            </button>
           ))
         )}
       </div>
