@@ -30,13 +30,13 @@ export default function ImageStrip({ images, activeIdx, onSelect, onRemove }) {
               <span
                 className="strip-del"
                 role="button"
-                aria-label="제거"
+                aria-label="삭제"
                 onClick={(e) => {
                   e.stopPropagation()
                   onRemove(i)
                 }}
               >
-                ✕
+                ✕ 삭제
               </span>
             )}
           </div>
