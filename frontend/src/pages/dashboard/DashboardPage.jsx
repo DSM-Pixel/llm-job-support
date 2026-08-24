@@ -65,7 +65,7 @@ const routeOf = (page) => PAGE_ROUTE[String(page || '').replace('.html', '')] ||
 
 // 다양한 작업 시작하기 — 기존 QUICK/업무 자동화 카드가 하던 이동 역할을 이어받는다.
 const TASKS = [
-  { icon: '⌘', title: '사진 라벨링', desc: '한국어로 지시하면 AI가 박스를 그려요', route: 'labeling.html', feature: true },
+  { icon: '⌘', title: '사진 라벨링', desc: '한국어로 지시하면 AI가 박스를 그려요', route: 'labeling.html' },
   { icon: '▥', title: '사진 설명 받기', desc: '무엇이 위험한지 문장으로 알려줘요', route: 'photo.html' },
   { icon: '⌕', title: '문서에 물어보기', desc: '근거가 없으면 없다고 답해요', route: 'rag.html' },
   { icon: '▦', title: '공공데이터 보기', desc: '표를 뒤지지 않고 물어서 확인해요', route: 'pubdata.html' },
