@@ -171,3 +171,36 @@
     justify-content: space-between;
   }
 }
+
+/* ── 다크 히어로(시안) 컨트롤 보정 ─────────────────────────────────
+   .px-hero.plain 이 다크가 되므로, 업무절차 히어로 입력·칩·버튼을 다크로. */
+.wf-hero .wf-hero-eyebrow {
+  color: #8b95a8;
+}
+.wf-hero .wf-input {
+  background: #1e232c;
+  border-color: #2c333d;
+  color: #fff;
+}
+.wf-hero .wf-input::placeholder {
+  color: #7c8698;
+}
+.wf-hero .wf-chip {
+  background: #1e232c;
+  border-color: #2c333d;
+  color: #c4ccd8;
+}
+.wf-hero .wf-chip:hover {
+  border-color: #3a434f;
+  color: #fff;
+}
+/* '계획 만들기'는 시안에서 흰 버튼 */
+.wf-hero .wf-input-row .btn.primary {
+  background: #fff;
+  color: #14161b;
+  border-color: #fff;
+}
+.wf-hero .wf-input-row .btn.primary:hover {
+  background: #e9e9ee;
+  border-color: #e9e9ee;
+}

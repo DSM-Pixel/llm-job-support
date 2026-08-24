@@ -596,3 +596,40 @@
 }
 
 /* 다크 모드 — 문서는 흰 종이 그대로, 주변 패널만 보정(자동으로 var() 토큰을 따르므로 대부분 불필요). */
+
+/* ── 다크 히어로(시안) 컨트롤 보정 ─────────────────────────────────
+   .px-hero.plain 이 다크가 되므로, 보고서 히어로 라벨·칩·날짜입력을 다크로.
+   '초안 만들기'(.rp-generate)는 .btn.primary(보라) 그대로 — 시안과 일치. */
+.rp-hero .rp-eyebrow {
+  color: #8b95a8;
+}
+.rp-hero .rp-control-label {
+  color: #8b95a8;
+}
+.rp-hero .rp-chip-row .pill {
+  background: #1e232c;
+  border: 1px solid #2c333d;
+  color: #c4ccd8;
+}
+.rp-hero .rp-chip-row .pill.active {
+  background: #fff;
+  border-color: #fff;
+  color: #14161b;
+}
+.rp-hero .rp-material-chip {
+  background: #1e232c;
+  border-color: #2c333d;
+  color: #c4ccd8;
+}
+.rp-hero .rp-date-inline {
+  background: #1e232c;
+  border-color: #2c333d;
+  color: #e7ecf3;
+}
+
+/* 보고서 히어로는 .rp-layout(max-width:900px) 안에 있어 -32px 로는 안 꽉 찬다.
+   50vw 브레이크아웃으로 뷰포트 끝까지(시안=풀블리드), 내부 콘텐츠는 900px 열에 맞춰 패딩. */
+.px-hero.plain.rp-hero {
+  margin: -10px calc(50% - 50vw) 22px;
+  padding: 52px calc(50vw - 50% + 48px);
+}

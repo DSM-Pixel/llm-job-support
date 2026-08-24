@@ -2113,6 +2113,25 @@ textarea {
 .px-hero:not(.plain) .px-hero-preview-bars span {
   background: rgba(255, 255, 255, 0.14);
 }
+
+/* plain 히어로(업무절차·보고서)도 시안처럼 다크 풀블리드 + 흰 헤드라인.
+   내부 컨트롤(입력·칩·프리셋·버튼)은 각 페이지 CSS(workflow/report)에서 다크로. */
+.px-hero.plain {
+  background: #14161b;
+  color: #fff;
+  margin: -10px -32px 22px;
+  padding: 52px 48px;
+  border-radius: 0;
+}
+.px-hero.plain h2 {
+  color: #fff;
+}
+.px-hero.plain h2 .accent {
+  color: var(--violet-soft);
+}
+[data-theme="dark"] .px-hero.plain {
+  background: #1a2231;
+}
 .px-hero-actions {
   display: flex;
   gap: 10px;
