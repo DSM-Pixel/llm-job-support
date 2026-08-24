@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api } from '../../lib/api.js'
 import AppShell from '../../shell/AppShell.jsx'
 import { useShell } from '../../shell/ShellContext.js'
@@ -160,6 +160,39 @@ function DashboardContent() {
         time: a.time,
       }))
 
+  // 히어로 미리보기 박스 — 실제로 마우스 드래그하면 보라 박스가 그려지는 반응형 데모.
+  const previewRef = useRef(null)
+  const drawStart = useRef(null)
+  const [drawBox, setDrawBox] = useState(null) // {x,y,w,h} px, 박스 내부 좌표
+
+  const previewPoint = (e) => {
+    const r = previewRef.current.getBoundingClientRect()
+    return {
+      x: Math.max(0, Math.min(r.width, e.clientX - r.left)),
+      y: Math.max(0, Math.min(r.height, e.clientY - r.top)),
+    }
+  }
+  const onDrawDown = (e) => {
+    if (!previewRef.current) return
+    drawStart.current = previewPoint(e)
+    setDrawBox({ ...drawStart.current, w: 0, h: 0 })
+    e.preventDefault()
+  }
+  const onDrawMove = (e) => {
+    if (!drawStart.current) return
+    const p = previewPoint(e)
+    const s = drawStart.current
+    setDrawBox({
+      x: Math.min(s.x, p.x),
+      y: Math.min(s.y, p.y),
+      w: Math.abs(p.x - s.x),
+      h: Math.abs(p.y - s.y),
+    })
+  }
+  const onDrawUp = () => {
+    drawStart.current = null
+  }
+
   return (
     <section className="content dashboard">
       <div className="px-hero">
@@ -179,7 +212,14 @@ function DashboardContent() {
             </button>
           </div>
         </div>
-        <div className="px-gradient px-hero-preview">
+        <div
+          className="px-gradient px-hero-preview"
+          ref={previewRef}
+          onMouseDown={onDrawDown}
+          onMouseMove={onDrawMove}
+          onMouseUp={onDrawUp}
+          onMouseLeave={onDrawUp}
+        >
           <div className="px-hero-preview-center">
             <span className="px-hero-preview-mark">+</span>
             <b>드래그해서 박스를 그려보세요</b>
@@ -194,15 +234,26 @@ function DashboardContent() {
               <span />
             </div>
           </div>
+          {drawBox && drawBox.w > 3 && drawBox.h > 3 && (
+            <div
+              className="px-hero-drawbox"
+              style={{ left: drawBox.x, top: drawBox.y, width: drawBox.w, height: drawBox.h }}
+            >
+              <span className="px-hero-drawbox-tag">영역</span>
+            </div>
+          )}
         </div>
       </div>
 
       <div className="px-classchips">
-        {CLASS_CHIPS.map((c) => (
-          <span className={'cc' + (c.cls ? ` ${c.cls}` : '')} key={c.label}>
-            {c.label}
-          </span>
-        ))}
+        {/* 오른→왼 무한 마퀴 — 칩을 2벌 이어 붙여 끊김 없이 반복(hover 시 정지). */}
+        <div className="px-classchips-track">
+          {[...CLASS_CHIPS, ...CLASS_CHIPS].map((c, i) => (
+            <span className={'cc' + (c.cls ? ` ${c.cls}` : '')} key={i}>
+              {c.label}
+            </span>
+          ))}
+        </div>
       </div>
 
       <div className="px-stats">

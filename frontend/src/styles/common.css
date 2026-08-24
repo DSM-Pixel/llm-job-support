@@ -2192,13 +2192,33 @@ textarea {
 
 /* ── 클래스 칩 줄(도로 파손 종류) — 색을 다양하게 순환 ───────────── */
 .px-classchips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 22px;
+  overflow: hidden;
   padding: 20px 4px;
   border-bottom: 1px solid var(--line);
   font-size: 22px;
   font-weight: 800;
+  /* 좌우 끝을 부드럽게 페이드(마퀴가 끊겨 보이지 않게) */
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent);
+}
+/* 칩 2벌을 이어 붙여 오른→왼으로 무한 스크롤(hover 시 정지). */
+.px-classchips-track {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 22px;
+  width: max-content;
+  animation: cc-marquee 32s linear infinite;
+}
+.px-classchips:hover .px-classchips-track {
+  animation-play-state: paused;
+}
+@keyframes cc-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
 }
 .px-classchips .cc {
   color: var(--g300);
