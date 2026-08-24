@@ -2344,18 +2344,23 @@ textarea {
   background: var(--surface);
   transition: border-color 0.13s ease, transform 0.13s ease, box-shadow 0.13s ease;
 }
+/* 호버 시 카드 전체를 보라로 칠한다(사진 라벨링 feature 카드와 동일한 톤) */
 .px-taskcard:hover {
+  background: var(--violet);
   border-color: var(--violet);
   transform: translateY(-2px);
-  box-shadow: 0 8px 22px rgba(123, 87, 230, 0.18);
+  box-shadow: 0 8px 22px rgba(123, 87, 230, 0.28);
 }
-/* 호버 시 아이콘·화살표도 보라 톤으로 — feature(이미 보라 배경) 카드는 제외 */
 .px-taskcard:not(.feature):hover .px-taskcard-ic {
-  background: var(--violet-weak-2);
-  color: var(--violet);
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
 }
+.px-taskcard:not(.feature):hover h4,
 .px-taskcard:not(.feature):hover .px-taskcard-go {
-  color: var(--violet);
+  color: #fff;
+}
+.px-taskcard:not(.feature):hover p {
+  color: rgba(255, 255, 255, 0.82);
 }
 .px-taskcard.feature {
   background: var(--violet);
