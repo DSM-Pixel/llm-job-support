@@ -39,14 +39,6 @@ export default function PdSearch({ keyword, setKeyword, busy, catalog, onSearch 
             {chip}
           </button>
         ))}
-        <button
-          className="pill pd-chip-add"
-          type="button"
-          title="직접 입력"
-          onClick={() => inputRef.current?.focus()}
-        >
-          ＋
-        </button>
       </div>
       <p className="pd-catalog">{catalog}</p>
     </>

@@ -144,7 +144,13 @@ export default function AskPanel({ docCount = 0, onResult }) {
         </div>
         <div className="ask-chips">
           {EXAMPLES.map((ex) => (
-            <button key={ex} type="button" className="pill ask-chip" onClick={() => runSearch(ex)}>
+            <button
+              key={ex}
+              type="button"
+              className={'pill ask-chip' + (query.trim() === ex ? ' active' : '')}
+              onClick={() => runSearch(ex)}
+            >
+              <i className="ask-dot" aria-hidden="true" />
               {ex}
             </button>
           ))}

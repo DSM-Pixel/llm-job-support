@@ -62,16 +62,18 @@
   margin-top: 14px;
 }
 
+/* 공공데이터(.pd-chip)와 동일한 디자인으로 통일 — 테두리 pill + 보라 점, 활성 시 어둡게. */
 .ask-chip {
-  border: 0;
-  background: var(--g50);
   cursor: pointer;
-  transition: background 0.13s ease, color 0.13s ease;
 }
-
-.ask-chip:hover {
-  background: var(--violet-weak);
-  color: var(--violet-strong);
+.ask-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--violet);
+}
+.pill.active .ask-dot {
+  background: #fff;
 }
 
 /* 이 페이지의 '보조' 버튼(선택 취소 등) — 테두리 없이 은은한 배경만. */
