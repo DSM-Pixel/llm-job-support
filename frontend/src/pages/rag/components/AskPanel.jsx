@@ -158,9 +158,11 @@ export default function AskPanel({ docCount = 0, onResult }) {
               <i className="rag-dot" />
               {result ? `근거 ${sourceCount}건` : '검색 대기'}
             </span>
-            {method && <span className="status green">{method}</span>}
           </h3>
-          {confidence && <span className="status green">{confidence}</span>}
+          {method && <span className="status green">{method}</span>}
+          {confidence && (
+            <span className={'status ' + (result?.found ? 'green' : 'gray')}>{confidence}</span>
+          )}
         </div>
 
         <div className="rag-summary">

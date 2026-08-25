@@ -129,6 +129,10 @@
 }
 
 .answer .answer-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
   margin-bottom: 4px;
 }
 
@@ -161,7 +165,8 @@
   background: var(--violet);
 }
 
-.answer-head > .status {
+/* 마지막 배지(연관도/근거 없음)만 오른쪽 끝으로 — 앞의 검색방식 배지는 제목 옆에 둔다 */
+.answer-head > .status:last-child {
   margin-left: auto;
 }
 
