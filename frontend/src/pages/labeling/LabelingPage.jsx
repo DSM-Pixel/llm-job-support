@@ -152,6 +152,7 @@ function LabelingContent() {
         activeIdx={lab.activeIdx}
         onSelect={lab.setActive}
         onRemove={lab.removeImage}
+        onRemoveAll={lab.clearImages}
         fileRef={fileRef}
         folderRef={folderRef}
         onBatch={onBatch}

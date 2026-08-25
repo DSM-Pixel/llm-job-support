@@ -165,6 +165,20 @@ export function useLabeling(sampleName, sampleResult) {
     [project, sampleName],
   )
 
+  // 올린 사진 전체 삭제 — 업로드본만 지우고(샘플은 남김) 갤러리를 초기 상태로 되돌린다.
+  const clearImages = useCallback(() => {
+    const uploaded = imagesRef.current.filter((im) => !im.sample)
+    if (!uploaded.length) return toast('삭제할 사진이 없습니다')
+    for (const im of uploaded) {
+      if (im.url) URL.revokeObjectURL(im.url)
+      deleteImage(project, im.name)
+    }
+    setImages([sampleImg()])
+    setActiveIdx(0)
+    toast(`사진 ${uploaded.length}장을 모두 삭제했습니다`)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project, sampleName])
+
   return {
     images,
     setImages,
@@ -176,6 +190,7 @@ export function useLabeling(sampleName, sampleResult) {
     setModalOpen,
     addImages,
     removeImage,
+    clearImages,
     updateSaved,
     updateResult,
     applyBatchBoxes,

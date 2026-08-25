@@ -532,8 +532,9 @@
 
 .strip-del {
   position: absolute;
-  top: -8px;
-  right: -8px;
+  /* 아이템 안쪽 모서리에 둔다 — 밖(-8px)에 두면 .image-strip 의 overflow 로 잘렸다. */
+  top: 6px;
+  right: 6px;
   height: 20px;
   display: inline-flex;
   align-items: center;
@@ -559,6 +560,15 @@
 .gallery-actions .sample-link {
   margin-left: auto;
   text-decoration: none;
+}
+/* 올린 사진 전체 삭제 — 파괴적 동작이라 빨간 톤으로 구분 */
+.gallery-actions .gallery-clear {
+  color: var(--red);
+  border-color: color-mix(in srgb, var(--red) 32%, transparent);
+}
+.gallery-actions .gallery-clear:hover {
+  background: color-mix(in srgb, var(--red) 10%, transparent);
+  border-color: var(--red);
 }
 
 /* 폴더 라벨링 결과 갤러리 — 배치 결과(서버 썸네일)를 유지 표시 */

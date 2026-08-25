@@ -12,6 +12,7 @@ export default function GalleryPanel({
   activeIdx,
   onSelect,
   onRemove,
+  onRemoveAll,
   fileRef,
   folderRef,
   onBatch,
@@ -58,6 +59,16 @@ export default function GalleryPanel({
         >
           샘플 데이터셋 ↗
         </a>
+        {hasUpload && (
+          <button
+            className="btn flat gallery-clear"
+            type="button"
+            onClick={onRemoveAll}
+            title="올린 사진을 모두 삭제(샘플은 남습니다)"
+          >
+            🗑 전체 삭제
+          </button>
+        )}
       </div>
     </section>
   )
