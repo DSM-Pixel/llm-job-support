@@ -14,12 +14,14 @@ export default function ResultPanel({ result }) {
           <ul className="finding-list" dangerouslySetInnerHTML={{ __html: result.html }} />
         ) : (
           <ul className="finding-list">
-            <li className="finding-empty">아직 분석 전입니다. 왼쪽 ‘분석하기’를 누르세요.</li>
+            <li className="finding-empty">
+              아직 분석 전이에요. 프롬프트에 찾을 대상을 적고 <b>‘AI로 찾기’</b>를 눌러보세요.
+            </li>
           </ul>
         )}
         <p className="result-hint">
-          사진을 추가하면 <b>라벨링 화면이 바로 열립니다</b>. 다시 열려면 미리보기 사진을 클릭하거나{' '}
-          <b>‘크게 열어 라벨링’</b>을 누르세요.
+          사진을 올리면 위 미리보기에 바로 나타나요. 직접 박스를 그려 라벨링하려면 미리보기를 클릭하거나{' '}
+          툴바의 <b>‘박스 추가’</b>를 누르세요.
         </p>
       </article>
     </section>
