@@ -1349,6 +1349,28 @@ def _gemini_detect(image_bytes: bytes, mime: str) -> list[dict] | None:
     return out or None
 
 
+def filter_labels_by_conf(res: dict, min_conf: int) -> dict:
+    """탐지 결과(labels)에서 신뢰도(confidence) < min_conf 인 박스를 걸러낸다.
+
+    엔진 무관(YOLO·GPT·Gemini) 통일 필터 — 사용자가 고른 임계값 이상만 남긴다.
+    confidence 가 없는(None) 박스는 임계값 판단이 불가하므로 그대로 유지한다.
+    min_conf<=0 이면 원본 그대로 반환.
+    """
+    if not isinstance(res, dict) or min_conf <= 0:
+        return res
+    labels = res.get("labels")
+    if not isinstance(labels, list):
+        return res
+    kept = [
+        lab
+        for lab in labels
+        if not isinstance(lab, dict)
+        or lab.get("confidence") is None
+        or lab.get("confidence") >= min_conf
+    ]
+    return {**res, "labels": kept}
+
+
 def detect_objects_vision(image_bytes: bytes, mime: str = "image/png") -> dict:
     """이미지 속 '모든' 객체를 VLM으로 탐지(박스+클래스). 박스는 Gemini grounding 우선.
 

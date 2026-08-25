@@ -49,6 +49,8 @@ export function useModalEditor({
   const [filter, setFilter] = useState({ visible: false, isMock: false, pendingBoxes: [], key: 0 })
   const [detectBusy, setDetectBusy] = useState(false)
   const [detectAllBusy, setDetectAllBusy] = useState(false)
+  // 신뢰도 임계값(%) — 이 값 이상만 탐지. 기본 25%(기존 서버 기본과 동일).
+  const [minConf, setMinConf] = useState(25)
   const [exportImgBusy, setExportImgBusy] = useState(false)
   const [saveBusy, setSaveBusy] = useState(false)
 
@@ -126,7 +128,7 @@ export function useModalEditor({
     if (!active.url) return toast('사진을 먼저 추가하세요')
     setDetectBusy(true)
     try {
-      const result = await detectImage(active.file, active.name)
+      const result = await detectImage(active.file, active.name, minConf)
       if (result.backend === 'AI_FAIL') {
         return toast('AI 사용량 한도로 잠시 실패했어요. 잠시 후 다시 시도해주세요')
       }
@@ -151,7 +153,7 @@ export function useModalEditor({
   const onDetectAll = async () => {
     setDetectAllBusy(true)
     try {
-      const result = await detectObjects(active.file)
+      const result = await detectObjects(active.file, minConf)
       if (result.backend === 'AI_FAIL') {
         setFilter((f) => ({ ...f, visible: false }))
         return toast('AI 사용량 한도로 잠시 실패했어요. 잠시 후 다시 시도해주세요')
@@ -298,6 +300,8 @@ export function useModalEditor({
     onClear,
     onDetect,
     onDetectAll,
+    minConf,
+    setMinConf,
     onFilterCancel,
     onFilterApply,
     onExportImg,

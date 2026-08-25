@@ -9,6 +9,8 @@ export default function LabelSide({
   onClear,
   detectBusy,
   detectAllBusy,
+  minConf,
+  onMinConf,
   filter,
   boxes,
   selected,
@@ -32,6 +34,23 @@ export default function LabelSide({
           onChange={(e) => onClassInput(e.target.value)}
         />
       </label>
+      <div className="conf-row">
+        <div className="conf-top">
+          <span className="conf-label">신뢰도 임계값</span>
+          <span className="conf-value">{minConf}% 이상</span>
+        </div>
+        <input
+          className="conf-slider"
+          type="range"
+          min="0"
+          max="90"
+          step="5"
+          value={minConf}
+          onChange={(e) => onMinConf(Number(e.target.value))}
+          title="이 값 이상 신뢰도의 박스만 자동 탐지로 추가됩니다"
+        />
+        <p className="conf-hint">낮출수록 더 많이(오탐 ↑), 높일수록 확실한 것만 탐지됩니다.</p>
+      </div>
       <div className="modal-actions">
         <button
           className={'btn primary modal-detect' + (detectBusy ? ' is-loading' : '')}

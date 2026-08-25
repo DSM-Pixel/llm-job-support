@@ -68,6 +68,8 @@ export default function LabelingModal(props) {
             onClear={m.onClear}
             detectBusy={m.detectBusy}
             detectAllBusy={m.detectAllBusy}
+            minConf={m.minConf}
+            onMinConf={m.setMinConf}
             filter={{
               visible: m.filter.visible,
               isMock: m.filter.isMock,

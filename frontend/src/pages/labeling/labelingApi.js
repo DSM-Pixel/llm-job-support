@@ -37,26 +37,29 @@ export const sameBox = (a, b) =>
   Math.abs(a.h - b.h) < 2
 
 // 한 이미지 탐지 호출 — 업로드 파일이 있으면 실제 YOLO(best.pt), 없으면 프리셋 MOCK.
-export const detectImage = async (file, name) => {
+// minConf(0~100): 신뢰도 임계값 — 이 값 이상만 탐지 결과로 받는다.
+export const detectImage = async (file, name, minConf = 0) => {
   if (file) {
     const fd = new FormData()
     fd.append('image', file)
+    fd.append('min_conf', String(minConf))
     const res = await fetch('/api/labeling/detect-image', { method: 'POST', body: fd })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     return res.json()
   }
-  return api('/api/labeling/detect', { preset: '도로 파손/포트홀 찾기', image_name: name })
+  return api('/api/labeling/detect', {
+    preset: '도로 파손/포트홀 찾기',
+    image_name: name,
+    min_conf: minConf,
+  })
 }
 
-// 전체 객체 탐지 — 업로드 파일이 있으면 함께, 없으면 MOCK.
-export const detectObjects = async (file) => {
-  const opt = { method: 'POST' }
-  if (file) {
-    const fd = new FormData()
-    fd.append('image', file)
-    opt.body = fd
-  }
-  const res = await fetch('/api/labeling/detect-objects', opt)
+// 전체 객체 탐지 — 업로드 파일이 있으면 함께, 없으면 MOCK. minConf: 신뢰도 임계값(0~100).
+export const detectObjects = async (file, minConf = 0) => {
+  const fd = new FormData()
+  if (file) fd.append('image', file)
+  fd.append('min_conf', String(minConf))
+  const res = await fetch('/api/labeling/detect-objects', { method: 'POST', body: fd })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   return res.json()
 }

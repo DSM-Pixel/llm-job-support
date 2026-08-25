@@ -634,17 +634,22 @@ def labeling_detect(body: DetectIn) -> dict:
 
 
 @app.post("/api/labeling/detect-image")
-async def labeling_detect_image(image: UploadFile = File(...)) -> dict:
-    """업로드 이미지 박스 탐지 — YOLO(best.pt) 우선, 없으면 Gemini 비전으로 폴백."""
+async def labeling_detect_image(image: UploadFile = File(...), min_conf: int = Form(0)) -> dict:
+    """업로드 이미지 박스 탐지 — YOLO(best.pt) 우선, 없으면 Gemini 비전으로 폴백.
+
+    min_conf(0~100): 사용자가 고른 신뢰도 임계값. YOLO 예측 conf 로 넘기고,
+    최종 결과도 임계값 이상만 남겨 엔진(YOLO/GPT/Gemini) 무관하게 일관 적용한다.
+    """
     data = await image.read()
-    res = yolo_service.detect_boxes(data)
+    conf = min(1.0, max(0.0, min_conf / 100)) or 0.25  # 0 이면 기존 기본값
+    res = yolo_service.detect_boxes(data, conf=conf)
     if res.get("backend") == "MOCK":  # 서버에 YOLO 없음 → GPT 비전으로 실제 박스 탐지
         vis = services.detect_objects_vision(data, image.content_type or "image/png")
         # 키가 있으면 vis 는 OPENAI(박스) 또는 AI_FAIL(빈 결과) — 어느 쪽이든 신뢰.
         # 키가 없을 때만(vis=MOCK) 데모용 yolo mock(res)로 폴백. 가짜 박스 노출 방지.
         if vis.get("backend") != "MOCK":
-            return vis
-    return res
+            res = vis
+    return services.filter_labels_by_conf(res, min_conf)
 
 
 @app.post("/api/labeling/analyze-image")
@@ -661,19 +666,23 @@ async def labeling_analyze_image(
 
 
 @app.post("/api/labeling/detect-objects")
-async def labeling_detect_objects(image: UploadFile | None = File(None)) -> dict:
+async def labeling_detect_objects(
+    image: UploadFile | None = File(None), min_conf: int = Form(0)
+) -> dict:
     """이미지 속 모든 객체 탐지 — 클래스 필터 라벨링용.
 
     1순위: 로컬 이중 YOLO(best.pt 파손 + yolov8n 일반객체) — 좌표 정확·한도 없음.
     2순위: Gemini Vision(모델 없을 때). 이미지가 없으면(샘플) 다중 클래스 MOCK.
+    min_conf(0~100): 신뢰도 임계값 — YOLO conf 로 넘기고 최종 결과도 임계값 이상만 남긴다.
     """
     data = await image.read() if image else b""
     mime = (image.content_type if image else None) or "image/png"
+    conf = min(1.0, max(0.0, min_conf / 100)) or 0.3  # 0 이면 기존 기본값
     if data:
-        local = yolo_service.detect_all_boxes(data)
+        local = yolo_service.detect_all_boxes(data, conf=conf)
         if local is not None:
-            return local
-    return services.detect_objects_vision(data, mime)
+            return services.filter_labels_by_conf(local, min_conf)
+    return services.filter_labels_by_conf(services.detect_objects_vision(data, mime), min_conf)
 
 
 @app.get("/api/labeling/model")
