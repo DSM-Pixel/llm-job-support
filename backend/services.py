@@ -275,19 +275,35 @@ def _ai_backend() -> str | None:
 
 
 def _text_backend() -> str | None:
-    """현재 텍스트 생성에 실제로 쓰이는 제공자 라벨. 로컬 LLM(vm2 등) 우선."""
+    """현재 텍스트 생성에 실제로 쓰이는 제공자 라벨. Gemini(어드민 UI 키) 우선."""
+    if _gemini_key():
+        return "GEMINI"
     if _local_llm():
         return "LOCAL"
     return _ai_backend()
 
 
 def _ai_text(prompt: str, *, fast: bool = False) -> str | None:
-    """텍스트 프롬프트 → 답변 문자열. 로컬 LLM(vm2) 우선, 없으면 OpenAI, 없으면 Gemini.
+    """텍스트 프롬프트 → 답변 문자열. Gemini 우선(어드민 UI 키로 관리),
+    실패/무키/한도 시 로컬 LLM(vm2) → OpenAI 로 폴백.
 
-    로컬 LLM은 reasoning 모델이라 느리고(수십 초) reasoning 토큰을 먼저 쓰므로
-    타임아웃·max_tokens 를 넉넉히 준다. 로컬 실패 시 OpenAI/Gemini 로 폴백.
-    fast=True 면 느린 vm2 를 건너뛰고 바로 OpenAI/Gemini 로 간다(대화형·지연 민감 기능용).
+    Gemini 를 1순위로 두는 이유: 슈퍼 어드민이 화면에서 키를 갈아끼우면 SSH·재시작 없이
+    즉시 반영되고, vm2 로컬 LLM 이 느리거나 불통일 때도 텍스트 기능(보고서 수정 등)이 살아난다.
+    fast 는 하위호환용 파라미터(대화형·지연 민감 호출에서 느린 vm2 폴백을 건너뛴다).
     """
+    # ① Gemini — 어드민 UI(app_settings) 키. 한도(429)/오류 시 fast 실패 후 아래로 폴백.
+    if _gemini_key():
+        try:
+            from google import genai
+
+            client = genai.Client(api_key=_gemini_key(), http_options={"timeout": 20000})
+            resp = _gemini_generate(client, model="gemini-2.5-flash", contents=prompt)
+            text = (resp.text or "").strip()
+            if text:
+                return text
+        except Exception:
+            pass  # 한도 소진·네트워크 → 폴백
+    # ② 로컬 LLM(vm2) — reasoning 모델이라 느려서 타임아웃 넉넉히.
     loc = None if fast else _local_llm()
     if loc:
         text = _openai_chat(
@@ -300,20 +316,10 @@ def _ai_text(prompt: str, *, fast: bool = False) -> str | None:
         )
         if text:
             return text.strip()
-        # 로컬이 죽었거나 비었으면 아래로 폴백.
+    # ③ OpenAI.
     if _openai_key():
         text = _openai_chat([{"role": "user", "content": prompt}])
         return text.strip() if text else None
-    if _gemini_key():
-        try:
-            from google import genai
-
-            client = genai.Client(api_key=_gemini_key(), http_options={"timeout": 20000})
-            resp = _gemini_generate(client, model="gemini-2.5-flash", contents=prompt)
-            text = (resp.text or "").strip()
-            return text or None
-        except Exception:
-            return None
     return None
 
 
