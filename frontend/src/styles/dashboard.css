@@ -1,5 +1,7 @@
 .dashboard {
-  padding-top: 20px;
+  /* .content 기본 상단 패딩(10px)과 맞춘다 — 다크 히어로의 margin-top:-10px 가
+     이 값을 정확히 상쇄해 내비와 히어로 사이 틈 없이 붙는다(20px면 10px 틈이 생겼음). */
+  padding-top: 10px;
 }
 
 /* ── 히어로 우측 프리뷰 패널(라벨링 캔버스 미리보기) ── */
