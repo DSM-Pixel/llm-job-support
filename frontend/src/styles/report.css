@@ -633,3 +633,10 @@
   margin: -10px calc(50% - 50vw) 22px;
   padding: 52px calc(50vw - 50% + 48px);
 }
+
+/* 하단 스티키 바도 히어로처럼 풀블리드 — 900px 안에서 -32px 만 삐져나와 어중간하게
+   잘려 보이던 문제 해결. 바 배경/테두리는 뷰포트 끝까지, 버튼은 900px 열에 맞춘다. */
+.rp-layout .px-bottomcta {
+  margin: 32px calc(50% - 50vw) -44px;
+  padding: 16px calc(50vw - 50% + 32px);
+}
