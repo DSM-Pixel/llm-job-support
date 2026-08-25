@@ -1663,7 +1663,7 @@ def generate_report(
     return {
         "backend": BACKEND,
         "report_type": kind,
-        "org": "GNSOFT",
+        "org": "Pixel",
         "date": _today(),
         "period": period,
         "title": f"도로 파손 {kind} 보고서",
@@ -2058,7 +2058,7 @@ def generate_report_web(
         return {
             "backend": backend,
             "report_type": kind,
-            "org": "GNSOFT",
+            "org": "Pixel",
             "date": _today(),
             "period": period,
             "query": topic,
@@ -2072,7 +2072,7 @@ def generate_report_web(
     return {
         "backend": "MOCK",
         "report_type": kind,
-        "org": "GNSOFT",
+        "org": "Pixel",
         "date": _today(),
         "period": period,
         "title": f"도로 파손 {kind} 보고서",
@@ -2215,7 +2215,7 @@ def generate_report_from_template(
                 return {
                     "backend": _text_backend() or "GEMINI_TEMPLATE",
                     "report_type": "양식 기반",
-                    "org": "GNSOFT",
+                    "org": "Pixel",
                     "date": _today(),
                     "period": period or "",
                     "title": f"{stem} — 자동 작성",
@@ -2233,7 +2233,7 @@ def generate_report_from_template(
     return {
         "backend": "MOCK",
         "report_type": "양식 기반",
-        "org": "GNSOFT",
+        "org": "Pixel",
         "date": _today(),
         "period": period or "",
         "title": f"{stem} — 자동 작성(예시)",
@@ -2285,7 +2285,7 @@ def generate_report_from_rag(
                 return {
                     "backend": _text_backend() or "GEMINI_RAG",
                     "report_type": kind,
-                    "org": "GNSOFT · RAG 검색 보고서",
+                    "org": "Pixel",
                     "date": _today(),
                     "period": period,
                     "query": question,
@@ -2312,7 +2312,7 @@ def generate_report_from_rag(
     return {
         "backend": "MOCK",
         "report_type": kind,
-        "org": "GNSOFT · RAG 검색 보고서",
+        "org": "Pixel",
         "date": _today(),
         "period": period,
         "query": question,
@@ -2528,7 +2528,7 @@ def generate_report_activity(
     return {
         "backend": backend,
         "report_type": rtype,
-        "org": f"GNSOFT · {rtype}",
+        "org": "Pixel",
         "date": today,
         "period": period_label,
         "title": f"내 {rtype} 보고서 ({period_label})",
