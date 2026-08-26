@@ -18,10 +18,11 @@ before="$(git rev-parse HEAD)"
 git fetch upstream --quiet
 
 # 서버는 자체 커밋(raspi-ver 조정)이 있어 fast-forward 가 아닐 수 있다 → 병합 커밋 허용.
-# 충돌 시엔 자동 해결하지 않고 실패시켜(사람이 개입) 잘못된 배포를 막는다.
-if ! git merge --no-edit upstream/main; then
+# 충돌 시엔 upstream(원격 main)을 정답으로 채택(-X theirs) — 앱 소스의 기준은 원격이며,
+# 서버 로컬 변경은 '충돌하지 않는' 부분만 유지된다. (예: README 재작성 시 원격본 채택)
+if ! git merge --no-edit -X theirs upstream/main; then
   git merge --abort || true
-  echo "::error:: 병합 충돌 — 수동 해결이 필요합니다. 배포를 중단합니다."
+  echo "::error:: 병합 실패 — 수동 확인이 필요합니다. 배포를 중단합니다."
   exit 1
 fi
 
