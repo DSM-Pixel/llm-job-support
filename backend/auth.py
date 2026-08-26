@@ -118,7 +118,7 @@ def _init(conn: sqlite3.Connection) -> None:
             (cid, raw),
         )
 
-    # 슈퍼 어드민 부트스트랩: 슈퍼가 없으면 최초 가입 계정(dsmadmin)을 슈퍼로.
+    # 슈퍼 어드민 부트스트랩: 슈퍼가 없으면 최초 가입 계정을 슈퍼로.
     has_user = conn.execute("SELECT 1 FROM users LIMIT 1").fetchone()
     has_super = conn.execute("SELECT 1 FROM users WHERE is_super = 1 LIMIT 1").fetchone()
     if has_user and not has_super:
