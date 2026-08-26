@@ -9,6 +9,8 @@ AI-hanes-explain.md export-ignore
 docs/notes export-ignore
 docs/claude-code-tools-guide.html export-ignore
 docs/claude-code-도구-가이드.pdf export-ignore
+docs/기능명세서_이미지라벨링.html export-ignore
+docs/기능명세서_이미지라벨링.pdf export-ignore
 # 레거시 바닐라 프론트(현재 web/react 로 컷오버 완료, 미서빙)
 web/index.html export-ignore
 web/README.md export-ignore
