@@ -9,6 +9,11 @@
   letter-spacing: 0.08em;
 }
 
+/* 히어로 제목 — 기본 .px-hero h2(72px)는 이 페이지엔 너무 커서 축소 */
+.wf-hero h2 {
+  font-size: 40px;
+}
+
 .wf-input-row {
   display: flex;
   gap: 10px;
