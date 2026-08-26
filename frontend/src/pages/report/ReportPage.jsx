@@ -6,6 +6,7 @@ import { reviseReport } from './reportApi.js'
 import { startJob, takeJobResult } from '../../lib/aijob.js'
 import { useReportDoc } from './useReportDoc.js'
 import ReportHero from './components/ReportHero.jsx'
+import ReportForm from './components/ReportForm.jsx'
 import ReportControls from './components/ReportControls.jsx'
 import { TYPES } from './reportTypes.js'
 import ReportDocument from './components/ReportDocument.jsx'
@@ -226,54 +227,63 @@ export default function ReportPage() {
     <>
       <AppShell activeNav="report" askHandler={reviseHandler} aiScope={AI_SCOPE}>
         <section className="content rp-layout">
-          <ReportHero
-            activeIndex={activeIndex}
-            onSelectType={setActiveIndex}
-            start={start}
-            end={end}
-            onStart={setStart}
-            onEnd={setEnd}
-            reportItems={reportItems}
-            onGenerate={() => generateActivity(true)}
-            busy={busy}
-          />
+          <ReportHero />
 
-          <div className="px-stats rp-stats">
-            <div className="px-stat">
-              <p className="px-stat-label">가져올 산출물</p>
-              <div className="px-stat-value">{artifacts.length}</div>
+          <div className="rp-workspace">
+            {/* 왼쪽 = 미리보기, 오른쪽 = 입력 폼·통계·자료·AI 수정 */}
+            <div className="rp-preview-col">
+              <ReportDocument docRef={docRef} readText={doc.readText} getReport={() => lastReportRef.current} />
             </div>
-            <div className="px-stat">
-              <p className="px-stat-label">첨부 예정 자료</p>
-              <div className="px-stat-value">{reportItems.length}</div>
-            </div>
-            <div className="px-stat">
-              <p className="px-stat-label">문서 섹션</p>
-              <div className="px-stat-value">{lastReportRef.current?.sections?.length || 0}</div>
-            </div>
-            <div className="px-stat">
-              <p className="px-stat-label">대상 기간</p>
-              <div className="px-stat-value text">{period}</div>
+
+            <div className="rp-side-col">
+              <ReportForm
+                activeIndex={activeIndex}
+                onSelectType={setActiveIndex}
+                start={start}
+                end={end}
+                onStart={setStart}
+                onEnd={setEnd}
+                reportItems={reportItems}
+                onGenerate={() => generateActivity(true)}
+                busy={busy}
+              />
+
+              <div className="px-stats rp-stats">
+                <div className="px-stat">
+                  <p className="px-stat-label">가져올 산출물</p>
+                  <div className="px-stat-value">{artifacts.length}</div>
+                </div>
+                <div className="px-stat">
+                  <p className="px-stat-label">첨부 예정 자료</p>
+                  <div className="px-stat-value">{reportItems.length}</div>
+                </div>
+                <div className="px-stat">
+                  <p className="px-stat-label">문서 섹션</p>
+                  <div className="px-stat-value">{lastReportRef.current?.sections?.length || 0}</div>
+                </div>
+                <div className="px-stat">
+                  <p className="px-stat-label">대상 기간</p>
+                  <div className="px-stat-value text">{period}</div>
+                </div>
+              </div>
+
+              <ReportControls
+                chartOff={chartOff}
+                onToggleChart={() => setChartOff((v) => !v)}
+                artifacts={artifacts}
+                onAddArtifact={addArtifact}
+                onOpenArtifact={setModalArt}
+                reportItems={reportItems}
+                onAddImages={addImages}
+                onRemoveThumb={removeThumb}
+                period={period}
+                includeChart={includeChart}
+                onTemplateRender={renderReport}
+              />
+
+              <ReportAiEdit onAsk={reviseHandler} />
             </div>
           </div>
-
-          <ReportControls
-            chartOff={chartOff}
-            onToggleChart={() => setChartOff((v) => !v)}
-            artifacts={artifacts}
-            onAddArtifact={addArtifact}
-            onOpenArtifact={setModalArt}
-            reportItems={reportItems}
-            onAddImages={addImages}
-            onRemoveThumb={removeThumb}
-            period={period}
-            includeChart={includeChart}
-            onTemplateRender={renderReport}
-          />
-
-          <ReportDocument docRef={docRef} readText={doc.readText} getReport={() => lastReportRef.current} />
-
-          <ReportAiEdit onAsk={reviseHandler} />
 
           <div className="px-bottomcta">
             <button className="btn lg" type="button" onClick={copyBody}>

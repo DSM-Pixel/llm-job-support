@@ -1,6 +1,38 @@
 .rp-layout {
-  max-width: 900px;
+  max-width: 1240px;
   margin: 0 auto;
+}
+
+/* 분할 작업영역 — 왼쪽 미리보기(넓게) / 오른쪽 입력·컨트롤 사이드 */
+.rp-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 400px;
+  gap: 24px;
+  align-items: start;
+}
+.rp-side-col {
+  display: grid;
+  gap: 20px;
+  align-content: start;
+}
+.rp-side-col .rp-form {
+  margin-bottom: 0; /* 사이드 컬럼은 gap 으로 간격 처리 */
+}
+/* 사이드가 좁아 4열 통계는 답답 → 2열로 */
+.rp-side-col .rp-stats {
+  grid-template-columns: repeat(2, 1fr);
+  margin-top: 0;
+}
+@media (max-width: 960px) {
+  .rp-workspace {
+    grid-template-columns: 1fr; /* 좁은 화면은 위아래로 쌓기 */
+  }
+  .rp-side-col {
+    order: 1; /* 모바일: 입력 폼 먼저, 미리보기는 아래로 */
+  }
+  .rp-preview-col {
+    order: 2;
+  }
 }
 
 /* ── 히어로(REPORT BUILDER) ── */
