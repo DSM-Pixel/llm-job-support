@@ -6,7 +6,9 @@
 /* 분할 작업영역 — 왼쪽 미리보기(넓게) / 오른쪽 입력·컨트롤 사이드 */
 .rp-workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 400px;
+  /* 미리보기를 살짝 넓게, 하지만 분할선이 가운데 근처에 오도록 균형 잡음
+     (1fr:400px 는 왼쪽이 과하게 넓어 오른쪽으로 치우쳐 보였음) */
+  grid-template-columns: minmax(0, 1.1fr) minmax(340px, 1fr);
   gap: 24px;
   align-items: start;
 }

@@ -2385,8 +2385,9 @@ button:disabled {
   color: rgba(255, 255, 255, 0.82);
 }
 .px-taskcard.feature {
-  background: var(--violet);
-  border-color: var(--violet);
+  /* 다른 강조 박스와 동일한 톤다운 보라 그라데이션 — 순수 --violet 은 너무 쨍 */
+  background: linear-gradient(135deg, var(--grad-a) 0%, var(--grad-b) 100%);
+  border-color: var(--grad-b);
 }
 .px-taskcard-ic {
   display: grid;
