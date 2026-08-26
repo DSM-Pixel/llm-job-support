@@ -64,6 +64,15 @@
   margin-top: 4px;
 }
 
+/* 입력 폼 패널 — 검은 히어로 아래로 내린 밝은 카드(양식·기간·자료 + 초안 버튼) */
+.rp-form {
+  padding: 22px 24px;
+  margin-bottom: 22px;
+}
+.rp-form .rp-hero-controls {
+  margin: 0 0 18px;
+}
+
 /* ── 스탯 행 ── */
 .rp-stats {
   margin-top: 24px;

@@ -46,15 +46,19 @@ export default function ReportHero({
   }
 
   return (
-    <div className="px-hero plain rp-hero">
-      <p className="rp-eyebrow">REPORT BUILDER</p>
-      <h2>
-        간단한 명령어로
-        <br />
-        <span className="accent">보고서 작성하기</span>
-      </h2>
+    <>
+      {/* 검은 박스에는 설명(제목)만 — 입력 폼·버튼은 아래 밝은 패널로 내렸다. */}
+      <div className="px-hero plain rp-hero">
+        <p className="rp-eyebrow">REPORT BUILDER</p>
+        <h2>
+          간단한 명령어로
+          <br />
+          <span className="accent">보고서 작성하기</span>
+        </h2>
+      </div>
 
-      <div className="rp-hero-controls">
+      <div className="rp-form card">
+        <div className="rp-hero-controls">
         <div className="rp-control-group">
           <span className="rp-control-label">보고서 양식</span>
           <div className="rp-chip-row">
@@ -122,6 +126,7 @@ export default function ReportHero({
       >
         {busy.active ? busy.text : '초안 만들기'}
       </button>
-    </div>
+      </div>
+    </>
   )
 }
