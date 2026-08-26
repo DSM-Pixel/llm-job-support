@@ -11,7 +11,6 @@ export default function PdResult({ data, onToReport, onCompare }) {
     .map((label, i) => ({ label, value: Number(values[i]) || 0 }))
     .sort((a, b) => b.value - a.value)
   const rankMax = Math.max(1, ...ranked.map((r) => r.value))
-  const MEDALS = ['🥇', '🥈', '🥉']
   // 월별 통계(제목에 '월별' + 라벨이 1~2자리 숫자)면 라벨을 'N월'로 표기.
   const isMonthly =
     /월/.test(stats.title || '') &&
@@ -57,7 +56,7 @@ export default function PdResult({ data, onToReport, onCompare }) {
           <div className="px-softcards">
             {data.insights.map((t, i) => (
               <div className="px-softcard" key={i}>
-                <span className="px-softcard-no">{i + 1}</span>
+                <span className="px-softcard-no icon">📰</span>
                 <p>{t}</p>
               </div>
             ))}
@@ -74,9 +73,7 @@ export default function PdResult({ data, onToReport, onCompare }) {
           <div className="px-ranklist">
             {ranked.map((r, i) => (
               <div className="px-rank" key={r.label + i}>
-                <span className={'px-rank-no' + (i < 3 ? ' medal' : '')}>
-                  {i < 3 ? MEDALS[i] : i + 1}
-                </span>
+                <span className={'px-rank-no' + (i === 0 ? ' top' : '')}>{i + 1}</span>
                 <div className="px-rank-main">
                   <b>{fmtLabel(r.label)}</b>
                   <div className="px-rank-bar">

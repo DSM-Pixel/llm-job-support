@@ -92,7 +92,7 @@
 
 /* 시안: 문서검색 결과 패널 = 진한 보라 그라데이션 + 흰 텍스트(옅은 --violet-weak 덮음) */
 .answer.px-gradient {
-  background: linear-gradient(135deg, var(--violet) 0%, var(--violet-strong) 100%);
+  background: linear-gradient(135deg, var(--grad-a) 0%, var(--grad-b) 100%);
   color: #fff;
 }
 .answer.px-gradient .rag-summary {

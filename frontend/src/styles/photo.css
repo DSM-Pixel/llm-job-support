@@ -47,7 +47,7 @@
   min-height: 300px;
   margin-bottom: 28px;
   /* 시안: 진한 보라 그라데이션 + 흰 텍스트(옅은 --violet-weak 기본을 덮는다) */
-  background: linear-gradient(135deg, var(--violet) 0%, var(--violet-strong) 100%);
+  background: linear-gradient(135deg, var(--grad-a) 0%, var(--grad-b) 100%);
   color: #fff;
 }
 .px-gradient-summary {
@@ -72,7 +72,7 @@
 .px-gradient-count b.muted {
   font-size: 22px;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.72);
+  color: rgba(255, 255, 255, 0.92);
 }
 .px-gradient-count small {
   margin-left: 6px;
