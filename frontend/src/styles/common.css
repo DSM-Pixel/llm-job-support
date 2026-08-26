@@ -2055,8 +2055,9 @@ button:disabled {
   margin: 0 0 16px;
   font-size: 72px;
   font-weight: 800;
-  line-height: 1.1;
-  letter-spacing: -0.035em;
+  line-height: 1.15;
+  /* 한글 큰 제목이 -0.035em 이면 글자가 다닥다닥 붙어 보여 자간을 살짝 넓힘 */
+  letter-spacing: -0.005em;
   color: var(--g900);
 }
 .px-hero h2 .accent {
