@@ -37,8 +37,11 @@
   color: #c4ccd8;
 }
 .canvas-card .prompt-chip:hover {
-  border-color: #3a434f;
-  color: #e7ecf3;
+  /* 배경을 명시하지 않으면 밝은 .prompt-chip:hover(violet-weak) 가 새어들어와
+     흰 글씨가 밝은 배경에 묻힌다 → 어두운(보라 기운) 배경을 직접 지정. */
+  border-color: var(--violet);
+  background: #2a2350;
+  color: #fff;
 }
 .canvas-card .preset-row {
   border-top-color: #262b34;
