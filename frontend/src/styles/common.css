@@ -812,6 +812,12 @@ textarea {
   color: var(--blue);
   background: rgba(70, 96, 191, 0.12);
 }
+/* 사용 중인 AI 모델명은 보라색으로 — 어떤 모델이 도는지 한눈에 보이게 */
+.model-chip-name {
+  color: var(--violet);
+  font-weight: 800;
+  text-transform: uppercase;
+}
 
 .field-hint {
   color: var(--muted);

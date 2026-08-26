@@ -123,7 +123,7 @@ export default function PreviewArea({
           title="AI 모델 — 클릭해 설정에서 변경"
           onClick={onOpenSettings}
         >
-          ⚙ {modelName}
+          ⚙ <b className="model-chip-name">{modelName}</b>
           {modelSuffix}
         </span>
         {!active.sample && active.url && (
@@ -134,7 +134,7 @@ export default function PreviewArea({
             aria-label="이 사진 제거"
             onClick={onRemoveActive}
           >
-            ⌫
+            ⌫ 삭제
           </button>
         )}
       </div>

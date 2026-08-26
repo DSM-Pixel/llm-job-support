@@ -205,8 +205,6 @@
 }
 
 .toolbar-btn.preview-del {
-  width: 32px;
-  padding: 0;
   color: var(--g400);
 }
 
