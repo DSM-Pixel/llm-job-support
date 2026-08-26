@@ -1,4 +1,4 @@
-"""GNSoft AI 플랫폼 통합 FastAPI 앱.
+"""Pixel AI 플랫폼 통합 FastAPI 앱.
 
 실행:
     uv pip install -e ".[web]"      # 또는: pip install fastapi "uvicorn[standard]"
@@ -36,7 +36,7 @@ elif _react_build.is_dir():
 else:
     WEB_DIR = _default_web
 
-app = FastAPI(title="GNSoft AI 플랫폼", version="0.1.0")
+app = FastAPI(title="Pixel AI 플랫폼", version="0.1.0")
 
 
 _CACHEABLE_EXT = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".ico", ".woff", ".woff2")

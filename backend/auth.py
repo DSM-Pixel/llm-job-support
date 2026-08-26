@@ -368,8 +368,8 @@ def start_signup(
 
     sent = _send_email(
         email,
-        "GNSoft 이메일 인증 코드",
-        f"GNSoft AI 플랫폼 회원가입 인증 코드입니다.\n\n    인증 코드: {code}\n\n"
+        "Pixel 이메일 인증 코드",
+        f"Pixel AI 플랫폼 회원가입 인증 코드입니다.\n\n    인증 코드: {code}\n\n"
         f"10분 안에 입력해주세요. 본인이 요청하지 않았다면 무시하셔도 됩니다.",
     )
     resp = {
@@ -469,7 +469,7 @@ def resend_code(email: str) -> dict:
         )
     sent = _send_email(
         email,
-        "GNSoft 이메일 인증 코드(재발송)",
+        "Pixel 이메일 인증 코드(재발송)",
         f"새 인증 코드: {code}\n10분 안에 입력해주세요.",
     )
     resp = {"ok": True, "message": "인증 코드를 다시 보냈습니다."}
@@ -519,8 +519,8 @@ def request_email_code(email: str) -> dict:
         )
     sent = _send_email(
         email,
-        "GNSoft 이메일 인증 코드",
-        f"GNSoft AI 플랫폼 회원가입 인증 코드입니다.\n\n    인증 코드: {code}\n\n"
+        "Pixel 이메일 인증 코드",
+        f"Pixel AI 플랫폼 회원가입 인증 코드입니다.\n\n    인증 코드: {code}\n\n"
         f"10분 안에 입력해주세요. 본인이 요청하지 않았다면 무시하셔도 됩니다.",
     )
     resp = {"ok": True, "email": email, "message": "인증 코드를 이메일로 보냈습니다."}

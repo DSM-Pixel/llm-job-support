@@ -42,7 +42,7 @@ export default function Sidebar({ activeNav }) {
     <aside className="sidebar">
       <a className="logo" href="dashboard.html">
         <img className="logo-img" src="/assets/img/logomark-transparent.png" alt="" />
-        GNSoft
+        Pixel
       </a>
 
       {/* 프로젝트 칩 — 현재 프로젝트 이모지·이름, 클릭 시 프로젝트 선택으로. */}

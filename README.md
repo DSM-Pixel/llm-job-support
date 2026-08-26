@@ -2,7 +2,7 @@
 
 > **"포트홀 영역을 찾아줘", "이 데이터로 보고서 만들어줘"** — 한국어 한 줄이면 끝나는 도로 점검 AI 워크스페이스.
 >
-> 지엔소프트(주) × 유클리드소프트 「프로젝트형 청년 일경험」 결과물. VLM · YOLO · SAM · Hybrid RAG · LLM · AI Agent를 하나의 웹 서비스로 묶었습니다.
+> VLM · YOLO · SAM · Hybrid RAG · LLM · AI Agent를 하나의 웹 서비스로 묶은 멀티모달 AI 플랫폼입니다.
 
 ![홈 화면](docs/screenshots/dashboard.png)
 
@@ -131,4 +131,4 @@ llm-job-support/
 
 [GNU AGPL v3](LICENSE) — 오픈소스. 네트워크로 서비스할 경우 소스 공개 의무가 있습니다.
 
-<sub>운영: ㈜유클리드소프트 · 참여기업: 지엔소프트(주) · 「프로젝트형 청년 일경험」 결과물</sub>
+<sub>© Pixel · 도로 점검 멀티모달 AI 플랫폼</sub>

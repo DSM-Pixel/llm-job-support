@@ -18,7 +18,7 @@ from typing import Any
 import requests
 
 # 브라우저형 UA — 일부 파일 서버가 기본 요청을 403 으로 막는 경우 완화.
-_UA = "Mozilla/5.0 (compatible; GNSoftPubData/0.1)"
+_UA = "Mozilla/5.0 (compatible; PixelPubData/0.1)"
 
 
 def _service_key() -> str | None:

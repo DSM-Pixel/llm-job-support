@@ -197,7 +197,7 @@ export default function LoginPage() {
             </p>
           </form>
         </div>
-        <p className="lg-foot">지엔소프트(주) × 유클리드소프트 · 프로젝트형 일경험 데모 플랫폼</p>
+        <p className="lg-foot">Pixel · 도로 점검 멀티모달 AI 플랫폼</p>
       </main>
 
       <SignupModal open={signupOpen} onClose={() => setSignupOpen(false)} />
