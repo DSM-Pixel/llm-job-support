@@ -2457,6 +2457,15 @@ button:disabled {
   background: var(--violet);
   color: #fff;
 }
+/* 상위 3위는 숫자 대신 메달 — 배지 배경 없이 이모지만 크게 */
+.px-rank-no.medal {
+  background: transparent;
+  font-size: 20px;
+}
+/* 1위(정렬상 첫 행)는 값도 보라로 강조 */
+.px-ranklist .px-rank:first-child .px-rank-val {
+  color: var(--violet);
+}
 .px-rank-main {
   flex: 1;
   min-width: 0;

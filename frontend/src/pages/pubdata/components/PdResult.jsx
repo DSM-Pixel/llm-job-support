@@ -6,7 +6,18 @@ export default function PdResult({ data, onToReport, onCompare }) {
   const stats = data.stats || {}
   const labels = stats.labels || []
   const values = stats.values || []
-  const max = Math.max(1, ...values)
+  // 값 내림차순 '순위'로 정렬(라벨↔값 쌍 유지) — 상위 3위는 메달, 나머지는 번호.
+  const ranked = labels
+    .map((label, i) => ({ label, value: Number(values[i]) || 0 }))
+    .sort((a, b) => b.value - a.value)
+  const rankMax = Math.max(1, ...ranked.map((r) => r.value))
+  const MEDALS = ['🥇', '🥈', '🥉']
+  // 월별 통계(제목에 '월별' + 라벨이 1~2자리 숫자)면 라벨을 'N월'로 표기.
+  const isMonthly =
+    /월/.test(stats.title || '') &&
+    labels.length > 0 &&
+    labels.every((l) => /^\d{1,2}$/.test(String(l).trim()))
+  const fmtLabel = (l) => (isMonthly ? `${String(l).trim()}월` : l)
 
   return (
     <>
@@ -61,20 +72,22 @@ export default function PdResult({ data, onToReport, onCompare }) {
             <span className="px-section-aside">{stats.dataset || data.domain} 기준</span>
           </div>
           <div className="px-ranklist">
-            {labels.map((label, i) => (
-              <div className="px-rank" key={label + i}>
-                <span className={'px-rank-no' + (i === 0 ? ' top' : '')}>{i + 1}</span>
+            {ranked.map((r, i) => (
+              <div className="px-rank" key={r.label + i}>
+                <span className={'px-rank-no' + (i < 3 ? ' medal' : '')}>
+                  {i < 3 ? MEDALS[i] : i + 1}
+                </span>
                 <div className="px-rank-main">
-                  <b>{label}</b>
+                  <b>{fmtLabel(r.label)}</b>
                   <div className="px-rank-bar">
                     <span
                       className={i === 0 ? undefined : 'mute'}
-                      style={{ width: `${Math.round((values[i] / max) * 100)}%` }}
+                      style={{ width: `${Math.round((r.value / rankMax) * 100)}%` }}
                     />
                   </div>
                 </div>
                 <span className="px-rank-val">
-                  {values[i]}
+                  {r.value}
                   {stats.unit || ''}
                 </span>
               </div>
