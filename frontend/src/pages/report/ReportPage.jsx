@@ -229,44 +229,46 @@ export default function ReportPage() {
         <section className="content rp-layout">
           <ReportHero />
 
+          {/* 상단: 통계 4개 한 줄 */}
+          <div className="px-stats rp-stats">
+            <div className="px-stat">
+              <p className="px-stat-label">가져올 산출물</p>
+              <div className="px-stat-value">{artifacts.length}</div>
+            </div>
+            <div className="px-stat">
+              <p className="px-stat-label">첨부 예정 자료</p>
+              <div className="px-stat-value">{reportItems.length}</div>
+            </div>
+            <div className="px-stat">
+              <p className="px-stat-label">문서 섹션</p>
+              <div className="px-stat-value">{lastReportRef.current?.sections?.length || 0}</div>
+            </div>
+            <div className="px-stat">
+              <p className="px-stat-label">대상 기간</p>
+              <div className="px-stat-value text">{period}</div>
+            </div>
+          </div>
+
+          {/* 그 아래: 보고서 생성(양식·기간·초안 만들기) 한 줄 */}
+          <ReportForm
+            activeIndex={activeIndex}
+            onSelectType={setActiveIndex}
+            start={start}
+            end={end}
+            onStart={setStart}
+            onEnd={setEnd}
+            reportItems={reportItems}
+            onGenerate={() => generateActivity(true)}
+            busy={busy}
+          />
+
+          {/* 그 밑으로만 분할: 왼쪽 미리보기 / 오른쪽 자료·AI 수정 */}
           <div className="rp-workspace">
-            {/* 왼쪽 = 미리보기, 오른쪽 = 입력 폼·통계·자료·AI 수정 */}
             <div className="rp-preview-col">
               <ReportDocument docRef={docRef} readText={doc.readText} getReport={() => lastReportRef.current} />
             </div>
 
             <div className="rp-side-col">
-              <ReportForm
-                activeIndex={activeIndex}
-                onSelectType={setActiveIndex}
-                start={start}
-                end={end}
-                onStart={setStart}
-                onEnd={setEnd}
-                reportItems={reportItems}
-                onGenerate={() => generateActivity(true)}
-                busy={busy}
-              />
-
-              <div className="px-stats rp-stats">
-                <div className="px-stat">
-                  <p className="px-stat-label">가져올 산출물</p>
-                  <div className="px-stat-value">{artifacts.length}</div>
-                </div>
-                <div className="px-stat">
-                  <p className="px-stat-label">첨부 예정 자료</p>
-                  <div className="px-stat-value">{reportItems.length}</div>
-                </div>
-                <div className="px-stat">
-                  <p className="px-stat-label">문서 섹션</p>
-                  <div className="px-stat-value">{lastReportRef.current?.sections?.length || 0}</div>
-                </div>
-                <div className="px-stat">
-                  <p className="px-stat-label">대상 기간</p>
-                  <div className="px-stat-value text">{period}</div>
-                </div>
-              </div>
-
               <ReportControls
                 chartOff={chartOff}
                 onToggleChart={() => setChartOff((v) => !v)}

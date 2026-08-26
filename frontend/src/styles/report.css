@@ -15,14 +15,6 @@
   gap: 20px;
   align-content: start;
 }
-.rp-side-col .rp-form {
-  margin-bottom: 0; /* 사이드 컬럼은 gap 으로 간격 처리 */
-}
-/* 사이드가 좁아 4열 통계는 답답 → 2열로 */
-.rp-side-col .rp-stats {
-  grid-template-columns: repeat(2, 1fr);
-  margin-top: 0;
-}
 @media (max-width: 960px) {
   .rp-workspace {
     grid-template-columns: 1fr; /* 좁은 화면은 위아래로 쌓기 */
