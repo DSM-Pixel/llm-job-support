@@ -58,7 +58,10 @@
   white-space: nowrap;
 }
 .rp-generate {
-  width: 100%;
+  /* 히어로가 넓어지며 100% 폭 버튼이 지나치게 길어 보임 → 내용 크기 + 최소폭으로 왼쪽 정렬 */
+  width: auto;
+  min-width: 220px;
+  margin-top: 4px;
 }
 
 /* ── 스탯 행 ── */
