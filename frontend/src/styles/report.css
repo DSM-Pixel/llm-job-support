@@ -58,10 +58,44 @@
   white-space: nowrap;
 }
 .rp-generate {
-  /* 히어로가 넓어지며 100% 폭 버튼이 지나치게 길어 보임 → 내용 크기 + 최소폭으로 왼쪽 정렬 */
-  width: auto;
-  min-width: 220px;
+  /* 입력 폼 카드(900px 안) 안에서는 전폭 버튼이 적당 — 길게 */
+  width: 100%;
   margin-top: 4px;
+}
+
+/* 검은 히어로 설명 문단·포인트 — 어두운 배경 위 밝은 글씨 */
+.rp-hero .rp-hero-desc {
+  max-width: 640px;
+  margin: 16px 0 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.65;
+  color: #aeb6c2;
+}
+.rp-hero .rp-hero-desc b {
+  color: #fff;
+}
+.rp-hero-points {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 24px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.rp-hero-points li {
+  position: relative;
+  padding-left: 20px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #cdd4df;
+}
+.rp-hero-points li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: var(--violet-soft);
+  font-weight: 800;
 }
 
 /* 입력 폼 패널 — 검은 히어로 아래로 내린 밝은 카드(양식·기간·자료 + 초안 버튼) */
