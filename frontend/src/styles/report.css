@@ -1,7 +1,24 @@
 .rp-layout {
-  /* 분할을 걷어내고 한 컬럼 스택 — 문서 가독 폭으로 중앙 정렬 */
-  max-width: 1040px;
+  max-width: 1240px;
   margin: 0 auto;
+}
+
+/* 스케치대로 분할 — 왼쪽 미리보기(크게) / 오른쪽 자료·AI수정 */
+.rp-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(320px, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.rp-side-col {
+  display: grid;
+  gap: 20px;
+  align-content: start;
+}
+@media (max-width: 960px) {
+  .rp-workspace {
+    grid-template-columns: 1fr; /* 좁은 화면은 위아래로 쌓기 */
+  }
 }
 
 /* ── 히어로(REPORT BUILDER) ── */

@@ -262,24 +262,28 @@ export default function ReportPage() {
             busy={busy}
           />
 
-          {/* 자료 추가 → 미리보기 → AI 수정 (한 컬럼으로 위아래 정렬) */}
-          <ReportControls
-            chartOff={chartOff}
-            onToggleChart={() => setChartOff((v) => !v)}
-            artifacts={artifacts}
-            onAddArtifact={addArtifact}
-            onOpenArtifact={setModalArt}
-            reportItems={reportItems}
-            onAddImages={addImages}
-            onRemoveThumb={removeThumb}
-            period={period}
-            includeChart={includeChart}
-            onTemplateRender={renderReport}
-          />
-
-          <ReportDocument docRef={docRef} readText={doc.readText} getReport={() => lastReportRef.current} />
-
-          <ReportAiEdit onAsk={reviseHandler} />
+          {/* 스케치대로: 왼쪽 미리보기(크게) / 오른쪽 자료 + AI 수정 */}
+          <div className="rp-workspace">
+            <div className="rp-preview-col">
+              <ReportDocument docRef={docRef} readText={doc.readText} getReport={() => lastReportRef.current} />
+            </div>
+            <div className="rp-side-col">
+              <ReportControls
+                chartOff={chartOff}
+                onToggleChart={() => setChartOff((v) => !v)}
+                artifacts={artifacts}
+                onAddArtifact={addArtifact}
+                onOpenArtifact={setModalArt}
+                reportItems={reportItems}
+                onAddImages={addImages}
+                onRemoveThumb={removeThumb}
+                period={period}
+                includeChart={includeChart}
+                onTemplateRender={renderReport}
+              />
+              <ReportAiEdit onAsk={reviseHandler} />
+            </div>
+          </div>
 
           <div className="px-bottomcta">
             <button className="btn lg" type="button" onClick={copyBody}>
