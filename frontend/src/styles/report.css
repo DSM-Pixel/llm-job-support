@@ -361,6 +361,11 @@
   background: #fff;
   color: #1f2a3c; /* 흰 종이 문서 — 테마와 무관하게 어두운 글씨 고정(제목 포함) */
   overflow: hidden;
+  /* A4 세로(210:297) 종이 비율 — 내용이 A4 한 장보다 길면 자연히 아래로 늘어난다.
+     빈 상태에서도 문서 한 장처럼 보이게 한다. */
+  aspect-ratio: 210 / 297;
+  max-width: 794px;
+  margin: 0 auto;
 }
 
 .report-page > header {
