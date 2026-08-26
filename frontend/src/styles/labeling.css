@@ -562,14 +562,11 @@
   margin-left: auto;
   text-decoration: none;
 }
-/* 올린 사진 전체 삭제 — 파괴적 동작이라 빨간 톤으로 구분 */
-.gallery-actions .gallery-clear {
-  color: var(--red);
-  border-color: color-mix(in srgb, var(--red) 32%, transparent);
-}
+/* 올린 사진 전체 삭제 — 평소엔 기본 버튼, 호버할 때만 빨간 톤으로 경고 */
 .gallery-actions .gallery-clear:hover {
-  background: color-mix(in srgb, var(--red) 10%, transparent);
+  color: var(--red);
   border-color: var(--red);
+  background: color-mix(in srgb, var(--red) 10%, transparent);
 }
 
 /* 폴더 라벨링 결과 갤러리 — 배치 결과(서버 썸네일)를 유지 표시 */
