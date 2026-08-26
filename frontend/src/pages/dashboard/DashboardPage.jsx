@@ -301,7 +301,7 @@ function DashboardContent() {
         ) : (
           continueRows.map((it, i) => (
             <button type="button" className="px-continue-row" key={i} onClick={() => go(it.route)}>
-              <span className={'px-continue-ic' + (it.v ? ' v' : '')}>{it.icon}</span>
+              <span className="px-continue-ic">{it.icon}</span>
               <div className="px-continue-body">
                 <b>{it.title}</b>
                 <span>{it.sub}</span>
