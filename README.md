@@ -1,81 +1,134 @@
-# llm-job-support
+# 🛣️ Pixel — 자연어로 도로를 점검하는 멀티모달 AI 플랫폼
 
-지엔소프트(주) × 유클리드소프트 「프로젝트형 청년 일경험」 멀티모달 AI 프로젝트 워크스페이스.
+> **"포트홀 영역을 찾아줘", "이 데이터로 보고서 만들어줘"** — 한국어 한 줄이면 끝나는 도로 점검 AI 워크스페이스.
+>
+> 지엔소프트(주) × 유클리드소프트 「프로젝트형 청년 일경험」 결과물. VLM · YOLO · SAM · Hybrid RAG · LLM · AI Agent를 하나의 웹 서비스로 묶었습니다.
 
-VLM · SAM · YOLOe · LLM · Hybrid RAG · AI Agent를 결합해
-**자연어 질의 → 이미지 이해/검색/요약/보고서 생성** 서비스의
-기획안과 기능별 프로토타입을 8주 동안 만들어냅니다.
+![홈 화면](docs/screenshots/dashboard.png)
 
-> 자세한 컨텍스트와 컨벤션은 [CLAUDE.md](./CLAUDE.md)를 보세요.
+---
 
-## 빠른 시작
+## 🔗 라이브 데모 & 데모 계정
+
+**바로 접속: [https://dsm.gyungdal.cc](https://dsm.gyungdal.cc)**
+
+심사·평가용으로 아래 계정을 준비했습니다. 로그인 후 상단 메뉴에서 모든 기능을 사용할 수 있습니다.
+
+| 구분 | 아이디 / 이메일 | 비밀번호 | 권한 |
+| --- | --- | --- | --- |
+| **슈퍼 어드민** | `dsmadmin` | `dsmadmin2026` | 전체 운영·회사/대표 승인·API 키 관리 |
+| **회사 어드민(대표)** | `admin@gnsoft.co.kr` | `gnsoft1234` | 같은 회사 멤버·검수자 관리, 프로젝트 검수 |
+| **일반 사용자** | `user@gnsoft.co.kr` | `gnsoft1234` | 라벨링·검색·보고서 등 기능 사용 |
+
+> ℹ️ 위 계정은 **평가용 데모 계정**입니다. 심사 종료 후 비밀번호를 교체하는 것을 권장합니다.
+
+---
+
+## ✨ 주요 기능
+
+상단 내비게이션 한 줄에 7개 기능이 모두 들어 있습니다.
+
+| 기능 | 설명 |
+| --- | --- |
+| 🏠 **홈 대시보드** | 내 작업·통계·이어서 하던 작업을 한눈에. 히어로에서 마우스 드래그로 박스도 그려집니다. |
+| 🏷 **사진 라벨링** | 한국어로 지시하면 AI가 박스를 그립니다. **자체 학습 YOLO(포트홀·차량)** 우선, 신뢰도 임계값 조절, COCO/YOLO 내보내기. |
+| 🖼 **사진 설명** | 도로 사진을 올리면 무엇이 위험한지 문장·객체 목록으로 설명(VLM). |
+| 🔍 **문서 검색(RAG)** | 업로드한 문서에 자연어로 질문 → 근거와 함께 답변(BM25 + 문맥 유사도 하이브리드). |
+| 📊 **공공데이터** | data.go.kr 연계 — 키워드로 통계·순위·AI 요약을 즉시 확인. |
+| ⛓ **업무 절차** | 목표만 적으면 AI가 작업 순서(파이프라인)를 세워줍니다. |
+| 📄 **보고서** | 기간·양식만 고르면 활동·검색·라벨링 결과를 모아 **제출용 초안**을 자동 작성(복사·PDF·DOCX). |
+
+<p align="center">
+  <img src="docs/screenshots/labeling.png" width="49%" alt="사진 라벨링" />
+  <img src="docs/screenshots/report.png" width="49%" alt="보고서" />
+</p>
+
+---
+
+## 🧠 AI 백엔드 (자체 모델 우선)
+
+박스 탐지는 **우리가 직접 학습한 YOLO 이중 모델**을 1순위로 사용합니다.
+
+- 🎯 **`best.pt`** — 포트홀·균열 등 **도로 파손** 탐지 (자체 학습)
+- 🚗 **`vehicle.pt`** — **차량**(승용차·버스·트럭) 탐지 (자체 학습)
+- 🧩 두 모델 + 일반 객체(yolov8n)를 합쳐 이미지 속 모든 객체를 좌표와 함께 반환
+- 🌐 **폴백**: 서버에 모델이 없을 때만 Gemini grounding / GPT‑4o 비전으로 대체
+
+텍스트 생성(사진 설명·RAG·보고서·요약·에이전트)은 **Gemini → 로컬 LLM(GPT‑OSS) → OpenAI** 순으로 폴백하며, 어드민 화면에서 API 키를 즉시 교체할 수 있습니다.
+
+> 모델 가중치(`*.pt`)는 용량 문제로 저장소에 포함하지 않습니다(gitignore). `scripts/fetch_pothole_model.py`로 내려받아 `backend/storage/models/`에 배치하면 자동으로 사용됩니다.
+
+---
+
+## 🛠 기술 스택
+
+| 영역 | 사용 기술 |
+| --- | --- |
+| **프론트엔드** | React 19 + Vite (MPA), 순수 CSS 디자인 시스템 |
+| **백엔드** | Python · FastAPI · Uvicorn |
+| **비전 AI** | Ultralytics YOLO(자체 학습), MobileSAM, Gemini/GPT‑4o Vision |
+| **생성형 AI** | Gemini · OpenAI · 로컬 LLM(GPT‑OSS, OpenAI 호환) |
+| **검색(RAG)** | BM25 + 문맥 유사도 하이브리드 |
+| **데이터** | 공공데이터포털(data.go.kr) 연계, SQLite |
+| **배포** | Raspberry Pi + Docker, GitHub Actions CD |
+
+---
+
+## 🚀 로컬 실행
+
+### 1) 백엔드 (통합 웹 서버)
 
 ```bash
-# 1) 가상환경 + 의존성
-uv sync --extra dev --extra demo
+# 의존성 설치 (uv 권장, pip 도 가능)
+uv sync --extra web        # YOLO까지: uv sync --extra web --extra seg
 
-# 2) 환경변수
+# 서버 실행 → http://127.0.0.1:8000
+./run_web.sh               # Windows: .\run_web.ps1
+# 또는: python -m uvicorn backend.app:app --port 8000
+```
+
+FastAPI가 `web/`(빌드된 프론트엔드)를 서빙하고 `/api/*`를 제공합니다. 브라우저로 **http://127.0.0.1:8000** 접속.
+
+### 2) 프론트엔드 개발 모드 (선택)
+
+```bash
+cd frontend
+npm install
+npm run dev                # Vite 개발 서버
+npm run build              # 배포 빌드 → web/react 로 복사
+```
+
+### 3) 환경변수 (선택)
+
+```bash
 cp .env.example .env
-# .env 에 ANTHROPIC_API_KEY, DATA_GO_KR_KEY 등을 채우기
-
-# 3) Claude Code 띄우기
-claude
+# GEMINI_API_KEY / OPENAI_API_KEY / DATA_GO_KR_KEY 등을 채우면 실제 AI 동작
+# 키가 없어도 MOCK 폴백으로 화면·흐름은 모두 확인 가능
 ```
 
-세션이 시작되면 `SessionStart` 훅이 현재 브랜치/팀/프로토타입 현황을 알려줍니다.
+---
 
-## 통합 웹 플랫폼 실행
-
-프로토타입(라벨링·RAG·질의·보고서)을 한 화면에 묶은 FastAPI 서버입니다.
-
-```bash
-uv sync --extra web
-./run_web.sh        # macOS/Linux/Git Bash  (PORT=9000 ./run_web.sh 로 포트 변경)
-./run_web.ps1       # Windows PowerShell
-```
-
-→ http://127.0.0.1:8000  (API·구조는 [backend/README.md](./backend/README.md) 참고)
-
-## 자주 쓰는 Claude Code 명령
-
-| 명령 | 용도 |
-|------|------|
-| `/team-init <팀명>` | 새 팀 워크스페이스 생성 |
-| `/prototype-scaffold` | Gradio/FastAPI 데모 1파일 생성 |
-| `/planning-report` | 기획 보고서/기능 정의서/발표자료 초안 |
-| `/run` | 만든 앱을 띄워 동작 확인 |
-
-> 통합 서버를 빠르게 띄우려면 루트의 `run_web.sh` / `run_web.ps1` 사용.
-
-## 자주 호출하는 subagent
-
-| 에이전트 | 용도 |
-|----------|------|
-| `vlm-researcher` | Qwen2-VL/SAM/YOLOe 등 모델 후보 비교 |
-| `rag-architect` | Hybrid RAG 파이프라인 설계 |
-| `prototype-builder` | Gradio/FastAPI 데모 1파일 코드 |
-| `public-data-finder` | data.go.kr 데이터셋/API 연계 |
-| `planning-writer` | 한국어 기획서/발표자료 작성 |
-
-## 디렉터리
+## 📁 프로젝트 구조
 
 ```
-.
-├── CLAUDE.md           # 프로젝트 컨텍스트 (반드시 먼저 읽기)
-├── pyproject.toml      # uv 기반
-├── .claude/            # 하네스: settings/agents/skills/hooks
-├── backend/            # 통합 FastAPI 서버 (web/ 서빙 + /api/*)
-├── web/                # 통합 웹 UI (대시보드/라벨링/질의/RAG/보고서)
-├── docs/               # 기획 보고서, 설계안, 발표자료, 작업노트
-├── prototypes/         # 기능별 데모 (Gradio 원형)
-├── teams/              # 팀별 작업 공간
-└── data/               # 샘플 데이터 (대용량 제외)
+llm-job-support/
+├── frontend/            # React + Vite 소스 (src/) — 각 기능별 페이지
+├── web/                 # 빌드된 프론트엔드(백엔드가 서빙) + 정적 에셋
+├── backend/             # FastAPI 앱 · YOLO/비전 서비스 · RAG · 공공데이터 어댑터
+│   ├── app.py           #   라우트(/api/*)
+│   ├── services.py      #   AI 텍스트·비전 오케스트레이션
+│   ├── yolo_service.py  #   자체 YOLO 이중 모델 탐지
+│   └── pubdata/         #   공공데이터포털 연계
+├── prototypes/          # 기능별 초기 프로토타입(Gradio 등)
+├── scripts/             # 모델 프로비저닝 등 유틸
+├── deploy/              # 배포 스크립트(RPi)
+└── docs/                # 기획·설계·발표 자료, 스크린샷
 ```
 
-## 라이선스
+---
 
-이 프로젝트는 **GNU Affero General Public License v3.0 (AGPL-3.0)** 하에 배포되는 오픈소스입니다.
-전체 조건은 저장소의 [`LICENSE`](./LICENSE) 파일을 참고하세요.
+## 📄 라이선스
 
-- 소스 코드의 사용·수정·재배포가 허용됩니다.
-- 네트워크를 통해 서비스로 제공(SaaS)하는 경우에도 **수정된 소스를 이용자에게 공개**해야 합니다(AGPL 핵심 조항).
+[GNU AGPL v3](LICENSE) — 오픈소스. 네트워크로 서비스할 경우 소스 공개 의무가 있습니다.
+
+<sub>운영: ㈜유클리드소프트 · 참여기업: 지엔소프트(주) · 「프로젝트형 청년 일경험」 결과물</sub>
