@@ -13,5 +13,5 @@ if (-not (Test-Path $python)) {
     exit 1
 }
 
-Write-Host "GNSoft AI 플랫폼 → http://$BindHost`:$Port" -ForegroundColor Cyan
+Write-Host "Pixel AI 플랫폼 → http://$BindHost`:$Port" -ForegroundColor Cyan
 & $python -m uvicorn backend.app:app --host $BindHost --port $Port --reload

@@ -50,6 +50,7 @@ SAMPLE_DIR = os.path.join(here, "sample_docs")
 
 # ---------- 문서 읽기 / 청킹 ----------
 
+
 def _read_file(path: str) -> str:
     """txt/md 는 그대로, pdf 는 텍스트 추출."""
     ext = os.path.splitext(path)[1].lower()
@@ -127,6 +128,7 @@ def _embed(texts, task_type: str):
 
 # ---------- 인덱싱 ----------
 
+
 def _index_status(index) -> str:
     n_src = len({c["source"] for c in index["chunks"]})
     return f"✅ 색인됨 — 문서/소스 {n_src}개 · 청크 {len(index['chunks'])}개. 이제 질문하세요."
@@ -156,7 +158,7 @@ def _carry_over_web(file_index, old_index):
     if not old_index:
         return file_index
     web_chunks, web_rows = [], []
-    for chunk, vec in zip(old_index["chunks"], old_index["vectors"]):
+    for chunk, vec in zip(old_index["chunks"], old_index["vectors"], strict=False):
         if chunk["source"].startswith("web:"):
             web_chunks.append(chunk)
             web_rows.append(vec)
@@ -202,6 +204,7 @@ def reset_index():
 
 # ---------- 웹 검색 → 가져오기 ----------
 
+
 def web_search(keyword: str):
     """DuckDuckGo로 실제 웹을 검색해 결과 목록을 체크박스로 보여준다."""
     keyword = (keyword or "").strip()
@@ -220,7 +223,9 @@ def web_search(keyword: str):
         title = (r.get("title") or "(제목 없음)").strip()
         url = r.get("href") or ""
         choices.append((f"{title[:70]}  —  {url[:45]}", url))
-    return gr.update(choices=choices, value=[]), f"🔎 {len(choices)}개 검색됨. 가져올 자료를 선택하세요."
+    return gr.update(
+        choices=choices, value=[]
+    ), f"🔎 {len(choices)}개 검색됨. 가져올 자료를 선택하세요."
 
 
 def _extract_url(url: str) -> str:
@@ -273,7 +278,9 @@ def add_web_sources(index, selected_urls, progress=gr.Progress()):
     if not new_chunks:
         if dup and not fail:
             raise gr.Error("선택한 자료는 이미 모두 색인돼 있습니다.")
-        raise gr.Error("선택한 자료에서 본문을 가져오지 못했습니다(JS·차단 페이지일 수 있어요). 다른 결과를 선택해보세요.")
+        raise gr.Error(
+            "선택한 자료에서 본문을 가져오지 못했습니다(JS·차단 페이지일 수 있어요). 다른 결과를 선택해보세요."
+        )
 
     progress(0.9, desc="임베딩 중…")
     index = _append_chunks(index, new_chunks)
@@ -286,6 +293,7 @@ def add_web_sources(index, selected_urls, progress=gr.Progress()):
 
 
 # ---------- 검색(하이브리드) + 답변 ----------
+
 
 def _hybrid_search(index, query: str, k: int = TOP_K):
     """의미검색 + BM25 결과를 RRF(역순위 융합)로 합쳐 상위 k개를 고른다."""
@@ -457,6 +465,7 @@ def respond(index, message: str, history):
 
 # ---------- 참고 파일 목록 / 추천 질문 ----------
 
+
 def _pretty_src(src: str) -> str:
     """소스 이름을 보기 좋게(웹은 🌐 URL, 파일은 📄 파일명)."""
     if src.startswith("web:"):
@@ -466,8 +475,12 @@ def _pretty_src(src: str) -> str:
 
 def _suggest_questions(index):
     """현재 색인된 자료를 바탕으로 답할 수 있는 추천 질문 4개를 생성."""
-    fallback = ["이 자료의 핵심 내용은?", "주요 기준이나 수치는 뭐야?",
-                "어떤 절차를 따라야 해?", "주의할 점은 뭐가 있어?"]
+    fallback = [
+        "이 자료의 핵심 내용은?",
+        "주요 기준이나 수치는 뭐야?",
+        "어떤 절차를 따라야 해?",
+        "주의할 점은 뭐가 있어?",
+    ]
     # 소스별로 하나씩 골라 다양하게 발췌(토큰 절약).
     by_src = {}
     for c in index["chunks"]:
@@ -513,11 +526,7 @@ def delete_sources(index, selected_sources):
         raise gr.Error("삭제할 자료를 선택해주세요.")
 
     targets = set(selected_sources)
-    kept = [
-        (c, v)
-        for c, v in zip(index["chunks"], index["vectors"])
-        if c["source"] not in targets
-    ]
+    kept = [(c, v) for c, v in zip(index["chunks"], index["vectors"], strict=False) if c["source"] not in targets]
     if not kept:  # 전부 삭제되면 빈 인덱스로 본다.
         return None, f"🗑 {len(targets)}개 자료를 삭제했습니다. 남은 자료가 없습니다."
 
@@ -528,7 +537,7 @@ def delete_sources(index, selected_sources):
     return index, f"🗑 {len(targets)}개 자료 삭제됨.\n" + _index_status(index)
 
 
-# ---------- UI (랜딩 페이지 GNSoft 브랜드와 통일) ----------
+# ---------- UI (랜딩 페이지 Pixel 브랜드와 통일) ----------
 
 # 랜딩과 동일한 색/폰트 토큰을 Gradio 테마에 매핑.
 THEME = gr.themes.Base(
@@ -626,9 +635,7 @@ with gr.Blocks(title="하이브리드 RAG 지식검색") as demo:
             status = gr.Markdown()
 
             gr.Markdown("### 🌐 웹에서 찾아 넣기", elem_classes=["gn-sec"])
-            search_kw = gr.Textbox(
-                label="검색어", placeholder="예: 포트홀 도로 보수 기준", lines=1
-            )
+            search_kw = gr.Textbox(label="검색어", placeholder="예: 포트홀 도로 보수 기준", lines=1)
             search_btn = gr.Button("🔍 웹 검색")
             web_results = gr.CheckboxGroup(
                 choices=[], label="검색 결과 — 가져올 자료 선택(여러 개 가능)"
@@ -664,9 +671,9 @@ with gr.Blocks(title="하이브리드 RAG 지식검색") as demo:
         build_index, inputs=[files, use_samples, index_state], outputs=[index_state, status]
     ).then(refresh_panel, inputs=index_state, outputs=[sources_panel, suggest_radio])
 
-    reset_btn.click(
-        reset_index, inputs=None, outputs=[index_state, status]
-    ).then(refresh_panel, inputs=index_state, outputs=[sources_panel, suggest_radio])
+    reset_btn.click(reset_index, inputs=None, outputs=[index_state, status]).then(
+        refresh_panel, inputs=index_state, outputs=[sources_panel, suggest_radio]
+    )
 
     search_btn.click(web_search, inputs=search_kw, outputs=[web_results, web_status])
 

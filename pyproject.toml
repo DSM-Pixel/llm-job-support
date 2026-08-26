@@ -1,7 +1,7 @@
 [project]
 name = "llm-job-support"
 version = "0.1.0"
-description = "지엔소프트 멀티모달 AI 프로젝트 (8주 일경험) — VLM/SAM/RAG/Agent 프로토타입 워크스페이스"
+description = "Pixel — 도로 점검 멀티모달 AI 플랫폼 (VLM/YOLO/SAM/RAG/Agent)"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "AGPL-3.0-or-later" }

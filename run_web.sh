@@ -17,5 +17,5 @@ else
     exit 1
 fi
 
-echo "GNSoft AI 플랫폼 → http://${BIND_HOST}:${PORT}"
+echo "Pixel AI 플랫폼 → http://${BIND_HOST}:${PORT}"
 exec "$PYTHON" -m uvicorn backend.app:app --host "$BIND_HOST" --port "$PORT" --reload

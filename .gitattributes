@@ -1,2 +1,17 @@
 # 쉘 스크립트는 항상 LF — CRLF 면 bash 가 `\r` 로 깨진다(특히 CD 배포 스크립트).
 *.sh text eol=lf
+
+# ── 제출 아카이브(git archive) 제외 — 내부 AI 개발 하네스 문서 & 레거시 바닐라 프론트 ──
+# 저장소에는 남기되(개발 편의), 코드 제출용 zip 에는 담지 않는다.
+CLAUDE.md export-ignore
+AI-hanes-explain.md export-ignore
+.claude export-ignore
+docs/notes export-ignore
+docs/claude-code-tools-guide.html export-ignore
+docs/claude-code-도구-가이드.pdf export-ignore
+# 레거시 바닐라 프론트(현재 web/react 로 컷오버 완료, 미서빙)
+web/index.html export-ignore
+web/README.md export-ignore
+web/icons.svg export-ignore
+web/pages export-ignore
+web/assets export-ignore
