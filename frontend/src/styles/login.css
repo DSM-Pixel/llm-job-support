@@ -133,7 +133,9 @@
 /* 인증(코드 입력) 패널 — 요소 간 간격 확보(예전엔 패딩이 없어 붙어 보였음). */
 .lg-verify {
   display: grid;
-  gap: 14px;
+  gap: 16px;
+  /* 인증 모달 콘텐츠에 여유 패딩 */
+  padding: 10px 8px 14px;
 }
 .lg-verify .field {
   display: grid;

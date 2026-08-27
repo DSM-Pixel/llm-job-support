@@ -41,6 +41,58 @@ def _connect() -> sqlite3.Connection:
     return conn
 
 
+# ── 평가/데모용 고정 계정 (이메일 인증 없이 시드) ────────────────────
+_DEMO_PW = "Pixel1234!"
+_DEMO_ACCOUNTS = (
+    # (email, name, role)  role: 'super' | 'admin' | 'user'
+    ("superadmin@pixel.com", "슈퍼 관리자", "super"),
+    ("admin@pixel.com", "회사 관리자", "admin"),
+    ("user@pixel.com", "데모 사용자", "user"),
+)
+
+
+def _seed_demo_accounts(conn: sqlite3.Connection) -> None:
+    """평가/데모용 고정 계정을 이메일 인증 없이 보장(없으면 생성). idempotent."""
+    now = time.time()
+    norm = _norm_company("Pixel")
+    row = conn.execute("SELECT id FROM companies WHERE name_norm = ?", (norm,)).fetchone()
+    if row:
+        cid = row["id"]
+    else:
+        cid = secrets.token_hex(6)
+        conn.execute(
+            "INSERT INTO companies(id, name, name_norm, created) VALUES (?,?,?,?)",
+            (cid, "Pixel", norm, now),
+        )
+    for email, name, role in _DEMO_ACCOUNTS:
+        if conn.execute("SELECT 1 FROM users WHERE email = ?", (email,)).fetchone():
+            continue
+        conn.execute(
+            "INSERT INTO users(id, email, pw, name, company, team, marketing, "
+            "terms_at, privacy_at, created, is_admin, active, is_super, "
+            "admin_requested, company_id, is_reviewer) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (
+                secrets.token_hex(8),
+                email,
+                _hash_pw(_DEMO_PW),
+                name,
+                "" if role == "super" else "Pixel",
+                "",
+                0,
+                now,
+                now,
+                now,
+                1 if role == "admin" else 0,  # is_admin(회사 대표)
+                1,  # active
+                1 if role == "super" else 0,  # is_super
+                0,  # admin_requested
+                None if role == "super" else cid,  # company_id
+                1 if role == "admin" else 0,  # is_reviewer(대표=검수 권한)
+            ),
+        )
+
+
 def _init(conn: sqlite3.Connection) -> None:
     conn.execute(
         "CREATE TABLE IF NOT EXISTS users ("
@@ -117,6 +169,9 @@ def _init(conn: sqlite3.Connection) -> None:
             "WHERE company = ? AND (company_id IS NULL OR company_id = '')",
             (cid, raw),
         )
+
+    # 평가/데모용 고정 계정 보장(이메일 인증 없이). 아래 불변식이 슈퍼 계정을 정규화한다.
+    _seed_demo_accounts(conn)
 
     # 슈퍼 어드민 부트스트랩: 슈퍼가 없으면 최초 가입 계정을 슈퍼로.
     has_user = conn.execute("SELECT 1 FROM users LIMIT 1").fetchone()
