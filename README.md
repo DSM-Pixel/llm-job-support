@@ -4,6 +4,8 @@
 >
 > VLM · YOLO · SAM · Hybrid RAG · LLM · AI Agent를 하나의 웹 서비스로 묶은 멀티모달 AI 플랫폼입니다.
 
+**🇺🇸 English README: [README.en.md](README.en.md)**
+
 ![홈 화면](docs/screenshots/dashboard.png)
 
 ---
@@ -109,7 +111,7 @@ cp .env.example .env
 ## 📁 프로젝트 구조
 
 ```
-llm-job-support/
+pixel/
 ├── frontend/            # React + Vite 소스 (src/) — 각 기능별 페이지
 ├── web/                 # 빌드된 프론트엔드(백엔드가 서빙) + 정적 에셋
 ├── backend/             # FastAPI 앱 · YOLO/비전 서비스 · RAG · 공공데이터 어댑터

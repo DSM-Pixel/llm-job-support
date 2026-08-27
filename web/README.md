@@ -1,6 +1,6 @@
-# GNSoft AI 플랫폼 (web)
+# Pixel (web · 레거시 바닐라 프론트엔드)
 
-지엔소프트 AI 업무 지원 플랫폼의 프론트엔드(HTML/CSS/JS 멀티페이지). 자연어 질의·RAG 검색·
+Pixel 도로 점검 AI 플랫폼의 초기 프론트엔드(HTML/CSS/JS 멀티페이지). 자연어 질의·RAG 검색·
 이미지 라벨링·보고서·데이터 관리 화면이 `backend`(FastAPI)의 `/api/*` 와 연결돼 동작합니다.
 
 > 프론트엔드의 하드코딩 mock은 제거되었고, 화면 데이터는 모두 백엔드 API에서 받아옵니다.
@@ -11,7 +11,7 @@
 
 ```bash
 uv pip install -e ".[web]"          # 또는: pip install fastapi "uvicorn[standard]"
-uvicorn backend.app:app --reload    # 저장소 루트(llm-job-support/)에서 실행
+uvicorn backend.app:app --reload    # 저장소 루트(pixel/)에서 실행
 # http://localhost:8000  접속  → 메인 대시보드
 ```
 
