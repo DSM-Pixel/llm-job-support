@@ -107,6 +107,12 @@ backend/storage/projects.db
 # 사용자 계정·세션(개인정보) — 절대 커밋 금지
 backend/storage/users.db
 
+# --- 문서(로컬 전용, GitHub 비공개) ---
+# docs/ 내용은 커밋/공개하지 않는다. 단 README가 참조하는 스크린샷/로고는 예외로 계속 추적.
+docs/*
+!docs/screenshots/
+!docs/logo/
+
 # 사용자별 활동·작업물 기록(대시보드 통계 원천) — 로컬 데이터, 커밋 제외
 backend/storage/activity.db
 
