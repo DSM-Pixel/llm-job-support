@@ -29,13 +29,19 @@ export default function CanvasStage({ open, imageUrl, imgRef, boxes, selected, o
     box.style.height = `${h}px`
   }, [imgRef])
 
-  // 마운트/이미지 변경 시 한 프레임 뒤 정렬(스테이지 크기 확정 후) + 리사이즈 대응.
+  // 마운트/이미지 변경 시 정렬 + 스테이지 '크기 변화'마다 재정렬.
+  // 모달이 열리며 커지는 애니메이션·캐시 이미지 등으로 최초 1회만 맞추면 박스가 밀리므로,
+  // ResizeObserver 로 스테이지 크기가 바뀔 때마다 fitBoxes 를 다시 돌린다.
   useEffect(() => {
     const id = requestAnimationFrame(fitBoxes)
+    const stage = stageRef.current
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => fitBoxes()) : null
+    if (ro && stage) ro.observe(stage)
     const onResize = () => fitBoxes()
     window.addEventListener('resize', onResize)
     return () => {
       cancelAnimationFrame(id)
+      if (ro) ro.disconnect()
       window.removeEventListener('resize', onResize)
     }
   }, [fitBoxes, imageUrl, open])

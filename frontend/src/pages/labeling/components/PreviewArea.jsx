@@ -42,10 +42,14 @@ export default function PreviewArea({
 
   useEffect(() => {
     const id = requestAnimationFrame(fitBoxes)
+    const stage = stageRef.current
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => fitBoxes()) : null
+    if (ro && stage) ro.observe(stage)
     const onResize = () => fitBoxes()
     window.addEventListener('resize', onResize)
     return () => {
       cancelAnimationFrame(id)
+      if (ro) ro.disconnect()
       window.removeEventListener('resize', onResize)
     }
   }, [fitBoxes, active.url, active.savedBoxes])
